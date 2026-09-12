@@ -1,0 +1,87 @@
+STEP 1 — Fix DomPDF crash (do this first)
+=========================================
+On Hostinger File Manager go to:
+
+  public_html/bootstrap/cache/
+
+DELETE these files if present:
+  - packages.php
+  - services.php
+  - config.php
+  - routes-v7.php
+
+Keep only .gitignore
+
+Why: old DomPDF package was removed, but cache still loads
+Barryvdh\DomPDF\ServiceProvider and crashes the whole site.
+
+
+STEP 2 — Terminal / SSH in public_html
+======================================
+php artisan package:discover
+php artisan config:clear
+php artisan view:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan homework:fix-answer-sheet
+
+
+STEP 3 — .env check
+===================
+APP_URL=https://lightsalmon-tapir-833332.hostingersite.com/public
+OPENAI_API_KEY=your_key_here
+
+
+STEP 4 — DB column (phpMyAdmin) if missing
+==========================================
+ALTER TABLE homework_submissions ADD COLUMN corrected_sheet_path VARCHAR(255) NULL AFTER pdf_path;
+ALTER TABLE exam_submissions ADD COLUMN corrected_sheet_path VARCHAR(255) NULL AFTER pdf_path;
+
+
+STEP 5 — LIVE FIX for □□□ comments (while headers look fine)
+===========================================================
+Headers use PNG sprites (OK). Comments/points need the real font file.
+
+Upload THIS exact file (from your PC project):
+
+  resources/fonts/NotoSansGujarati-Regular.ttf
+
+Into BOTH Hostinger folders:
+
+  1) public_html/public/fonts/NotoSansGujarati-Regular.ttf
+  2) public_html/resources/fonts/NotoSansGujarati-Regular.ttf
+
+Also upload updated PHP:
+  app/Support/IndicScript.php
+  app/Support/IndicFontResolver.php
+  app/Services/CorrectedAnswerSheetRenderer.php
+
+Then SSH:
+  php artisan homework:fix-answer-sheet
+
+If font is missing, comments will show "[Gujarati font missing]" instead of boxes.
+
+Re-upload the student answer sheet after that.
+
+
+STEP 5b — Optional: enable Imagick for cleaner Gujarati (matras/conjuncts)
+==========================================================================
+hPanel → PHP Configuration → Extensions → enable `imagick` (if listed).
+
+With Imagick, teacher comments shape properly (ઉદાહરણો, પ્રયત્ન).
+Without Imagick, GD still works but some vowels may look slightly split.
+
+Also keep NotoSansGujarati-Regular.ttf uploaded (Step 5).
+
+================================
+After upload, images are copied to:
+  public/uploads/homework-submissions/{id}/corrected_xxx.jpg
+
+URL will look like:
+  /public/uploads/homework-submissions/2/corrected_xxx.jpg
+
+If Network tab shows /storage/... 404, re-upload code + run:
+  php artisan homework:fix-answer-sheet
+
+
+Then open homework page again and upload answer sheet.

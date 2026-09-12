@@ -1,0 +1,29 @@
+STEP 5 — LIVE GD FIX (Imagick NOT needed)
+=========================================
+Comments show □□□ because Gujarati TTF was missing / wrong font was used.
+Headers work via PNG sprites; comments need the real font with GD.
+
+Upload this FOLDER from your PC to Hostinger:
+
+  app/Support/fonts/
+    NotoSansGujarati-Regular.ttf
+    NotoSans-Regular.ttf
+
+Full path on Hostinger:
+
+  public_html/app/Support/fonts/NotoSansGujarati-Regular.ttf
+
+Also upload:
+
+  app/Support/EmbeddedGujaratiFont.php
+  app/Support/IndicFontResolver.php
+  app/Support/IndicScript.php
+  app/Services/CorrectedAnswerSheetRenderer.php
+
+Then:
+
+  php artisan homework:fix-answer-sheet
+
+Re-upload the student answer sheet.
+
+No Imagick required — GD + this font file is enough.
