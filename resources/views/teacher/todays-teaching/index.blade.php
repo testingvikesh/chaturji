@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-                <span class="admin-section-label">Chaturji</span>
+                <span class="admin-section-label">Teacher</span>
                 <h2 class="admin-page-title">Today's Teaching</h2>
                 <p class="admin-page-subtitle">Track standard · subject · chapter · topic — completed topics auto-generate homework</p>
             </div>

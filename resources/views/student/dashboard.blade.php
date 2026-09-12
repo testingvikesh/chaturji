@@ -16,7 +16,7 @@
         </div>
 
         <div class="grid lg:grid-cols-3 gap-6 mb-8">
-            <div class="lg:col-span-2 admin-card">
+            <div class="lg:col-span-3 admin-card">
                 <div class="admin-card-top"></div>
                 <div class="admin-card-header">
                     <h3 class="font-bold text-slate-900">My Profile</h3>
@@ -41,6 +41,7 @@
                 </div>
             </div>
 
+            {{--
             <div class="admin-card">
                 <div class="admin-card-top"></div>
                 <div class="admin-card-header">
@@ -87,6 +88,7 @@
                     </a>
                 </div>
             </div>
+            --}}
         </div>
 
         @include('student.partials.subjects-grid', [

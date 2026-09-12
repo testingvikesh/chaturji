@@ -3,7 +3,7 @@
         <img src="{{ asset('images/brand/logo.png') }}" alt="Gses Chaturji" class="h-10 w-10 shrink-0 object-contain drop-shadow-lg">
         <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-10 w-10 shrink-0 object-contain drop-shadow-lg">
         <div class="min-w-0">
-            <p class="font-bold text-white leading-tight">Chaturji Panel</p>
+            <p class="font-bold text-white leading-tight">Teacher Panel</p>
             <p class="text-[11px] text-brand-gold/90 font-medium truncate">Gses Chaturji</p>
         </div>
     </div>
@@ -71,7 +71,7 @@
         <span class="font-bold text-sm flex items-center gap-2">
             <img src="{{ asset('images/brand/logo.png') }}" alt="Gses Chaturji" class="h-7 w-7 object-contain drop-shadow">
             <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-7 w-7 object-contain drop-shadow">
-            Chaturji Panel
+            Teacher Panel
         </span>
         <div class="flex items-center gap-2 text-xs overflow-x-auto">
             <a href="{{ route('teacher.dashboard') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Home</a>

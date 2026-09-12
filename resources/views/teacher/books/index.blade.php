@@ -1,7 +1,7 @@
 <x-teacher-layout>
     <x-slot name="header">
         <div>
-            <span class="admin-section-label">Chaturji</span>
+            <span class="admin-section-label">Teacher</span>
             <h2 class="admin-page-title">Books</h2>
             <p class="admin-page-subtitle">Only the standard and subjects you selected in Settings</p>
         </div>

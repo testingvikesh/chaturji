@@ -4,7 +4,7 @@
 
         <div>
 
-            <span class="admin-section-label">Chaturji</span>
+            <span class="admin-section-label">Teacher</span>
 
             <h2 class="admin-page-title">Welcome, {{ $teacher->name }}!</h2>
 

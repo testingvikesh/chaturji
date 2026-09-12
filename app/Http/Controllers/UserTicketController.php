@@ -87,7 +87,7 @@ class UserTicketController extends Controller
         return [
             'layout' => $role.'-layout',
             'panel' => $role,
-            'label' => $role === 'teacher' ? 'Chaturji' : 'Student',
+            'label' => $role === 'teacher' ? 'Teacher' : 'Student',
             'routePrefix' => $role.'.tickets',
         ];
     }

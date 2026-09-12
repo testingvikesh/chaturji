@@ -27,7 +27,7 @@
                     <div class="h-14 w-14 rounded-2xl bg-brand-green-50 text-brand-green flex items-center justify-center mb-5 group-hover:bg-brand-green group-hover:text-white transition-colors duration-300">
                         <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </div>
-                    <h2 class="text-xl font-bold text-brand-green mb-2">Chaturji {{ ucfirst($type) }}</h2>
+                    <h2 class="text-xl font-bold text-brand-green mb-2">Teacher {{ ucfirst($type) }}</h2>
                     <p class="text-sm text-slate-500 mb-4">{{ $type === 'login' ? 'Sign in with mobile or email' : 'Register with name, mobile & email' }}</p>
                     <span class="inline-flex items-center gap-1 text-sm font-semibold text-brand-green group-hover:gap-2 transition-all">
                         Continue

@@ -1,5 +1,5 @@
 @php
-    $roleLabel = $role === 'teacher' ? 'Chaturji' : ucfirst($role);
+    $roleLabel = $role === 'teacher' ? 'Teacher' : ucfirst($role);
 @endphp
 
 <x-front-layout :title="$roleLabel . ' Registration Successful'">

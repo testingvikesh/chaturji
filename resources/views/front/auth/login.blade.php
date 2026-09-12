@@ -1,7 +1,7 @@
 @php
     $siteName = config('app.name', 'Gses Chaturji');
     $tagline = 'Gujarat School of Excellence System';
-    $roleLabel = $role === 'teacher' ? 'Chaturji' : ucfirst($role);
+    $roleLabel = $role === 'teacher' ? 'Teacher' : ucfirst($role);
 @endphp
 
 <x-auth-direct-layout :title="$roleLabel . ' Login'">

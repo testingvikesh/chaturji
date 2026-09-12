@@ -120,7 +120,7 @@
                             class="login-role-tab"
                             :class="role === 'teacher' && 'is-active'"
                             :aria-selected="role === 'teacher'"
-                            @click="role = 'teacher'">Chaturji</button>
+                            @click="role = 'teacher'">Teacher</button>
                 </div>
 
                 <form method="POST" :action="action()" class="space-y-4">
