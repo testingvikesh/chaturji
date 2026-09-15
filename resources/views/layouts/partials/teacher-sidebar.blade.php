@@ -68,28 +68,60 @@
     </div>
 </aside>
 
-<div class="lg:hidden fixed top-0 inset-x-0 z-30 bg-brand-green text-white shadow-lg">
-    <div class="flex items-center justify-between px-4 h-14">
-        <span class="font-bold text-sm flex items-center gap-2">
-            <img src="{{ asset('images/brand/logo.png') }}" alt="Gses Chaturji" class="h-7 w-7 object-contain drop-shadow">
-            <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-7 w-7 object-contain drop-shadow">
-            Teacher Panel
-        </span>
-        <div class="flex items-center gap-2 text-xs overflow-x-auto">
-            <a href="{{ route('teacher.dashboard') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Home</a>
-            <a href="{{ route('teacher.books.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Books</a>
-            <a href="{{ route('teacher.exams.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Exams</a>
-            <a href="{{ route('teacher.homework.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Homework</a>
-            <a href="{{ route('teacher.todays-exam.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Today Exam</a>
-            <a href="{{ route('teacher.todays-teaching.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Today HW</a>
-            <a href="{{ route('teacher.daily-syllabus.create') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Syllabus</a>
-            <a href="{{ route('teacher.settings.edit') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Settings</a>
-            <a href="{{ route('teacher.tickets.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Tickets</a>
-            <a href="{{ route('teacher.notifications.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Alerts</a>
-            <form method="POST" action="{{ route('logout') }}" class="inline" onsubmit="return confirm('Logout?')">
-                @csrf
-                <button type="submit" class="px-2 py-1 rounded-lg bg-white/15">Logout</button>
-            </form>
+{{-- Mobile top bar + hamburger drawer --}}
+<div class="lg:hidden fixed top-0 inset-x-0 z-50" x-data="{ open: false }" @keydown.escape.window="open = false">
+    <div class="bg-brand-green text-white shadow-lg">
+        <div class="flex items-center justify-between gap-3 px-4 h-14">
+            <div class="min-w-0 flex items-center gap-2">
+                <img src="{{ asset('images/brand/logo.png') }}" alt="Gses Chaturji" class="h-7 w-7 object-contain shrink-0 drop-shadow">
+                <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-7 w-7 object-contain shrink-0 drop-shadow">
+                <span class="font-bold text-sm truncate">Teacher Panel</span>
+            </div>
+            <button type="button"
+                    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25"
+                    @click="open = !open"
+                    :aria-expanded="open.toString()"
+                    aria-label="Toggle menu">
+                <svg x-show="!open" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <svg x-show="open" x-cloak class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
     </div>
+
+    <div x-show="open"
+         x-cloak
+         x-transition.opacity
+         class="fixed inset-0 top-14 z-40 bg-black/40"
+         @click="open = false"></div>
+
+    <nav x-show="open"
+         x-cloak
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="-translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="-translate-x-full"
+         class="fixed top-14 left-0 bottom-0 z-50 w-[min(18rem,86vw)] overflow-y-auto bg-gradient-to-b from-brand-green-darker via-brand-green to-brand-green-light text-white shadow-2xl">
+        <div class="px-3 py-4 space-y-0.5">
+            <a href="{{ route('teacher.dashboard') }}" @click="open = false" class="{{ request()->routeIs('teacher.dashboard') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Dashboard</a>
+            <a href="{{ route('teacher.books.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.books.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Books</a>
+            <a href="{{ route('teacher.exams.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.exams.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">My Exams</a>
+            <a href="{{ route('teacher.homework.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.homework.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">My Homework</a>
+            <a href="{{ route('teacher.todays-exam.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.todays-exam.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Today's Exam</a>
+            <a href="{{ route('teacher.todays-teaching.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.todays-teaching.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Today's Homework</a>
+            <a href="{{ route('teacher.daily-syllabus.create') }}" @click="open = false" class="{{ request()->routeIs('teacher.daily-syllabus.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Daily Syllabus</a>
+            <a href="{{ route('teacher.settings.edit') }}" @click="open = false" class="{{ request()->routeIs('teacher.settings.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Settings</a>
+            <a href="{{ route('teacher.tickets.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.tickets.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Tickets</a>
+            <a href="{{ route('teacher.notifications.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.notifications.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Notifications</a>
+        </div>
+        <div class="border-t border-white/15 p-4 mt-2">
+            <p class="px-2 text-sm font-semibold truncate">{{ Auth::user()->name }}</p>
+            <p class="px-2 text-xs text-white/60 truncate mb-3">{{ Auth::user()->mobile }}</p>
+            <form method="POST" action="{{ route('logout') }}" onsubmit="return confirm('Logout?')">
+                @csrf
+                <button type="submit" class="w-full rounded-xl bg-white/15 hover:bg-white/25 px-3 py-2.5 text-sm font-medium">Logout</button>
+            </form>
+        </div>
+    </nav>
 </div>

@@ -87,36 +87,70 @@
     </div>
 </aside>
 
-<div class="lg:hidden fixed top-0 inset-x-0 z-30 bg-brand-green text-white shadow-lg">
-    <div class="flex items-center justify-between px-4 h-14">
-        <div class="min-w-0 flex-1 pr-2 flex items-center gap-2">
-            <img src="{{ asset('images/brand/logo.png') }}" alt="Gses Chaturji" class="h-7 w-7 object-contain shrink-0 drop-shadow">
-            <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-7 w-7 object-contain shrink-0 drop-shadow">
-            <div class="min-w-0">
-                <span class="font-bold text-sm block truncate">Student Panel</span>
-                @if ($studentNavTrail->isNotEmpty())
-                    @php $current = $studentNavTrail->last(); @endphp
-                    <p class="text-xs text-brand-gold font-semibold truncate" title="{{ $current['label'] ?? '' }}">{{ $current['label'] ?? '' }}</p>
-                @endif
+{{-- Mobile top bar + hamburger drawer --}}
+<div class="lg:hidden fixed top-0 inset-x-0 z-50" x-data="{ open: false }" @keydown.escape.window="open = false">
+    <div class="bg-brand-green text-white shadow-lg">
+        <div class="flex items-center justify-between gap-3 px-4 h-14">
+            <div class="min-w-0 flex items-center gap-2 flex-1 pr-2">
+                <img src="{{ asset('images/brand/logo.png') }}" alt="Gses Chaturji" class="h-7 w-7 object-contain shrink-0 drop-shadow">
+                <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-7 w-7 object-contain shrink-0 drop-shadow">
+                <div class="min-w-0">
+                    <span class="font-bold text-sm block truncate">Student Panel</span>
+                    @if ($studentNavTrail->isNotEmpty())
+                        @php $current = $studentNavTrail->last(); @endphp
+                        <p class="text-xs text-brand-gold font-semibold truncate" title="{{ $current['label'] ?? '' }}">{{ $current['label'] ?? '' }}</p>
+                    @endif
+                </div>
             </div>
-        </div>
-        <div class="flex items-center gap-2 text-xs overflow-x-auto">
-            <a href="{{ route('student.dashboard') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Home</a>
-            <a href="{{ route('student.subjects.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Subjects</a>
-            <a href="{{ route('student.self-practice.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Practice</a>
-            <a href="{{ route('student.exams.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Self Exam</a>
-            <a href="{{ route('student.homework.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Self HW</a>
-            <a href="{{ route('student.notifications.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap relative">
-                Alerts
+            <button type="button"
+                    class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25"
+                    @click="open = !open"
+                    :aria-expanded="open.toString()"
+                    aria-label="Toggle menu">
+                <svg x-show="!open" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <svg x-show="open" x-cloak class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 @if ($unreadNotifications > 0)
-                    ({{ $unreadNotifications }})
+                    <span class="absolute -top-1 -right-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-brand-gold px-1 text-[10px] font-bold text-brand-green-darker" x-show="!open">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>
                 @endif
-            </a>
-            <a href="{{ route('student.tickets.index') }}" class="px-2 py-1 rounded-lg bg-white/15 whitespace-nowrap">Tickets</a>
-            <form method="POST" action="{{ route('logout') }}" class="inline" onsubmit="return confirm('Logout?')">
-                @csrf
-                <button type="submit" class="px-2 py-1 rounded-lg bg-white/15">Logout</button>
-            </form>
+            </button>
         </div>
     </div>
+
+    <div x-show="open" x-cloak x-transition.opacity class="fixed inset-0 top-14 z-40 bg-black/40" @click="open = false"></div>
+
+    <nav x-show="open"
+         x-cloak
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="-translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="-translate-x-full"
+         class="fixed top-14 left-0 bottom-0 z-50 w-[min(18rem,86vw)] overflow-y-auto bg-gradient-to-b from-brand-green-darker via-brand-green to-brand-green-light text-white shadow-2xl">
+        <div class="px-3 py-4 space-y-0.5">
+            <a href="{{ route('student.dashboard') }}" @click="open = false" class="{{ request()->routeIs('student.dashboard') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Dashboard</a>
+            <a href="{{ route('student.subjects.index') }}" @click="open = false" class="{{ request()->routeIs('student.subjects.*', 'student.topics.*', 'student.chapters.*', 'student.material-topics.*', 'student.materials.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">My Subjects</a>
+            <a href="{{ route('student.self-practice.index') }}" @click="open = false" class="{{ request()->routeIs('student.self-practice.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Self Practice</a>
+            <a href="{{ route('student.exams.index') }}" @click="open = false" class="{{ request()->routeIs('student.exams.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Self Exam</a>
+            <a href="{{ route('student.homework.index') }}" @click="open = false" class="{{ request()->routeIs('student.homework.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Self Homework</a>
+            <a href="{{ route('student.notifications.index') }}" @click="open = false" class="{{ request()->routeIs('student.notifications.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">
+                <span class="flex-1">Notifications</span>
+                @if ($unreadNotifications > 0)
+                    <span class="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-gold px-1.5 py-0.5 text-[10px] font-bold text-brand-green-darker">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>
+                @endif
+            </a>
+            <a href="{{ route('student.tickets.index') }}" @click="open = false" class="{{ request()->routeIs('student.tickets.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Tickets</a>
+            <a href="{{ route('student.profile.edit') }}" @click="open = false" class="{{ request()->routeIs('student.profile.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Edit Profile</a>
+            <a href="{{ route('student.change-password') }}" @click="open = false" class="{{ request()->routeIs('student.change-password') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Change Password</a>
+            <a href="{{ route('pwa.install') }}" @click="open = false" class="{{ request()->routeIs('pwa.install') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Install App</a>
+        </div>
+        <div class="border-t border-white/15 p-4 mt-2">
+            <p class="px-2 text-sm font-semibold truncate">{{ Auth::user()->name }}</p>
+            <p class="px-2 text-xs text-white/60 truncate mb-3">{{ Auth::user()->mobile }}</p>
+            <form method="POST" action="{{ route('logout') }}" onsubmit="return confirm('Logout?')">
+                @csrf
+                <button type="submit" class="w-full rounded-xl bg-white/15 hover:bg-white/25 px-3 py-2.5 text-sm font-medium">Logout</button>
+            </form>
+        </div>
+    </nav>
 </div>
