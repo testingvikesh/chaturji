@@ -17,9 +17,12 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->withoutOverlapping(5);
 
-        $schedule->command('teachers:generate-daily-otp')
-            ->dailyAt('00:05')
-            ->withoutOverlapping();
+        // Daily teacher OTP → in-app Notifications at 1:00 AM India time (no email).
+        $schedule->command('teachers:generate-daily-otp --force')
+            ->dailyAt('01:00')
+            ->timezone('Asia/Kolkata')
+            ->withoutOverlapping(30)
+            ->appendOutputTo(storage_path('logs/teacher-daily-otp.log'));
     }
 
     /**

@@ -48,7 +48,8 @@
                 <div>
                     <h3 class="font-bold text-slate-900">All Teachers</h3>
                     <p class="text-xs text-slate-500 mt-0.5">{{ $teachers->total() }} total registered · Today's OTP date {{ now()->format('d M Y') }}</p>
-                    <p class="text-xs text-slate-400 mt-1 break-all">Manual / cron URL: <a href="{{ \App\Support\TeacherOtpService::cronUrl() }}" class="text-brand-green hover:underline" target="_blank" rel="noopener">{{ \App\Support\TeacherOtpService::cronUrl() }}</a></p>
+                    <p class="text-xs text-slate-400 mt-1">Cron auto-sends a new OTP to teacher <strong>Notifications</strong> daily at <strong>1:00 AM</strong> (Asia/Kolkata). Email is off.</p>
+                    <p class="text-xs text-slate-400 mt-1 break-all">Manual / cron URL: <a href="{{ \App\Support\TeacherOtpService::cronUrl() }}?force=1" class="text-brand-green hover:underline" target="_blank" rel="noopener">{{ \App\Support\TeacherOtpService::cronUrl() }}?force=1</a></p>
                 </div>
             </div>
             <div class="admin-table-wrap">
