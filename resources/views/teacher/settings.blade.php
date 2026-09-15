@@ -3,7 +3,7 @@
         <div>
             <span class="admin-section-label">Teacher</span>
             <h2 class="admin-page-title">Settings</h2>
-            <p class="admin-page-subtitle">Select medium, then standard, then subjects. Standard 11 &amp; 12 support multi-select subjects. A subject taken by another teacher for the same medium stays locked.</p>
+            <p class="admin-page-subtitle">Select medium, then standard, then subjects. For Standard 11 &amp; 12, up to <strong>2 teachers</strong> can share the same subject. Other standards stay 1 teacher per subject.</p>
         </div>
     </x-slot>
 
@@ -20,16 +20,13 @@
                 const key = this.subjectKey();
                 return key && this.form.subjects[key] ? this.form.subjects[key] : [];
             },
-            availableSubjects() {
-                return this.currentSubjects().filter(s => !s.taken_by);
+            standardMeta() {
+                return (this.form.standards || []).find(s => String(s.id) === String(this.standardId)) || null;
             },
             standardNumber() {
-                const std = (this.form.standards || []).find(s => String(s.id) === String(this.standardId));
-                if (!std) return 0;
-                const m = String(std.name || '').match(/(\d+)/);
-                return m ? parseInt(m[1], 10) : 0;
+                return this.standardMeta()?.grade || 0;
             },
-            isMultiSelectStandard() {
+            isSharedStandard() {
                 const n = this.standardNumber();
                 return n === 11 || n === 12;
             },
@@ -43,23 +40,16 @@
                 this.selected = this.currentSubjects().filter(s => s.mine).map(s => String(s.id));
             },
             toggle(subject) {
-                if (subject.taken_by) return;
+                if (subject.locked) return;
                 const id = String(subject.id);
                 if (this.selected.includes(id)) {
                     this.selected = this.selected.filter(x => x !== id);
-                    return;
+                } else {
+                    this.selected = [...this.selected, id];
                 }
-                // Std 11 & 12: always multi-select. Other standards: also allow multi.
-                this.selected = [...this.selected, id];
             },
             isChecked(id) {
                 return this.selected.includes(String(id));
-            },
-            selectAll() {
-                this.selected = this.availableSubjects().map(s => String(s.id));
-            },
-            clearAll() {
-                this.selected = [];
             }
          }">
 
@@ -116,7 +106,7 @@
                     <select class="admin-select" x-model="medium" @change="chooseMedium(medium)" required>
                         <option value="">Choose medium</option>
                         <template x-for="(label, value) in form.mediums" :key="value">
-                            <option :value="value" x-text="label" :selected="medium === value"></option>
+                            <option :value="value" x-text="label"></option>
                         </template>
                     </select>
                     @error('medium')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
@@ -127,30 +117,21 @@
                     <select class="admin-select" x-model="standardId" @change="chooseStandard(standardId)" :disabled="!medium" required>
                         <option value="" x-text="medium ? 'Choose standard' : 'Select medium first'"></option>
                         <template x-for="std in form.standards" :key="std.id">
-                            <option :value="String(std.id)" x-text="std.name" :selected="String(standardId) === String(std.id)"></option>
+                            <option :value="String(std.id)" x-text="std.name"></option>
                         </template>
                     </select>
                     @error('standard_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+                    <p class="text-xs text-brand-green mt-2" x-show="isSharedStandard()" x-cloak>
+                        Standard <span x-text="standardNumber()"></span>: same subject can be selected by up to 2 teachers.
+                    </p>
                 </div>
 
                 <div>
-                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                        <div>
-                            <label class="admin-label mb-0">3. Select subjects</label>
-                            <p class="text-xs text-slate-500 mt-1"
-                               x-text="isMultiSelectStandard()
-                                   ? ('Standard ' + standardNumber() + ' — multi-select: choose one or more subjects (Ctrl/Cmd + click in the list, or tap cards).')
-                                   : 'Tap subjects to select. You can choose more than one.'"></p>
-                        </div>
-                        <div class="flex items-center gap-2" x-show="medium && standardId && availableSubjects().length" x-cloak>
-                            <button type="button" class="admin-btn-ghost text-xs py-1.5 px-3" @click="selectAll()">Select all</button>
-                            <button type="button" class="admin-btn-ghost text-xs py-1.5 px-3" @click="clearAll()">Clear</button>
-                        </div>
-                    </div>
-
-                    <p class="text-xs font-semibold text-brand-green mb-3" x-show="selected.length" x-cloak>
-                        <span x-text="selected.length"></span> subject(s) selected
-                    </p>
+                    <label class="admin-label">3. Select subjects</label>
+                    <p class="text-xs text-slate-500 mb-3"
+                       x-text="isSharedStandard()
+                           ? 'Tap to select. For Std ' + standardNumber() + ', up to 2 teachers may share one subject.'
+                           : 'Locked subjects already belong to another teacher for this medium.'"></p>
 
                     <div x-show="!medium" class="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-400 text-center">
                         Choose a medium first.
@@ -162,27 +143,13 @@
                         No material subjects found for this medium and standard.
                     </div>
 
-                    {{-- Native multi-select for Std 11 & 12 --}}
-                    <div x-show="medium && standardId && isMultiSelectStandard() && availableSubjects().length" x-cloak class="mb-4">
-                        <label class="admin-label">Multi-select list (Std <span x-text="standardNumber()"></span>)</label>
-                        <select multiple
-                                size="8"
-                                class="admin-select min-h-[12rem]"
-                                x-model="selected">
-                            <template x-for="subject in availableSubjects()" :key="'ms-'+subject.id">
-                                <option :value="String(subject.id)" x-text="subject.name"></option>
-                            </template>
-                        </select>
-                        <p class="text-xs text-slate-400 mt-1">Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects. On mobile, use the subject cards below.</p>
-                    </div>
-
                     <div x-show="medium && standardId && currentSubjects().length" class="grid sm:grid-cols-2 gap-3">
                         <template x-for="subject in currentSubjects()" :key="subject.id">
                             <button type="button"
                                     @click="toggle(subject)"
-                                    :disabled="!!subject.taken_by"
+                                    :disabled="!!subject.locked"
                                     class="text-left rounded-xl border px-4 py-3 transition"
-                                    :class="subject.taken_by
+                                    :class="subject.locked
                                         ? 'border-slate-200 bg-slate-50 opacity-70 cursor-not-allowed'
                                         : (isChecked(subject.id)
                                             ? 'border-brand-green bg-brand-green-50 ring-1 ring-brand-green'
@@ -190,15 +157,24 @@
                                 <span class="flex items-start justify-between gap-3">
                                     <span>
                                         <span class="block text-sm font-semibold text-slate-900" x-text="subject.name"></span>
-                                        <span class="block text-xs mt-1" x-show="subject.taken_by" x-cloak>
-                                            Assigned to <span class="font-semibold text-amber-800" x-text="subject.taken_by"></span>
+                                        <span class="block text-xs mt-1 text-slate-500" x-show="subject.slots_max > 1" x-cloak>
+                                            Teachers: <span x-text="subject.slots_used"></span>/<span x-text="subject.slots_max"></span>
+                                            <span x-show="subject.teacher_names && subject.teacher_names.length" x-cloak>
+                                                · <span x-text="subject.teacher_names.join(', ')"></span>
+                                            </span>
                                         </span>
-                                        <span class="block text-xs mt-1 text-brand-green" x-show="!subject.taken_by && isChecked(subject.id)">
+                                        <span class="block text-xs mt-1" x-show="subject.locked" x-cloak>
+                                            Full — <span class="font-semibold text-amber-800" x-text="subject.taken_by"></span>
+                                        </span>
+                                        <span class="block text-xs mt-1 text-brand-green" x-show="!subject.locked && isChecked(subject.id)">
                                             Selected for you
+                                        </span>
+                                        <span class="block text-xs mt-1 text-amber-700" x-show="!subject.locked && !isChecked(subject.id) && subject.teacher_names && subject.teacher_names.length" x-cloak>
+                                            Also taken by <span x-text="subject.teacher_names.join(', ')"></span> (you can still join)
                                         </span>
                                     </span>
                                     <span class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border"
-                                          :class="isChecked(subject.id) && !subject.taken_by ? 'bg-brand-green border-brand-green text-white' : 'border-slate-300 bg-white text-transparent'">
+                                          :class="isChecked(subject.id) && !subject.locked ? 'bg-brand-green border-brand-green text-white' : 'border-slate-300 bg-white text-transparent'">
                                         ✓
                                     </span>
                                 </span>
@@ -209,11 +185,7 @@
                 </div>
 
                 <div class="flex items-center gap-3 pt-2">
-                    <button type="submit"
-                            class="admin-btn-primary"
-                            :disabled="!medium || !standardId || (isMultiSelectStandard() && selected.length === 0)">
-                        Save assignment
-                    </button>
+                    <button type="submit" class="admin-btn-primary" :disabled="!medium || !standardId">Save assignment</button>
                     <a href="{{ route('teacher.dashboard') }}" class="admin-btn-ghost">Back to dashboard</a>
                 </div>
             </form>

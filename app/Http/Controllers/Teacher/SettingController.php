@@ -17,6 +17,11 @@ use Illuminate\View\View;
 
 class SettingController extends Controller
 {
+    /** Std 11 & 12: up to 2 teachers may share one subject. Other standards: 1 teacher only. */
+    private const SHARED_GRADES = [11, 12];
+
+    private const SHARED_MAX_TEACHERS = 2;
+
     public function edit(): View
     {
         $teacher = auth()->user();
@@ -71,12 +76,8 @@ class SettingController extends Controller
             ->unique()
             ->values();
 
-        $grade = (int) preg_replace('/\D+/', '', (string) ($standard->slug ?: $standard->name));
-        if (in_array($grade, [11, 12], true) && $subjectIds->isEmpty()) {
-            throw ValidationException::withMessages([
-                'subject_ids' => 'For Standard '.$grade.', select at least one subject (multi-select).',
-            ]);
-        }
+        $grade = self::gradeNumber($standard);
+        $maxTeachers = self::maxTeachersForGrade($grade);
 
         $allowedIds = Material::subjectsForStudent($standard, $medium)->pluck('id')->map(fn ($id) => (int) $id);
         $validIds = $subjectIds->intersect($allowedIds)->values();
@@ -87,22 +88,32 @@ class SettingController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($teacher, $standard, $medium, $validIds) {
-            $taken = TeacherSubject::query()
-                ->with(['teacher:id,name', 'subject:id,name'])
-                ->where('medium', $medium)
-                ->whereIn('subject_id', $validIds)
-                ->where('teacher_id', '!=', $teacher->id)
-                ->lockForUpdate()
-                ->get();
+        DB::transaction(function () use ($teacher, $standard, $medium, $validIds, $maxTeachers, $grade) {
+            $conflicts = [];
 
-            if ($taken->isNotEmpty()) {
-                $names = $taken->map(function (TeacherSubject $row) {
-                    return ($row->subject?->name ?: 'Subject').' — '.$row->teacher?->name;
-                })->implode(', ');
+            foreach ($validIds as $subjectId) {
+                $others = TeacherSubject::query()
+                    ->with(['teacher:id,name', 'subject:id,name'])
+                    ->where('medium', $medium)
+                    ->where('subject_id', $subjectId)
+                    ->where('teacher_id', '!=', $teacher->id)
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($others->count() >= $maxTeachers) {
+                    $names = $others->map(fn (TeacherSubject $row) => $row->teacher?->name ?: 'Teacher')->implode(', ');
+                    $subjectName = $others->first()?->subject?->name ?: 'Subject';
+                    $conflicts[] = $subjectName.' (already '.$others->count().'/'.$maxTeachers.': '.$names.')';
+                }
+            }
+
+            if ($conflicts !== []) {
+                $hint = in_array($grade, self::SHARED_GRADES, true)
+                    ? 'Standard '.$grade.' allows up to '.self::SHARED_MAX_TEACHERS.' teachers per subject.'
+                    : 'This subject is already taken by another teacher.';
 
                 throw ValidationException::withMessages([
-                    'subject_ids' => 'Already assigned to another teacher: '.$names,
+                    'subject_ids' => $hint.' '.implode(' · ', $conflicts),
                 ]);
             }
 
@@ -144,12 +155,12 @@ class SettingController extends Controller
     }
 
     /**
-     * @return array{mediums: array<string, string>, standards: list<array{id:int,name:string}>, subjects: array<string, list<array{id:int,name:string,mine:bool,taken_by:?string}>>}
+     * @return array{mediums: array<string, string>, standards: list<array{id:int,name:string,grade:int}>, subjects: array<string, list<array{id:int,name:string,mine:bool,taken_by:?string,teacher_names:list<string>,slots_used:int,slots_max:int,locked:bool}>>}
      */
     private function formData(int $teacherId): array
     {
         $taken = TeacherSubject::query()
-            ->with('teacher:id,name')
+            ->with(['teacher:id,name', 'standard:id,name,slug'])
             ->get();
 
         $standards = Standard::query()
@@ -160,20 +171,32 @@ class SettingController extends Controller
         $subjects = [];
         foreach (array_keys(Standard::MEDIUMS) as $medium) {
             foreach ($standards as $standard) {
+                $grade = self::gradeNumber($standard);
+                $maxTeachers = self::maxTeachersForGrade($grade);
                 $key = $medium.'-'.$standard->id;
+
                 $subjects[$key] = Material::subjectsForStudent($standard, $medium)
-                    ->map(function (Subject $subject) use ($taken, $teacherId, $medium) {
-                        $row = $taken->first(function (TeacherSubject $item) use ($subject, $medium) {
+                    ->map(function (Subject $subject) use ($taken, $teacherId, $medium, $maxTeachers) {
+                        $rows = $taken->filter(function (TeacherSubject $item) use ($subject, $medium) {
                             return (int) $item->subject_id === (int) $subject->id
                                 && Material::normalizeMedium($item->medium) === $medium;
-                        });
-                        $mine = $row && (int) $row->teacher_id === $teacherId;
+                        })->values();
+
+                        $mine = $rows->contains(fn (TeacherSubject $row) => (int) $row->teacher_id === $teacherId);
+                        $others = $rows->filter(fn (TeacherSubject $row) => (int) $row->teacher_id !== $teacherId)->values();
+                        $otherNames = $others->map(fn (TeacherSubject $row) => $row->teacher?->name ?: 'Teacher')->values()->all();
+                        $slotsUsed = $rows->count();
+                        $locked = ! $mine && $others->count() >= $maxTeachers;
 
                         return [
                             'id' => $subject->id,
                             'name' => $subject->name,
                             'mine' => (bool) $mine,
-                            'taken_by' => ($row && ! $mine) ? ($row->teacher?->name ?: 'Another teacher') : null,
+                            'taken_by' => $locked ? implode(', ', $otherNames) : null,
+                            'teacher_names' => $otherNames,
+                            'slots_used' => $slotsUsed,
+                            'slots_max' => $maxTeachers,
+                            'locked' => $locked,
                         ];
                     })
                     ->values()
@@ -186,8 +209,19 @@ class SettingController extends Controller
             'standards' => $standards->map(fn (Standard $standard) => [
                 'id' => $standard->id,
                 'name' => $standard->name,
+                'grade' => self::gradeNumber($standard),
             ])->values()->all(),
             'subjects' => $subjects,
         ];
+    }
+
+    private static function gradeNumber(Standard $standard): int
+    {
+        return (int) preg_replace('/\D+/', '', (string) ($standard->slug ?: $standard->name));
+    }
+
+    private static function maxTeachersForGrade(int $grade): int
+    {
+        return in_array($grade, self::SHARED_GRADES, true) ? self::SHARED_MAX_TEACHERS : 1;
     }
 }
