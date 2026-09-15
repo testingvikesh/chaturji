@@ -20,13 +20,31 @@ class SettingController extends Controller
     public function edit(): View
     {
         $teacher = auth()->user();
+        $assignedGroups = $this->assignedGroups($teacher->id);
+        $firstGroup = $assignedGroups->first();
+        $first = $firstGroup?->first();
+
+        $initialMedium = old('medium', $first?->medium ?: ($teacher->medium ?: ''));
+        $initialMedium = Material::normalizeMedium($initialMedium) ?: $initialMedium;
+        $initialStandardId = (string) old('standard_id', $first?->standard_id ?: '');
+        $initialSubjectIds = old('subject_ids');
+        if (! is_array($initialSubjectIds)) {
+            $initialSubjectIds = $firstGroup
+                ? $firstGroup->pluck('subject_id')->map(fn ($id) => (string) $id)->values()->all()
+                : [];
+        } else {
+            $initialSubjectIds = array_map('strval', $initialSubjectIds);
+        }
 
         return view('teacher.settings', [
             'teacher' => $teacher,
             'todayOtp' => TeacherOtpService::ensureForTeacher($teacher),
             'mediums' => Standard::MEDIUMS,
-            'assignedGroups' => $this->assignedGroups($teacher->id),
+            'assignedGroups' => $assignedGroups,
             'formData' => $this->formData($teacher->id),
+            'initialMedium' => $initialMedium,
+            'initialStandardId' => $initialStandardId,
+            'initialSubjectIds' => $initialSubjectIds,
         ]);
     }
 
@@ -52,6 +70,13 @@ class SettingController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
+
+        $grade = (int) preg_replace('/\D+/', '', (string) ($standard->slug ?: $standard->name));
+        if (in_array($grade, [11, 12], true) && $subjectIds->isEmpty()) {
+            throw ValidationException::withMessages([
+                'subject_ids' => 'For Standard '.$grade.', select at least one subject (multi-select).',
+            ]);
+        }
 
         $allowedIds = Material::subjectsForStudent($standard, $medium)->pluck('id')->map(fn ($id) => (int) $id);
         $validIds = $subjectIds->intersect($allowedIds)->values();

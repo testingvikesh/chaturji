@@ -3,22 +3,35 @@
         <div>
             <span class="admin-section-label">Teacher</span>
             <h2 class="admin-page-title">Settings</h2>
-            <p class="admin-page-subtitle">Select medium, then standard, then subjects. A subject taken by another teacher for the same medium stays locked.</p>
+            <p class="admin-page-subtitle">Select medium, then standard, then subjects. Standard 11 &amp; 12 support multi-select subjects. A subject taken by another teacher for the same medium stays locked.</p>
         </div>
     </x-slot>
 
     <div class="admin-page space-y-6"
          x-data="{
             form: @js($formData),
-            medium: @js(old('medium', $teacher->medium ?: '')),
-            standardId: @js((string) old('standard_id', '')),
-            selected: @js(array_map('strval', old('subject_ids', []))),
+            medium: @js($initialMedium ?: ''),
+            standardId: @js((string) $initialStandardId),
+            selected: @js($initialSubjectIds),
             subjectKey() {
                 return this.medium && this.standardId ? (this.medium + '-' + this.standardId) : '';
             },
             currentSubjects() {
                 const key = this.subjectKey();
                 return key && this.form.subjects[key] ? this.form.subjects[key] : [];
+            },
+            availableSubjects() {
+                return this.currentSubjects().filter(s => !s.taken_by);
+            },
+            standardNumber() {
+                const std = (this.form.standards || []).find(s => String(s.id) === String(this.standardId));
+                if (!std) return 0;
+                const m = String(std.name || '').match(/(\d+)/);
+                return m ? parseInt(m[1], 10) : 0;
+            },
+            isMultiSelectStandard() {
+                const n = this.standardNumber();
+                return n === 11 || n === 12;
             },
             chooseMedium(value) {
                 this.medium = value || '';
@@ -34,15 +47,21 @@
                 const id = String(subject.id);
                 if (this.selected.includes(id)) {
                     this.selected = this.selected.filter(x => x !== id);
-                } else {
-                    this.selected = [...this.selected, id];
+                    return;
                 }
+                // Std 11 & 12: always multi-select. Other standards: also allow multi.
+                this.selected = [...this.selected, id];
             },
             isChecked(id) {
                 return this.selected.includes(String(id));
+            },
+            selectAll() {
+                this.selected = this.availableSubjects().map(s => String(s.id));
+            },
+            clearAll() {
+                this.selected = [];
             }
-         }"
-         x-init="if (medium && standardId && selected.length === 0) chooseStandard(standardId)">
+         }">
 
         <div class="admin-card">
             <div class="admin-card-top"></div>
@@ -88,7 +107,7 @@
                 @method('PUT')
                 <input type="hidden" name="medium" :value="medium">
                 <input type="hidden" name="standard_id" :value="standardId">
-                <template x-for="id in selected" :key="id">
+                <template x-for="id in selected" :key="'sid-'+id">
                     <input type="hidden" name="subject_ids[]" :value="id">
                 </template>
 
@@ -97,7 +116,7 @@
                     <select class="admin-select" x-model="medium" @change="chooseMedium(medium)" required>
                         <option value="">Choose medium</option>
                         <template x-for="(label, value) in form.mediums" :key="value">
-                            <option :value="value" x-text="label"></option>
+                            <option :value="value" x-text="label" :selected="medium === value"></option>
                         </template>
                     </select>
                     @error('medium')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
@@ -108,15 +127,30 @@
                     <select class="admin-select" x-model="standardId" @change="chooseStandard(standardId)" :disabled="!medium" required>
                         <option value="" x-text="medium ? 'Choose standard' : 'Select medium first'"></option>
                         <template x-for="std in form.standards" :key="std.id">
-                            <option :value="String(std.id)" x-text="std.name"></option>
+                            <option :value="String(std.id)" x-text="std.name" :selected="String(standardId) === String(std.id)"></option>
                         </template>
                     </select>
                     @error('standard_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
-                    <label class="admin-label">3. Select subjects</label>
-                    <p class="text-xs text-slate-500 mb-3">Locked subjects already belong to another teacher for this medium.</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div>
+                            <label class="admin-label mb-0">3. Select subjects</label>
+                            <p class="text-xs text-slate-500 mt-1"
+                               x-text="isMultiSelectStandard()
+                                   ? ('Standard ' + standardNumber() + ' — multi-select: choose one or more subjects (Ctrl/Cmd + click in the list, or tap cards).')
+                                   : 'Tap subjects to select. You can choose more than one.'"></p>
+                        </div>
+                        <div class="flex items-center gap-2" x-show="medium && standardId && availableSubjects().length" x-cloak>
+                            <button type="button" class="admin-btn-ghost text-xs py-1.5 px-3" @click="selectAll()">Select all</button>
+                            <button type="button" class="admin-btn-ghost text-xs py-1.5 px-3" @click="clearAll()">Clear</button>
+                        </div>
+                    </div>
+
+                    <p class="text-xs font-semibold text-brand-green mb-3" x-show="selected.length" x-cloak>
+                        <span x-text="selected.length"></span> subject(s) selected
+                    </p>
 
                     <div x-show="!medium" class="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-400 text-center">
                         Choose a medium first.
@@ -126,6 +160,20 @@
                     </div>
                     <div x-show="medium && standardId && currentSubjects().length === 0" x-cloak class="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-400 text-center">
                         No material subjects found for this medium and standard.
+                    </div>
+
+                    {{-- Native multi-select for Std 11 & 12 --}}
+                    <div x-show="medium && standardId && isMultiSelectStandard() && availableSubjects().length" x-cloak class="mb-4">
+                        <label class="admin-label">Multi-select list (Std <span x-text="standardNumber()"></span>)</label>
+                        <select multiple
+                                size="8"
+                                class="admin-select min-h-[12rem]"
+                                x-model="selected">
+                            <template x-for="subject in availableSubjects()" :key="'ms-'+subject.id">
+                                <option :value="String(subject.id)" x-text="subject.name"></option>
+                            </template>
+                        </select>
+                        <p class="text-xs text-slate-400 mt-1">Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects. On mobile, use the subject cards below.</p>
                     </div>
 
                     <div x-show="medium && standardId && currentSubjects().length" class="grid sm:grid-cols-2 gap-3">
@@ -161,7 +209,11 @@
                 </div>
 
                 <div class="flex items-center gap-3 pt-2">
-                    <button type="submit" class="admin-btn-primary" :disabled="!medium || !standardId">Save assignment</button>
+                    <button type="submit"
+                            class="admin-btn-primary"
+                            :disabled="!medium || !standardId || (isMultiSelectStandard() && selected.length === 0)">
+                        Save assignment
+                    </button>
                     <a href="{{ route('teacher.dashboard') }}" class="admin-btn-ghost">Back to dashboard</a>
                 </div>
             </form>
