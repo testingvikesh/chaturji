@@ -173,8 +173,11 @@
                 <div class="relative min-h-0 flex-1 overflow-hidden bg-slate-100">
                     <div x-show="textbookLoading"
                          x-cloak
-                         class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-50">
-                        <div class="h-10 w-10 animate-spin rounded-full border-[3px] border-brand-green-200 border-t-brand-green"></div>
+                         class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-brand-green-50 via-white to-amber-50">
+                        <img src="{{ asset('images/brand/ganpati.png') }}"
+                             alt="Shree Ganpati"
+                             class="h-20 w-20 sm:h-24 sm:w-24 object-contain drop-shadow-lg animate-pulse">
+                        <p class="text-sm font-bold text-brand-green">જય શ્રી ગણેશ</p>
                         <p class="text-sm font-semibold text-slate-700">Loading textbook…</p>
                         <p class="text-xs text-slate-500">Please wait while the PDF opens</p>
                     </div>

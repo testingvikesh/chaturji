@@ -132,14 +132,37 @@
 <div class="admin-page material-reader" x-data="{
     pdfOpen: false,
     textbookOpen: false,
+    textbookLoading: false,
+    textbookTimer: null,
     summaryOpen: false,
     topicPage: {{ $topicPageNumber ?: 0 }},
+    startTextbookLoading() {
+        this.textbookLoading = true;
+        clearTimeout(this.textbookTimer);
+        this.textbookTimer = setTimeout(() => { this.textbookLoading = false; }, 15000);
+    },
+    onTextbookLoaded() {
+        this.textbookLoading = false;
+        clearTimeout(this.textbookTimer);
+    },
     openTextbook() {
+        this.startTextbookLoading();
         this.textbookOpen = true;
+        document.body.classList.add('overflow-hidden');
         this.$nextTick(() => {
             const el = document.getElementById(this.topicPage ? 'textbook-page-' + this.topicPage : 'textbook-pages');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Page-image mode: hide loader once DOM is ready
+            if (document.getElementById('textbook-pages')) {
+                setTimeout(() => this.onTextbookLoaded(), 600);
+            }
         });
+    },
+    closeTextbook() {
+        this.textbookOpen = false;
+        this.textbookLoading = false;
+        clearTimeout(this.textbookTimer);
+        document.body.classList.remove('overflow-hidden');
     },
     goToSummaryPoint(anchor) {
         this.summaryOpen = false;
@@ -151,7 +174,7 @@
             setTimeout(() => el.classList.remove('ring-2', 'ring-brand-green', 'bg-emerald-50'), 1800);
         });
     }
-}">
+}" @keydown.escape.window="closeTextbook()">
     @if ($hasSummaryLinks)
         <button type="button"
                 @click="summaryOpen = true"
@@ -214,7 +237,7 @@
              x-cloak
              class="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6"
              style="display: none;">
-            <div class="absolute inset-0 bg-slate-900/60" @click="textbookOpen = false"></div>
+            <div class="absolute inset-0 bg-slate-900/60" @click="closeTextbook()"></div>
             <div class="relative flex h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
                  @click.stop>
                 <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
@@ -243,7 +266,7 @@
                             </a>
                         @endif
                         <button type="button"
-                                @click="textbookOpen = false"
+                                @click="closeTextbook()"
                                 class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
                                 aria-label="Close">
                             &times;
@@ -251,39 +274,55 @@
                     </div>
                 </div>
 
-                <div class="min-h-0 flex-1 overflow-y-auto bg-slate-100">
+                <div class="relative min-h-0 flex-1 overflow-hidden bg-slate-100">
+                    <div x-show="textbookLoading"
+                         x-cloak
+                         class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-brand-green-50 via-white to-amber-50">
+                        <img src="{{ asset('images/brand/ganpati.png') }}"
+                             alt="Shree Ganpati"
+                             class="h-20 w-20 sm:h-24 sm:w-24 object-contain drop-shadow-lg animate-pulse">
+                        <p class="text-sm font-bold text-brand-green">જય શ્રી ગણેશ</p>
+                        <p class="text-sm font-semibold text-slate-700">Loading textbook…</p>
+                        <p class="text-xs text-slate-500">Please wait while the PDF opens</p>
+                    </div>
+
                     @if ($textbookPageImages->isNotEmpty())
-                        <div id="textbook-pages" class="textbook-page-list mx-auto w-full max-w-3xl space-y-4 p-3 sm:p-5">
-                            @foreach ($textbookPageImages as $image)
-                                @php
-                                    $pageNo = (int) ($image['page'] ?? 0);
-                                    $pageRef = $pageNo > 0 ? (string) $pageNo : ($image['file'] ?? '1');
-                                    $isCurrent = $topicPageImage && (
-                                        ((int) ($topicPageImage['page'] ?? 0) === $pageNo && $pageNo > 0)
-                                        || (($topicPageImage['file'] ?? '') !== '' && ($topicPageImage['file'] ?? '') === ($image['file'] ?? ''))
-                                    );
-                                @endphp
-                                <figure id="textbook-page-{{ $pageNo ?: $loop->iteration }}"
-                                        class="textbook-page-card {{ $isCurrent ? 'textbook-page-card-current' : '' }}">
-                                    <figcaption class="textbook-page-caption">{{ $image['label'] ?? ('Page '.$pageRef) }}</figcaption>
-                                    <img src="{{ route('materials.textbook-page', [$material, $pageRef]) }}"
-                                         alt="{{ $image['label'] ?? 'Textbook page' }}"
-                                         class="textbook-page-image"
-                                         loading="{{ $isCurrent || $loop->iteration < 3 ? 'eager' : 'lazy' }}">
-                                </figure>
-                            @endforeach
+                        <div id="textbook-pages" class="h-full overflow-y-auto">
+                            <div class="textbook-page-list mx-auto w-full max-w-3xl space-y-4 p-3 sm:p-5">
+                                @foreach ($textbookPageImages as $image)
+                                    @php
+                                        $pageNo = (int) ($image['page'] ?? 0);
+                                        $pageRef = $pageNo > 0 ? (string) $pageNo : ($image['file'] ?? '1');
+                                        $isCurrent = $topicPageImage && (
+                                            ((int) ($topicPageImage['page'] ?? 0) === $pageNo && $pageNo > 0)
+                                            || (($topicPageImage['file'] ?? '') !== '' && ($topicPageImage['file'] ?? '') === ($image['file'] ?? ''))
+                                        );
+                                    @endphp
+                                    <figure id="textbook-page-{{ $pageNo ?: $loop->iteration }}"
+                                            class="textbook-page-card {{ $isCurrent ? 'textbook-page-card-current' : '' }}">
+                                        <figcaption class="textbook-page-caption">{{ $image['label'] ?? ('Page '.$pageRef) }}</figcaption>
+                                        <img src="{{ route('materials.textbook-page', [$material, $pageRef]) }}"
+                                             alt="{{ $image['label'] ?? 'Textbook page' }}"
+                                             class="textbook-page-image"
+                                             loading="{{ $isCurrent || $loop->iteration < 3 ? 'eager' : 'lazy' }}"
+                                             @if ($loop->first) @load="onTextbookLoaded()" @endif>
+                                    </figure>
+                                @endforeach
+                            </div>
                         </div>
                     @elseif ($textbookPdfUrl)
                         <iframe
                             x-show="textbookOpen"
                             :src="textbookOpen ? @js($textbookPdfUrl) : ''"
-                            class="h-full min-h-full w-full border-0"
+                            @load="onTextbookLoaded()"
+                            class="absolute inset-0 h-full w-full border-0 bg-slate-100"
                             title="Textbook PDF"></iframe>
                     @elseif ($textbookPublicUrl)
                         <iframe
                             x-show="textbookOpen"
                             :src="textbookOpen ? @js($textbookPublicUrl) : ''"
-                            class="h-full min-h-full w-full border-0"
+                            @load="onTextbookLoaded()"
+                            class="absolute inset-0 h-full w-full border-0 bg-slate-100"
                             title="Textbook PDF"></iframe>
                     @else
                         <div class="flex h-full items-center justify-center p-6 text-center">
