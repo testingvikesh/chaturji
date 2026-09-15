@@ -36,7 +36,7 @@ class Handler extends ExceptionHandler
                 $route = 'teacher.login';
             } elseif (str_starts_with($path, 'student') || str_contains($previous, '/student')) {
                 $route = 'student.login';
-            } elseif (str_starts_with($path, 'admin') || str_contains($previous, '/admin')) {
+            } elseif ((str_starts_with($path, 'admin') || str_contains($previous, '/admin')) && \Illuminate\Support\Facades\Route::has('admin.login')) {
                 $route = 'admin.login';
             } else {
                 $route = 'login';
