@@ -54,9 +54,18 @@ class MaterialWorkedExamples
      */
     public static function fromMaterial(Material $material): Collection
     {
-        $topics = $material->relationLoaded('topics')
-            ? $material->topics
-            : $material->topics()->orderBy('topic_order')->get();
+        // Always fetch section_json here — nav/list queries omit it for speed.
+        $topics = $material->topics()
+            ->orderBy('topic_order')
+            ->get([
+                'id',
+                'material_id',
+                'topic_order',
+                'title',
+                'title_gu',
+                'generated',
+                'section_json',
+            ]);
 
         return $topics
             ->flatMap(fn (MaterialTopic $topic) => self::fromTopic($topic))

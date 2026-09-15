@@ -41,7 +41,16 @@ class MaterialTopic extends Model
 
     public function hasContent(): bool
     {
-        return $this->generated && filled($this->section_json);
+        if (! $this->generated) {
+            return false;
+        }
+
+        // Lightweight eager loads omit section_json; generated + DB filter implies ready content.
+        if (! array_key_exists('section_json', $this->getAttributes())) {
+            return true;
+        }
+
+        return filled($this->section_json);
     }
 
     public function sectionData(): ?array

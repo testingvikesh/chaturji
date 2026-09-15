@@ -9,6 +9,7 @@ use App\Models\Standard;
 use App\Models\Subject;
 use App\Support\MaterialWorkedExamples;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -97,69 +98,77 @@ class MaterialPaperBank
             return [];
         }
 
-        return Material::subjectsForStudent($standard, $medium)
-            ->map(function (Subject $subject) use ($medium, $topicRoute, $topicRouteExtra) {
-                $chapters = Material::forStudentSubject($subject, $medium)
-                    ->map(function (Material $material, int $index) use ($subject, $topicRoute, $topicRouteExtra) {
-                        $topics = ($material->topics ?? collect())
-                            ->filter(fn (MaterialTopic $topic) => $topic->hasContent())
-                            ->values()
-                            ->map(fn (MaterialTopic $topic) => [
-                                'id' => $topic->id,
-                                'name' => $topic->displayName(),
-                                'url' => route($topicRoute, array_merge([
+        $cacheKey = 'reader-nav-tree:'
+            .$standard->id.':'
+            .Material::normalizeMedium($medium).':'
+            .$topicRoute.':'
+            .md5(json_encode($topicRouteExtra));
+
+        return Cache::remember($cacheKey, 300, function () use ($standard, $medium, $topicRoute, $topicRouteExtra) {
+            return Material::subjectsForStudent($standard, $medium)
+                ->map(function (Subject $subject) use ($medium, $topicRoute, $topicRouteExtra) {
+                    $chapters = Material::forStudentSubject($subject, $medium)
+                        ->map(function (Material $material, int $index) use ($subject, $topicRoute, $topicRouteExtra) {
+                            $topics = ($material->topics ?? collect())
+                                ->filter(fn (MaterialTopic $topic) => $topic->hasContent())
+                                ->values()
+                                ->map(fn (MaterialTopic $topic) => [
+                                    'id' => $topic->id,
+                                    'name' => $topic->displayName(),
+                                    'url' => route($topicRoute, array_merge([
+                                        'subject' => $subject,
+                                        'materialTopic' => $topic,
+                                    ], $topicRouteExtra)),
+                                ])
+                                ->all();
+
+                            $examples = MaterialWorkedExamples::isExampleSubject($subject)
+                                ? MaterialWorkedExamples::fromMaterial($material)
+                                : collect();
+                            $chapterRoute = self::chapterExamplesRoute($topicRoute);
+
+                            if ($topics === [] && $examples->isEmpty()) {
+                                return null;
+                            }
+
+                            $no = $material->displayChapterNo($index + 1);
+                            $chapterUrl = ($examples->isNotEmpty() && $chapterRoute)
+                                ? route($chapterRoute, array_merge([
                                     'subject' => $subject,
-                                    'materialTopic' => $topic,
-                                ], $topicRouteExtra)),
-                            ])
-                            ->all();
+                                    'material' => $material,
+                                ], $topicRouteExtra))
+                                : ($topics[0]['url'] ?? null);
 
-                        $examples = MaterialWorkedExamples::isExampleSubject($subject)
-                            ? MaterialWorkedExamples::fromMaterial($material)
-                            : collect();
-                        $chapterRoute = self::chapterExamplesRoute($topicRoute);
+                            if (! $chapterUrl) {
+                                return null;
+                            }
 
-                        if ($topics === [] && $examples->isEmpty()) {
-                            return null;
-                        }
+                            return [
+                                'id' => $material->id,
+                                'name' => trim($no.'. '.$material->displayChapterName()),
+                                'url' => $chapterUrl,
+                                'topics' => $topics,
+                            ];
+                        })
+                        ->filter()
+                        ->values()
+                        ->all();
 
-                        $no = $material->displayChapterNo($index + 1);
-                        $chapterUrl = ($examples->isNotEmpty() && $chapterRoute)
-                            ? route($chapterRoute, array_merge([
-                                'subject' => $subject,
-                                'material' => $material,
-                            ], $topicRouteExtra))
-                            : ($topics[0]['url'] ?? null);
+                    if ($chapters === []) {
+                        return null;
+                    }
 
-                        if (! $chapterUrl) {
-                            return null;
-                        }
-
-                        return [
-                            'id' => $material->id,
-                            'name' => trim($no.'. '.$material->displayChapterName()),
-                            'url' => $chapterUrl,
-                            'topics' => $topics,
-                        ];
-                    })
-                    ->filter()
-                    ->values()
-                    ->all();
-
-                if ($chapters === []) {
-                    return null;
-                }
-
-                return [
-                    'id' => $subject->id,
-                    'name' => $subject->name,
-                    'url' => $chapters[0]['url'],
-                    'chapters' => $chapters,
-                ];
-            })
-            ->filter()
-            ->values()
-            ->all();
+                    return [
+                        'id' => $subject->id,
+                        'name' => $subject->name,
+                        'url' => $chapters[0]['url'],
+                        'chapters' => $chapters,
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
+        });
     }
 
     /**

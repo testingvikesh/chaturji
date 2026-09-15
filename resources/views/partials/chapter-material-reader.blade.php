@@ -52,7 +52,15 @@
     $textbookPoints = collect($textbookPoints ?? []);
     $hasTextbookPoints = $textbookPoints->isNotEmpty();
     if ($material && method_exists($material, 'textbookPageImages')) {
-        $material->loadMissing('topics');
+        // Prefer already-loaded lightweight topics; avoid pulling section_json blobs.
+        if (! $material->relationLoaded('topics')) {
+            $material->setRelation(
+                'topics',
+                $material->topics()
+                    ->orderBy('topic_order')
+                    ->get(['id', 'material_id', 'topic_order', 'title', 'title_gu', 'image_url', 'generated'])
+            );
+        }
         $textbookPageImages = $material->textbookPageImages();
     } else {
         $textbookPageImages = collect();

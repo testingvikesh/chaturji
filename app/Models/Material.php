@@ -128,7 +128,24 @@ class Material extends Model
                 self::query()
                     ->forSubject($subject)
                     ->forMedium($medium)
-                    ->with(['topics' => fn ($q) => $q->orderBy('topic_order')])
+                    ->with(['topics' => function ($q) {
+                        // Never eager-load section_json here — it is huge and made topic pages very slow.
+                        $q->orderBy('topic_order')
+                            ->select([
+                                'id',
+                                'material_id',
+                                'topic_order',
+                                'topic_key',
+                                'title',
+                                'title_gu',
+                                'generated',
+                                'image_url',
+                                'updated_at',
+                            ])
+                            ->where('generated', true)
+                            ->whereNotNull('section_json')
+                            ->whereRaw("TRIM(section_json) <> ''");
+                    }])
                     ->get()
             )
         );
@@ -439,14 +456,17 @@ class Material extends Model
 
             $topics = $this->relationLoaded('topics')
                 ? $this->topics
-                : $this->topics()->get(['id', 'material_id', 'topic_order', 'title', 'title_gu', 'section_json', 'image_url']);
+                : $this->topics()->orderBy('topic_order')->get([
+                    'id',
+                    'material_id',
+                    'topic_order',
+                    'title',
+                    'title_gu',
+                    'image_url',
+                ]);
 
             foreach ($topics as $topic) {
                 $url = trim((string) ($topic->image_url ?? ''));
-                if ($url === '') {
-                    $section = $topic->sectionData();
-                    $url = trim((string) ($section['image_url'] ?? ''));
-                }
                 if ($url === '') {
                     continue;
                 }
