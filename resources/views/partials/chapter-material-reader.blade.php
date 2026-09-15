@@ -18,6 +18,9 @@
 
 @php
     use App\Support\ChapterMaterialHelper;
+    use App\Support\TeacherChapterAccess;
+
+    [$sections, $questionGroups] = TeacherChapterAccess::filterMaterial($sections, $questionGroups);
 
     $partition = ChapterMaterialHelper::partitionSections($sections);
     $introduction = $partition['introduction'];
