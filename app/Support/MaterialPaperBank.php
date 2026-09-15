@@ -98,17 +98,20 @@ class MaterialPaperBank
             return [];
         }
 
-        $cacheKey = 'reader-nav-tree:'
+        $cacheKey = 'reader-nav-tree:v2:'
             .$standard->id.':'
             .Material::normalizeMedium($medium).':'
             .$topicRoute.':'
             .md5(json_encode($topicRouteExtra));
 
-        return Cache::remember($cacheKey, 300, function () use ($standard, $medium, $topicRoute, $topicRouteExtra) {
+        return Cache::remember($cacheKey, 600, function () use ($standard, $medium, $topicRoute, $topicRouteExtra) {
             return Material::subjectsForStudent($standard, $medium)
                 ->map(function (Subject $subject) use ($medium, $topicRoute, $topicRouteExtra) {
+                    $isExampleSubject = MaterialWorkedExamples::isExampleSubject($subject);
+                    $chapterRoute = self::chapterExamplesRoute($topicRoute);
+
                     $chapters = Material::forStudentSubject($subject, $medium)
-                        ->map(function (Material $material, int $index) use ($subject, $topicRoute, $topicRouteExtra) {
+                        ->map(function (Material $material, int $index) use ($subject, $topicRoute, $topicRouteExtra, $isExampleSubject, $chapterRoute) {
                             $topics = ($material->topics ?? collect())
                                 ->filter(fn (MaterialTopic $topic) => $topic->hasContent())
                                 ->values()
@@ -122,17 +125,17 @@ class MaterialPaperBank
                                 ])
                                 ->all();
 
-                            $examples = MaterialWorkedExamples::isExampleSubject($subject)
-                                ? MaterialWorkedExamples::fromMaterial($material)
-                                : collect();
-                            $chapterRoute = self::chapterExamplesRoute($topicRoute);
+                            // Never parse section_json while building nav — use ready topic flags only.
+                            $hasExamples = $isExampleSubject && (
+                                $topics !== [] || (int) ($material->topics_done ?? 0) > 0
+                            );
 
-                            if ($topics === [] && $examples->isEmpty()) {
+                            if ($topics === [] && ! $hasExamples) {
                                 return null;
                             }
 
                             $no = $material->displayChapterNo($index + 1);
-                            $chapterUrl = ($examples->isNotEmpty() && $chapterRoute)
+                            $chapterUrl = ($hasExamples && $chapterRoute)
                                 ? route($chapterRoute, array_merge([
                                     'subject' => $subject,
                                     'material' => $material,

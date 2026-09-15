@@ -126,40 +126,70 @@ class Material extends Model
     public static function forStudentSubject(Subject $subject, ?string $medium): Collection
     {
         $mediumKey = self::normalizeMedium($medium) ?? 'any';
-        $cacheKey = 'materials:for-subject:'.$subject->id.':'.$mediumKey;
+        // v3: slim columns only (never pull material_json / attachments into the chapter index).
+        $cacheKey = 'materials:for-subject:v3:'.$subject->id.':'.$mediumKey;
 
-        return Cache::remember($cacheKey, 300, function () use ($subject, $medium) {
-            if (! $subject->relationLoaded('standard')) {
-                $subject->load('standard');
+        try {
+            $cached = Cache::get($cacheKey);
+            if ($cached instanceof Collection) {
+                return $cached;
             }
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
-            return self::sortAsChapters(
-                self::uniqueChapters(
-                    self::query()
-                        ->forSubject($subject)
-                        ->forMedium($medium)
-                        ->with(['topics' => function ($q) {
-                            // Never eager-load section_json here — it is huge and made topic pages very slow.
-                            $q->orderBy('topic_order')
-                                ->select([
-                                    'id',
-                                    'material_id',
-                                    'topic_order',
-                                    'topic_key',
-                                    'title',
-                                    'title_gu',
-                                    'generated',
-                                    'image_url',
-                                    'updated_at',
-                                ])
-                                ->where('generated', true)
-                                ->whereNotNull('section_json')
-                                ->whereRaw("TRIM(section_json) <> ''");
-                        }])
-                        ->get()
-                )
-            );
-        });
+        if (! $subject->relationLoaded('standard')) {
+            $subject->load('standard');
+        }
+
+        $materials = self::sortAsChapters(
+            self::uniqueChapters(
+                self::query()
+                    ->forSubject($subject)
+                    ->forMedium($medium)
+                    ->select([
+                        'id',
+                        'chapter_id',
+                        'slug',
+                        'title',
+                        'medium',
+                        'standard',
+                        'subject',
+                        'chapter_no',
+                        'chapter_name',
+                        'status',
+                        'topics_total',
+                        'topics_done',
+                        'updated_at',
+                    ])
+                    ->with(['topics' => function ($q) {
+                        // Index only needs titles — never touch section_json here.
+                        $q->orderBy('topic_order')
+                            ->select([
+                                'id',
+                                'material_id',
+                                'topic_order',
+                                'topic_key',
+                                'title',
+                                'title_gu',
+                                'generated',
+                                'image_url',
+                                'updated_at',
+                            ])
+                            ->where('generated', true);
+                    }])
+                    ->get()
+            )
+        );
+
+        try {
+            // Slim payload should fit; skip cache if serialization fails on shared hosts.
+            Cache::put($cacheKey, $materials, 600);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $materials;
     }
 
     public static function forgetStudentSubjectCache(int $subjectId, ?string $medium = null): void
@@ -170,6 +200,7 @@ class Material extends Model
 
         foreach ($mediums as $mediumKey) {
             Cache::forget('materials:for-subject:'.$subjectId.':'.$mediumKey);
+            Cache::forget('materials:for-subject:v3:'.$subjectId.':'.$mediumKey);
         }
     }
 
@@ -246,6 +277,18 @@ class Material extends Model
             return collect();
         }
 
+        $mediumKey = self::normalizeMedium($medium) ?? 'any';
+        $cacheKey = 'materials:subjects-for-student:v1:'.$standard->id.':'.$mediumKey;
+
+        try {
+            $cached = Cache::get($cacheKey);
+            if ($cached instanceof Collection) {
+                return $cached;
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         $number = self::standardNumber($standard);
 
         $rows = self::query()
@@ -267,13 +310,21 @@ class Material extends Model
             ->orderByRaw('LOWER(TRIM(subject))')
             ->get();
 
-        return $rows->map(function ($row) use ($standard) {
+        $subjects = $rows->map(function ($row) use ($standard) {
             $name = trim((string) $row->subject_name);
             $subject = self::matchOrCreateSubject($standard, $name);
             $subject->setAttribute('chapters_count', (int) $row->chapters_count);
 
             return $subject;
         })->values();
+
+        try {
+            Cache::put($cacheKey, $subjects, 600);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $subjects;
     }
 
     public static function matchOrCreateSubject(Standard $standard, string $name): Subject

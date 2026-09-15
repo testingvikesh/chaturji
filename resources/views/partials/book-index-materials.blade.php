@@ -44,7 +44,8 @@
                 $examplesCount = 0;
                 $openExamplesDirect = false;
                 if ($isExampleSubject) {
-                    $examplesCount = MaterialWorkedExamples::fromMaterial($material)->count();
+                    // Do NOT parse section_json here — that made Maths/Accounts subject pages hang.
+                    $examplesCount = max($topics->count(), (int) ($material->topics_done ?? 0));
                     $openExamplesDirect = $examplesCount > 0;
                 }
                 $chapterUrl = $openExamplesDirect
@@ -62,7 +63,7 @@
                         <div class="book-index-chapter-title">
                             <h4 class="book-index-chapter-name group-hover:text-brand-green">{{ $material->displayChapterName() }}</h4>
                             <p class="book-index-chapter-meta">
-                                {{ $examplesCount }} {{ Str::plural('example', $examplesCount) }}
+                                {{ $examplesCount }} {{ Str::plural('page', $examplesCount) }} ready
                                 <span class="text-brand-green"> &middot; Click to view examples</span>
                                 @if ($material->medium)
                                     <span class="text-slate-400"> &middot; {{ $material->medium }}</span>

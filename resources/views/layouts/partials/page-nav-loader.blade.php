@@ -108,6 +108,8 @@
     document.addEventListener('DOMContentLoaded', hideLoader);
     setTimeout(hideLoader, 0);
     setTimeout(hideLoader, 1500);
+    // Safety: never leave the overlay stuck if a navigation stalls or bfcache restores oddly.
+    setTimeout(hideLoader, 12000);
 
     function shouldShowForLink(a) {
         if (!a || a.target === '_blank' || a.hasAttribute('download')) return false;
@@ -123,7 +125,11 @@
             var url = new URL(href, window.location.origin);
             if (url.origin !== window.location.origin) return false;
             var path = url.pathname;
-            return path.indexOf('/material-topics/') !== -1
+            // Subject / book chapter index pages (slow without cache) + topic readers.
+            return /\/student\/subjects\/\d+(\/|$)/.test(path)
+                || /\/teacher\/books\/\d+(\/|$)/.test(path)
+                || /\/self-practice\/subjects\/\d+/.test(path)
+                || path.indexOf('/material-topics/') !== -1
                 || /\/books\/\d+\/topics\//.test(path)
                 || /\/self-practice\/.*\/material-topics\//.test(path);
         } catch (e) {

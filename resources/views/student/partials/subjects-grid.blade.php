@@ -25,6 +25,7 @@
             @foreach ($subjects as $subject)
                 @php $variant = $variants[$loop->index % count($variants)]; @endphp
                 <a href="{{ route('student.subjects.show', $subject) }}"
+                   data-page-loader
                    class="group student-subject-card {{ $variant }}">
                     <span class="student-subject-card-index">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
 
