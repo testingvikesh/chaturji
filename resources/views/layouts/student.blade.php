@@ -33,5 +33,6 @@
         </div>
     </div>
     @include('layouts.partials.page-nav-loader')
+    @include('layouts.partials.disable-context-menu')
 </body>
 </html>
