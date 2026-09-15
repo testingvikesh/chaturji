@@ -20,6 +20,11 @@
                 const key = this.subjectKey();
                 return key && this.form.subjects[key] ? this.form.subjects[key] : [];
             },
+            selectedSubjects() {
+                return this.selected
+                    .map(id => this.currentSubjects().find(s => String(s.id) === String(id)))
+                    .filter(Boolean);
+            },
             standardMeta() {
                 return (this.form.standards || []).find(s => String(s.id) === String(this.standardId)) || null;
             },
@@ -38,6 +43,17 @@
             chooseStandard(id) {
                 this.standardId = String(id || '');
                 this.selected = this.currentSubjects().filter(s => s.mine).map(s => String(s.id));
+            },
+            editGroup(medium, standardId) {
+                this.medium = medium || '';
+                this.standardId = String(standardId || '');
+                this.selected = this.currentSubjects().filter(s => s.mine).map(s => String(s.id));
+                this.$nextTick(() => {
+                    document.getElementById('assignment-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            },
+            removeSelected(id) {
+                this.selected = this.selected.filter(x => String(x) !== String(id));
             },
             toggle(subject) {
                 if (subject.locked) return;
@@ -58,41 +74,83 @@
             <div class="admin-card-header">
                 <div>
                     <h3 class="font-bold text-slate-900">Your assigned medium, standard & subjects</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">Saved after you submit below</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Use Edit to change subjects, or remove a subject with the × on each chip</p>
                 </div>
             </div>
             <div class="p-5">
                 @if ($assignedGroups->isEmpty())
-                    <p class="text-sm text-slate-500">Nothing saved yet. Select medium, standard and subjects below.</p>
+                    <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center">
+                        <p class="text-sm font-medium text-slate-600">Nothing saved yet</p>
+                        <p class="mt-1 text-xs text-slate-400">Select medium, standard and subjects in the form below.</p>
+                    </div>
                 @else
-                    <div class="space-y-4">
+                    <div class="space-y-3">
                         @foreach ($assignedGroups as $rows)
                             @php
                                 $first = $rows->first();
                                 $mediumKey = \App\Models\Material::normalizeMedium($first?->medium) ?: $first?->medium;
                                 $mediumLabel = \App\Models\Standard::MEDIUMS[$mediumKey] ?? ucfirst((string) $first?->medium);
+                                $standardName = $first?->standard?->name ?? 'Standard';
+                                $subjectCount = $rows->count();
                             @endphp
-                            <div class="rounded-xl border border-brand-green-100 bg-brand-green-50/50 p-4">
-                                <p class="text-sm font-bold text-brand-green">
-                                    {{ $mediumLabel }} · {{ $first?->standard?->name ?? 'Standard' }}
-                                </p>
-                                <div class="mt-2 flex flex-wrap gap-2">
+                            <div class="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-brand-green-50/40 p-4 shadow-sm">
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <p class="text-sm font-bold text-brand-green">
+                                                {{ $mediumLabel }} · {{ $standardName }}
+                                            </p>
+                                            <span class="inline-flex items-center rounded-full bg-white border border-brand-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-green">
+                                                {{ $subjectCount }} {{ $subjectCount === 1 ? 'subject' : 'subjects' }}
+                                            </span>
+                                        </div>
+                                        <p class="mt-1 text-xs text-slate-500">Saved assignment</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button"
+                                                class="inline-flex items-center gap-1.5 rounded-lg border border-brand-green-100 bg-white px-3 py-1.5 text-xs font-semibold text-brand-green hover:bg-brand-green-50 transition"
+                                                @click="editGroup(@js($mediumKey), @js((string) $first?->standard_id))">
+                                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z"/>
+                                            </svg>
+                                            Edit
+                                        </button>
+                                        <form method="POST"
+                                              action="{{ route('teacher.settings.groups.destroy') }}"
+                                              onsubmit="return confirm('Clear all subjects for {{ $mediumLabel }} · {{ $standardName }}?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="medium" value="{{ $mediumKey }}">
+                                            <input type="hidden" name="standard_id" value="{{ $first?->standard_id }}">
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition">
+                                                Clear
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 flex flex-wrap gap-2">
                                     @foreach ($rows as $row)
-                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white border border-brand-green-100 pl-3 pr-1 py-1 text-xs font-semibold text-slate-700">
-                                            {{ $row->subject?->name ?? 'Subject' }}
-                                            <form method="POST" action="{{ route('teacher.settings.subjects.destroy', $row) }}" class="inline" onsubmit="return confirm('Remove {{ $row->subject?->name ?? 'this subject' }} from your assignment?');">
+                                        @php $subjectName = $row->subject?->name ?? 'Subject'; @endphp
+                                        <div class="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1.5 pl-3.5 pr-1.5 text-sm font-semibold text-slate-800 shadow-sm">
+                                            <span class="leading-none">{{ $subjectName }}</span>
+                                            <form method="POST"
+                                                  action="{{ route('teacher.settings.subjects.destroy', $row) }}"
+                                                  class="inline-flex"
+                                                  onsubmit="return confirm('Remove {{ $subjectName }} from {{ $mediumLabel }} · {{ $standardName }}?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
-                                                        class="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600"
-                                                        title="Remove {{ $row->subject?->name ?? 'subject' }}"
-                                                        aria-label="Remove {{ $row->subject?->name ?? 'subject' }}">
+                                                        class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-red-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-200"
+                                                        title="Remove {{ $subjectName }}"
+                                                        aria-label="Remove {{ $subjectName }}">
                                                     <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                                         <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
                                                     </svg>
                                                 </button>
                                             </form>
-                                        </span>
+                                        </div>
                                     @endforeach
                                 </div>
                             </div>
@@ -102,7 +160,7 @@
             </div>
         </div>
 
-        <div class="admin-form-card">
+        <div id="assignment-form" class="admin-form-card scroll-mt-4">
             <div class="admin-card-top"></div>
             <form method="POST" action="{{ route('teacher.settings.update') }}" class="admin-card-body">
                 @csrf
@@ -142,7 +200,7 @@
                     <label class="admin-label">3. Select subjects</label>
                     <p class="text-xs text-slate-500 mb-3"
                        x-text="isSharedStandard()
-                           ? 'Tap to select. For Std ' + standardNumber() + ', up to 2 teachers may share one subject.'
+                           ? 'Tap cards to select. For Std ' + standardNumber() + ', up to 2 teachers may share one subject.'
                            : 'Locked subjects already belong to another teacher for this medium.'"></p>
 
                     <div x-show="!medium" class="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-400 text-center">
@@ -155,22 +213,32 @@
                         No material subjects found for this medium and standard.
                     </div>
 
-                    <div x-show="medium && standardId && selected.length" x-cloak class="mb-3">
-                        <p class="text-xs font-semibold text-slate-600 mb-2">Selected (click × to remove)</p>
+                    <div x-show="medium && standardId && selected.length" x-cloak class="mb-4 rounded-2xl border border-brand-green-100 bg-brand-green-50/50 p-3">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <p class="text-xs font-bold uppercase tracking-wide text-brand-green">
+                                Selected · <span x-text="selected.length"></span>
+                            </p>
+                            <button type="button"
+                                    class="text-xs font-semibold text-slate-500 hover:text-red-600 transition"
+                                    @click="selected = []"
+                                    x-show="selected.length">
+                                Clear selected
+                            </button>
+                        </div>
                         <div class="flex flex-wrap gap-2">
-                            <template x-for="id in selected" :key="'chip-'+id">
-                                <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-green-50 border border-brand-green-100 pl-3 pr-1 py-1 text-xs font-semibold text-brand-green">
-                                    <span x-text="(currentSubjects().find(s => String(s.id) === String(id)) || {}).name || ('#'+id)"></span>
+                            <template x-for="subject in selectedSubjects()" :key="'chip-'+subject.id">
+                                <div class="inline-flex items-center gap-2 rounded-full border border-brand-green-200 bg-white py-1.5 pl-3.5 pr-1.5 text-sm font-semibold text-slate-800 shadow-sm">
+                                    <span class="leading-none" x-text="subject.name"></span>
                                     <button type="button"
-                                            class="inline-flex h-5 w-5 items-center justify-center rounded-full text-brand-green/70 hover:bg-white hover:text-red-600"
-                                            @click="selected = selected.filter(x => x !== id)"
+                                            class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-red-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-200"
+                                            @click="removeSelected(subject.id)"
                                             title="Remove"
                                             aria-label="Remove selected subject">
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                             <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
                                         </svg>
                                     </button>
-                                </span>
+                                </div>
                             </template>
                         </div>
                     </div>

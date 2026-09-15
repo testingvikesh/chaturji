@@ -152,6 +152,29 @@ class SettingController extends Controller
             ->with('success', $name.' was removed from your assignment.');
     }
 
+    public function destroyGroup(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'medium' => ['required', Rule::in(array_keys(Standard::MEDIUMS))],
+            'standard_id' => ['required', 'integer', 'exists:standards,id'],
+        ]);
+
+        $teacher = auth()->user();
+        $medium = Material::normalizeMedium($validated['medium']) ?: $validated['medium'];
+
+        $deleted = TeacherSubject::query()
+            ->where('teacher_id', $teacher->id)
+            ->where('medium', $medium)
+            ->where('standard_id', $validated['standard_id'])
+            ->delete();
+
+        return redirect()
+            ->route('teacher.settings.edit')
+            ->with('success', $deleted > 0
+                ? 'Assignment group cleared.'
+                : 'Nothing to remove for that group.');
+    }
+
     private function assignedGroups(int $teacherId)
     {
         return TeacherSubject::query()
