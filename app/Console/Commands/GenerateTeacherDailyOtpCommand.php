@@ -7,9 +7,9 @@ use Illuminate\Console\Command;
 
 class GenerateTeacherDailyOtpCommand extends Command
 {
-    protected $signature = 'teachers:generate-daily-otp {--force : Replace today\'s OTP for every approved teacher} {--no-email : Generate OTP without sending emails}';
+    protected $signature = 'teachers:generate-daily-otp {--force : Replace today\'s OTP for every approved teacher} {--email : Also email OTPs (off by default)}';
 
-    protected $description = 'Create a 4-digit login OTP for each approved teacher for today and email it';
+    protected $description = 'Create a 4-digit login OTP for each approved teacher for today and send it to Notifications';
 
     public function handle(): int
     {
@@ -17,13 +17,15 @@ class GenerateTeacherDailyOtpCommand extends Command
 
         $this->info('Teacher login OTPs ready for '.now()->toDateString().' ('.$count.' teacher'.($count === 1 ? '' : 's').').');
 
-        if ($this->option('no-email')) {
-            return self::SUCCESS;
+        $notify = TeacherOtpService::notifyTodayOtpsToApprovedTeachers();
+        $this->info('OTP notifications sent: '.$notify['notified'].' · skipped: '.$notify['skipped']);
+
+        if ($this->option('email')) {
+            $mail = TeacherOtpService::emailTodayOtpsToApprovedTeachers();
+            $this->info('OTP emails sent: '.$mail['sent'].' · skipped (no email): '.$mail['skipped'].' · failed: '.$mail['failed']);
+        } else {
+            $this->info('OTP email skipped (use --email to send mail).');
         }
-
-        $mail = TeacherOtpService::emailTodayOtpsToApprovedTeachers();
-
-        $this->info('OTP emails sent: '.$mail['sent'].' · skipped (no email): '.$mail['skipped'].' · failed: '.$mail['failed']);
 
         return self::SUCCESS;
     }

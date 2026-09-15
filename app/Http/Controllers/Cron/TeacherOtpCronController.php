@@ -15,21 +15,25 @@ class TeacherOtpCronController extends Controller
 
         $force = $request->boolean('force');
         $count = TeacherOtpService::generateForApprovedTeachers(null, $force);
-        $mail = $request->boolean('no_email')
-            ? ['sent' => 0, 'skipped' => 0, 'failed' => 0]
-            : TeacherOtpService::emailTodayOtpsToApprovedTeachers();
+        $notify = TeacherOtpService::notifyTodayOtpsToApprovedTeachers();
+
+        // Email is opt-in only: ?email=1
+        $mail = $request->boolean('email')
+            ? TeacherOtpService::emailTodayOtpsToApprovedTeachers()
+            : ['sent' => 0, 'skipped' => 0, 'failed' => 0];
 
         return response()->json([
             'ok' => true,
             'date' => now()->toDateString(),
             'teachers' => $count,
             'force' => $force,
+            'notifications_sent' => $notify['notified'],
             'emails_sent' => $mail['sent'],
             'emails_skipped' => $mail['skipped'],
             'emails_failed' => $mail['failed'],
             'message' => $force
-                ? 'New 4-digit OTPs generated and emailed for today.'
-                : 'Today\'s 4-digit OTPs are ready and emailed.',
+                ? 'New 4-digit OTPs generated and sent to Notifications (email off by default).'
+                : 'Today\'s 4-digit OTPs are ready in Notifications (email off by default).',
         ]);
     }
 }

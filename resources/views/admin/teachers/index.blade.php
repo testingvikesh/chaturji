@@ -2,7 +2,7 @@
     <x-slot name="header">
         <x-admin.partials.page-header title="Teachers" subtitle="Manage registered teacher accounts">
             <x-slot name="actions">
-                <form method="POST" action="{{ route('admin.teachers.generate-otp') }}" onsubmit="return confirm('Generate a new 4-digit OTP for all approved teachers and email it to them?')">
+                <form method="POST" action="{{ route('admin.teachers.generate-otp') }}" onsubmit="return confirm('Generate a new 4-digit OTP for all approved teachers and send it to Notifications (no email)?')">
                     @csrf
                     <button type="submit" class="admin-btn-secondary">Generate Today OTP</button>
                 </form>

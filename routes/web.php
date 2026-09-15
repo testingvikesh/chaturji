@@ -41,6 +41,7 @@ use App\Http\Controllers\Teacher\DailySyllabusController;
 use App\Http\Controllers\Teacher\TodaysTeachingController;
 use App\Http\Controllers\Teacher\SettingController as TeacherSettingController;
 use App\Http\Controllers\Teacher\BookController as TeacherBookController;
+use App\Http\Controllers\Teacher\NotificationController as TeacherNotificationController;
 use App\Http\Controllers\UserTicketController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\PublicStorageController;
@@ -203,6 +204,10 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::post('/tickets', [UserTicketController::class, 'store'])->name('tickets.store');
     Route::get('/tickets/{ticket}', [UserTicketController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/reply', [UserTicketController::class, 'reply'])->name('tickets.reply');
+
+    Route::get('/notifications', [TeacherNotificationController::class, 'index'])->name('notifications.index');
+    Route::match(['get', 'post'], '/notifications/{id}/read', [TeacherNotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [TeacherNotificationController::class, 'markAllRead'])->name('notifications.read-all');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {

@@ -106,14 +106,11 @@ class TeacherController extends Controller
         $this->ensureTeacher($teacher);
         $teacher->update(['is_approved' => true]);
         TeacherOtpService::ensureForTeacher($teacher);
-        $mailStatus = TeacherOtpService::emailTodayOtpToTeacher($teacher);
-        $mailNote = $mailStatus === 'sent'
-            ? ' Today\'s OTP was emailed.'
-            : ($mailStatus === 'failed' ? ' OTP email failed.' : '');
+        TeacherOtpService::notifyTodayOtpToTeacher($teacher);
 
         return redirect()
             ->back()
-            ->with('success', $teacher->name.' has been approved and can now login.'.$mailNote);
+            ->with('success', $teacher->name.' has been approved and can now login. Today\'s OTP is in Notifications.');
     }
 
     public function pending(User $teacher)
@@ -129,11 +126,11 @@ class TeacherController extends Controller
     public function generateOtp(): RedirectResponse
     {
         $count = TeacherOtpService::generateForApprovedTeachers(null, true);
-        $mail = TeacherOtpService::emailTodayOtpsToApprovedTeachers();
+        $notify = TeacherOtpService::notifyTodayOtpsToApprovedTeachers();
 
         return redirect()
             ->route('admin.teachers.index')
-            ->with('success', 'Today\'s 4-digit OTP generated for '.$count.' approved teacher'.($count === 1 ? '' : 's').'. Email sent to '.$mail['sent'].'.');
+            ->with('success', 'Today\'s 4-digit OTP generated for '.$count.' approved teacher'.($count === 1 ? '' : 's').'. Sent to Notifications ('.$notify['notified'].'). No email sent.');
     }
 
     public function report(): View

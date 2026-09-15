@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Mail\TeacherDailyOtpMail;
 use App\Models\TeacherDailyOtp;
 use App\Models\User;
+use App\Notifications\TeacherDailyOtpNotification;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -65,6 +66,59 @@ class TeacherOtpService
     }
 
     /**
+     * Push today's OTP into each teacher's in-app notification inbox (no email).
+     *
+     * @return array{notified:int, skipped:int}
+     */
+    public static function notifyTodayOtpsToApprovedTeachers(): array
+    {
+        $notified = 0;
+        $skipped = 0;
+
+        User::teachers()
+            ->approved()
+            ->orderBy('id')
+            ->each(function (User $teacher) use (&$notified, &$skipped) {
+                if (self::notifyTodayOtpToTeacher($teacher)) {
+                    $notified++;
+                } else {
+                    $skipped++;
+                }
+            });
+
+        return compact('notified', 'skipped');
+    }
+
+    public static function notifyTodayOtpToTeacher(User $teacher): bool
+    {
+        try {
+            $otp = self::ensureForTeacher($teacher);
+
+            $otpDate = optional($otp->otp_date)?->toDateString() ?: now()->toDateString();
+
+            // Replace any earlier OTP alerts for today so the inbox stays clean.
+            $teacher->notifications()
+                ->where('data->type', 'otp')
+                ->where('data->otp_date', $otpDate)
+                ->delete();
+
+            $teacher->notify(new TeacherDailyOtpNotification($otp));
+
+            return true;
+        } catch (Throwable $e) {
+            report($e);
+            Log::warning('Teacher OTP notification failed', [
+                'teacher_id' => $teacher->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Optional email delivery — disabled by default (use notify instead).
+     *
      * @return array{sent:int, skipped:int, failed:int}
      */
     public static function emailTodayOtpsToApprovedTeachers(): array
