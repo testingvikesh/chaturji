@@ -42,6 +42,7 @@ use App\Http\Controllers\Teacher\TodaysTeachingController;
 use App\Http\Controllers\Teacher\SettingController as TeacherSettingController;
 use App\Http\Controllers\Teacher\BookController as TeacherBookController;
 use App\Http\Controllers\Teacher\NotificationController as TeacherNotificationController;
+use App\Http\Controllers\Teacher\ProfileController as TeacherProfileController;
 use App\Http\Controllers\UserTicketController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\PublicStorageController;
@@ -158,6 +159,10 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/books/{subject}/topics/{materialTopic}', [TeacherBookController::class, 'topic'])->name('books.topics.show');
     Route::get('/settings', [TeacherSettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [TeacherSettingController::class, 'update'])->name('settings.update');
+    Route::get('/profile', [TeacherProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [TeacherProfileController::class, 'update'])->name('profile.update');
+    Route::get('/change-password', [TeacherProfileController::class, 'editPassword'])->name('change-password');
+    Route::put('/change-password', [TeacherProfileController::class, 'updatePassword'])->name('password.update');
     Route::get('/subjects/{subject}', [TeacherSubjectController::class, 'show'])->name('subjects.show');
     Route::get('/subjects/{subject}/topics/{topic}', [TeacherTopicController::class, 'show'])->name('subjects.topics.show');
     Route::get('/subjects/{subject}/chapters/{chapter}', [TeacherTopicController::class, 'chapter'])->name('subjects.chapters.show');
