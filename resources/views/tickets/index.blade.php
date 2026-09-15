@@ -31,6 +31,7 @@
                             <th>Status</th>
                             <th>Replies</th>
                             <th>Date</th>
+                            <th class="text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -44,9 +45,12 @@
                                 <td>@include('tickets.partials.status-badge', ['status' => $ticket->status])</td>
                                 <td>{{ $ticket->replies_count }}</td>
                                 <td class="text-xs text-slate-500 whitespace-nowrap">{{ $ticket->created_at?->format('d M Y, h:i A') }}</td>
+                                <td class="text-right">
+                                    <a href="{{ route($routePrefix.'.show', $ticket) }}" class="admin-btn-secondary text-xs py-2 px-3 inline-flex">View</a>
+                                </td>
                             </tr>
                         @empty
-                            @include('admin.partials.empty-row', ['colspan' => 6, 'message' => 'No tickets yet', 'hint' => 'Click Generate Ticket to create one.'])
+                            @include('admin.partials.empty-row', ['colspan' => 7, 'message' => 'No tickets yet', 'hint' => 'Click Generate Ticket to create one.'])
                         @endforelse
                     </tbody>
                 </table>

@@ -16,7 +16,11 @@
 
         <div class="admin-form-card">
             <div class="admin-card-top"></div>
-            <form method="POST" action="{{ route($routePrefix.'.store') }}" class="admin-card-body">
+            <form method="POST"
+                  action="{{ route($routePrefix.'.store') }}"
+                  class="admin-card-body"
+                  x-data="{ sending: false }"
+                  @submit="if (sending) { $event.preventDefault(); return; } sending = true">
                 @csrf
                 <div>
                     <label class="admin-label">Category</label>
@@ -38,8 +42,13 @@
                     @error('message')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div class="flex items-center gap-3 pt-2">
-                    <button type="submit" class="admin-btn-primary">Generate Ticket</button>
-                    <a href="{{ route($routePrefix.'.index') }}" class="admin-btn-ghost">Cancel</a>
+                    <button type="submit"
+                            class="admin-btn-primary"
+                            :disabled="sending"
+                            :class="{ 'opacity-60 cursor-not-allowed': sending }">
+                        <span x-text="sending ? 'Submitting…' : 'Generate Ticket'">Generate Ticket</span>
+                    </button>
+                    <a href="{{ route($routePrefix.'.index') }}" class="admin-btn-ghost" @click="if (sending) $event.preventDefault()">Cancel</a>
                 </div>
             </form>
         </div>
