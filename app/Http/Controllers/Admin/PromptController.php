@@ -35,7 +35,7 @@ class PromptController extends Controller
         abort_unless(in_array($prompt, $keys, true), 404);
 
         $validated = $request->validate([
-            'body' => ['required', 'string', 'max:20000'],
+            'body' => ['required', 'string', 'max:100000'],
             'key' => ['required', Rule::in($keys)],
         ]);
 

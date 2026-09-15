@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-admin.partials.page-header title="AI Prompts" subtitle="Set the prompts used for answer-sheet checking and OCR" />
+        <x-admin.partials.page-header title="AI Prompts" subtitle="Set prompts for grading, OCR, and exam paper generation" />
     </x-slot>
 
     <div class="admin-page">

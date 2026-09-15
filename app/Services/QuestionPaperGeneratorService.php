@@ -98,8 +98,6 @@ class QuestionPaperGeneratorService
             $pool = $this->poolQueryForScope($chapterIds, $topicIds)
                 ->where('question_type', $type)
                 ->whereNotIn('id', $usedIds)
-                ->inRandomOrder()
-                ->limit($count)
                 ->get();
 
             if ($pool->count() < $count) {
@@ -108,8 +106,9 @@ class QuestionPaperGeneratorService
                 ]);
             }
 
-            $usedIds = array_merge($usedIds, $pool->pluck('id')->all());
-            $selected = $selected->concat($pool);
+            $picked = $this->pickWithTopicDiversity($pool, $count);
+            $usedIds = array_merge($usedIds, $picked->pluck('id')->all());
+            $selected = $selected->concat($picked);
         }
 
         $marksPerType = PaperTypeHelper::normalizeMarksPerType($marksPerType, $typeCounts);
@@ -299,5 +298,53 @@ class QuestionPaperGeneratorService
         throw ValidationException::withMessages([
             'chapter_id' => 'Please select a chapter.',
         ]);
+    }
+
+    /**
+     * Prefer questions from different topics / section titles before repeats.
+     *
+     * @param  Collection<int, ChapterQuestion>  $pool
+     * @return Collection<int, ChapterQuestion>
+     */
+    private function pickWithTopicDiversity(Collection $pool, int $count): Collection
+    {
+        if ($pool->count() <= $count) {
+            return $pool->values();
+        }
+
+        $byTopic = $pool
+            ->shuffle()
+            ->groupBy(function (ChapterQuestion $question) {
+                $meta = is_array($question->metadata) ? $question->metadata : [];
+
+                return (string) ($meta['section_title'] ?? $meta['topic'] ?? 'general');
+            });
+
+        $picked = collect();
+        $topicKeys = $byTopic->keys()->values();
+        $index = 0;
+
+        while ($picked->count() < $count && $byTopic->flatten(1)->isNotEmpty()) {
+            $topic = $topicKeys[$index % max(1, $topicKeys->count())];
+            $index++;
+
+            $bucket = $byTopic->get($topic);
+            if (! $bucket instanceof Collection || $bucket->isEmpty()) {
+                $byTopic->forget($topic);
+                $topicKeys = $byTopic->keys()->values();
+                continue;
+            }
+
+            $question = $bucket->shift();
+            $picked->push($question);
+            $byTopic->put($topic, $bucket);
+
+            if ($bucket->isEmpty()) {
+                $byTopic->forget($topic);
+                $topicKeys = $byTopic->keys()->values();
+            }
+        }
+
+        return $picked->values();
     }
 }

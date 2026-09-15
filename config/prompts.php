@@ -41,5 +41,12 @@ return [
             'default' => 'Transcribe this handwritten answer sheet exactly (English or Gujarati). '
                 .'Preserve Q numbers and Ans lines, e.g. "Q10. ..." then "Ans - ...". Plain text only.',
         ],
+        'exam_paper_generator' => [
+            'label' => 'AI Exam Paper Generator',
+            'hint' => 'Master prompt for balanced exam paper generation. Placeholders: {{total_marks}}, {{standard}}, {{subject}}, {{exam_date}}, {{class_label}}, {{syllabus_outline}}, {{chapter_weightage}}, {{difficulty_easy}}, {{difficulty_medium}}, {{difficulty_hard}}, {{set_label}}, {{available_questions_json}}, {{previous_exam_summary}}.',
+            'default' => is_file(resource_path('prompts/exam_paper_generator.txt'))
+                ? (string) file_get_contents(resource_path('prompts/exam_paper_generator.txt'))
+                : '',
+        ],
     ],
 ];

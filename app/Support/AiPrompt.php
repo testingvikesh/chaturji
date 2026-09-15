@@ -6,17 +6,39 @@ use App\Models\Setting;
 
 class AiPrompt
 {
-    public static function get(string $key): string
+    /**
+     * @param  array<string, scalar|null>  $replacements
+     */
+    public static function get(string $key, array $replacements = []): string
     {
         $default = (string) (config('prompts.catalog.'.$key.'.default') ?? '');
         $saved = trim((string) Setting::get('prompt_'.$key, ''));
 
-        return $saved !== '' ? $saved : $default;
+        $text = $saved !== '' ? $saved : $default;
+
+        return self::applyReplacements($text, $replacements);
     }
 
     public static function settingKey(string $key): string
     {
         return 'prompt_'.$key;
+    }
+
+    /**
+     * @param  array<string, scalar|null>  $replacements
+     */
+    public static function applyReplacements(string $text, array $replacements): string
+    {
+        foreach ($replacements as $key => $value) {
+            $value = (string) ($value ?? '');
+            $text = str_replace(
+                ['{{'.$key.'}}', '{'.$key.'}'],
+                $value,
+                $text
+            );
+        }
+
+        return $text;
     }
 
     /**

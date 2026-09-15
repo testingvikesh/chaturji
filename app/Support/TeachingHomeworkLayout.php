@@ -25,27 +25,12 @@ class TeachingHomeworkLayout
      */
     public static function autoLayout(int $targetMarks): array
     {
-        $targetMarks = max(1, $targetMarks);
-        $objectiveMarks = (int) round($targetMarks * 0.45);
-        $subjectiveMarks = $targetMarks - $objectiveMarks;
-
-        $typeCounts = array_merge(
-            self::splitEvenly($objectiveMarks, ['one_word', 'mcq', 'true_false', 'match']),
-            self::splitByMarkWeights($subjectiveMarks, [
-                'one_mark' => 1,
-                'two_marks' => 2,
-                'three_marks' => 3,
-                'five_marks' => 5,
-            ])
-        );
-
-        $typeCounts = PaperTypeHelper::normalizeCounts($typeCounts);
-        $marksPerType = self::marksPerType();
+        $layout = ExamPaperWeightage::layoutForTotalMarks($targetMarks);
 
         return [
-            'type_counts' => $typeCounts,
-            'marks_per_type' => PaperTypeHelper::normalizeMarksPerType($marksPerType, $typeCounts),
-            'total_marks' => PaperTypeHelper::totalMarks($typeCounts, $marksPerType),
+            'type_counts' => $layout['type_counts'],
+            'marks_per_type' => $layout['marks_per_type'],
+            'total_marks' => $layout['total_marks'],
         ];
     }
 

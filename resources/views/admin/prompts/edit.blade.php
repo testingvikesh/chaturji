@@ -24,7 +24,19 @@
 
                 <div>
                     <label for="body" class="admin-label">Prompt text</label>
-                    <textarea id="body" name="body" rows="16" required class="admin-input font-mono text-sm">{{ old('body', $prompt['value']) }}</textarea>
+                    <textarea id="body" name="body" rows="{{ ($prompt['key'] ?? '') === 'exam_paper_generator' ? 28 : 16 }}" required class="admin-input font-mono text-sm">{{ old('body', $prompt['value']) }}</textarea>
+                    @if (($prompt['key'] ?? '') === 'exam_paper_generator')
+                        <p class="text-xs text-slate-500 mt-2">
+                            Dynamic placeholders:
+                            <code class="text-[11px]">{{'{{total_marks}}'}}</code>,
+                            <code class="text-[11px]">{{'{{standard}}'}}</code>,
+                            <code class="text-[11px]">{{'{{subject}}'}}</code>,
+                            <code class="text-[11px]">{{'{{exam_date}}'}}</code>,
+                            <code class="text-[11px]">{{'{{syllabus_outline}}'}}</code>,
+                            <code class="text-[11px]">{{'{{chapter_weightage}}'}}</code>,
+                            <code class="text-[11px]">{{'{{available_questions_json}}'}}</code>
+                        </p>
+                    @endif
                     @error('body')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 

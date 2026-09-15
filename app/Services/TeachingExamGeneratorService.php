@@ -6,6 +6,8 @@ use App\Models\Exam;
 use App\Models\ExamLog;
 use App\Models\ExamQuestion;
 use App\Models\User;
+use App\Support\ExamPaperPromptBuilder;
+use App\Support\ExamPaperWeightage;
 use App\Support\PaperTypeHelper;
 use App\Support\TeachingHomeworkLayout;
 use Illuminate\Support\Collection;
@@ -88,6 +90,26 @@ class TeachingExamGeneratorService
             ]);
         }
 
+        $first = $logs->first();
+        $syllabusOutline = $logs->map(function (ExamLog $log) {
+            return trim(($log->chapter?->name ?? 'Chapter').' / '.($log->topic?->name ?? 'Topic'));
+        })->filter()->unique()->values()->implode("\n");
+
+        $masterPrompt = ExamPaperPromptBuilder::build([
+            'total_marks' => $targetMarks,
+            'standard' => (string) ($first->standard ?? ''),
+            'class_label' => (string) ($first->standard ?? ''),
+            'subject' => (string) ($first->subject?->name ?? ''),
+            'exam_date' => $first->exam_date?->format('d M Y') ?? now()->format('d M Y'),
+            'syllabus_outline' => $syllabusOutline !== '' ? $syllabusOutline : '(not provided)',
+            'chapter_weightage' => 'balanced across selected topics',
+            'set_label' => 'Set A',
+            'available_questions_json' => json_encode([
+                'type_counts' => $combinedTypeCounts,
+                'question_ids' => $allQuestions->pluck('id')->values()->all(),
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
         return [
             'logs' => $logs,
             'target_marks' => $targetMarks,
@@ -99,6 +121,8 @@ class TeachingExamGeneratorService
             'topic_sections' => $topicSections,
             'question_ids' => $allQuestions->pluck('id')->all(),
             'sources' => $sources,
+            'master_weightage' => ExamPaperWeightage::TYPE_PERCENTS,
+            'ai_prompt' => $masterPrompt,
         ];
     }
 
@@ -152,6 +176,14 @@ class TeachingExamGeneratorService
                     'total_marks' => $section['total_marks'],
                 ])->all(),
                 'generated_from' => 'todays_exam',
+                'master_weightage' => ExamPaperWeightage::TYPE_PERCENTS,
+                'ai_prompt_key' => 'exam_paper_generator',
+                'ai_prompt' => $preview['ai_prompt'] ?? ExamPaperPromptBuilder::build([
+                    'total_marks' => $targetMarks,
+                    'standard' => (string) ($first->standard ?? ''),
+                    'subject' => $subjectName,
+                    'exam_date' => $examDate,
+                ]),
             ],
         ]);
 
