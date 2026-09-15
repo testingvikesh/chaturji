@@ -60,13 +60,13 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Teacher/Student chapter detail visibility (by client IP)
+    | Teacher chapter detail visibility (by client IP)
     |--------------------------------------------------------------------------
     |
-    | On these IPs, teacher AND student panels can see Introduction, Trailer,
-    | Importance, Knowledge Ladder, Line to Line, What I Like, and
-    | 32 ગુણ / 64 કળા / 16 સંસ્કાર. Any other IP hides those blocks.
-    | Comma-separated list in TEACHER_CHAPTER_DETAIL_IPS.
+    | Teachers on these IPs can see Introduction, Trailer, Importance,
+    | Knowledge Ladder, Line to Line, What I Like, and 32 ગુણ / 64 કળા / 16 સંસ્કાર.
+    | Teachers on any other IP will not see those blocks.
+    | Students are not affected. Comma-separated list in TEACHER_CHAPTER_DETAIL_IPS.
     |
     */
 

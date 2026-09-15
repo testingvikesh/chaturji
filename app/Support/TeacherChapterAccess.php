@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 class TeacherChapterAccess
 {
     /**
-     * Chapter content sections only visible on allowed IPs (teacher + student panels).
+     * Chapter content sections only visible to teachers on allowed IPs.
      *
      * @var list<string>
      */
@@ -23,7 +23,7 @@ class TeacherChapterAccess
     ];
 
     /**
-     * Question groups only visible on allowed IPs (teacher + student panels).
+     * Question groups only visible to teachers on allowed IPs.
      *
      * @var list<string>
      */
@@ -37,21 +37,6 @@ class TeacherChapterAccess
         $request ??= request();
 
         return $request->routeIs('teacher.*');
-    }
-
-    public static function isStudentRequest(?Request $request = null): bool
-    {
-        $request ??= request();
-
-        return $request->routeIs('student.*');
-    }
-
-    /**
-     * Teacher and student material readers both apply the IP gate.
-     */
-    public static function isRestrictedPanelRequest(?Request $request = null): bool
-    {
-        return self::isTeacherRequest($request) || self::isStudentRequest($request);
     }
 
     public static function allowsCurrentIp(?Request $request = null): bool
@@ -115,7 +100,7 @@ class TeacherChapterAccess
     }
 
     /**
-     * On teacher/student panels, strip restricted blocks unless client IP is allowed.
+     * When teacher is on a non-allowed IP, strip restricted chapter detail blocks.
      *
      * @param  Collection<int, mixed>|iterable<int, mixed>  $sections
      * @param  array<string, mixed>  $questionGroups
@@ -128,7 +113,7 @@ class TeacherChapterAccess
             ? $questionGroups->all()
             : $questionGroups;
 
-        if (! self::isRestrictedPanelRequest($request) || self::allowsCurrentIp($request)) {
+        if (! self::isTeacherRequest($request) || self::allowsCurrentIp($request)) {
             return [$sections->values(), $questionGroups];
         }
 
