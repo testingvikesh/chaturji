@@ -1,18 +1,87 @@
-{{-- Full-page Ganpati loader shown while navigating to a topic/material page --}}
+{{-- Full-page Ganpati loader — centered in the main content area --}}
 <div id="page-nav-loader"
-     class="fixed inset-0 z-[9999] hidden items-center justify-center bg-gradient-to-b from-brand-green-50 via-white to-amber-50"
+     class="page-nav-loader"
      aria-live="polite"
      aria-busy="true"
-     role="status">
-    <div class="flex flex-col items-center gap-3 px-6 text-center">
+     role="status"
+     hidden>
+    <div class="page-nav-loader-inner">
         <img src="{{ asset('images/brand/ganpati.png') }}"
              alt="Shree Ganpati"
-             class="h-24 w-24 sm:h-28 sm:w-28 object-contain drop-shadow-lg animate-pulse">
-        <p class="text-base font-bold text-brand-green">જય શ્રી ગણેશ</p>
-        <p class="text-sm font-semibold text-slate-700">Loading…</p>
-        <p class="text-xs text-slate-500">Please wait while the page opens</p>
+             class="page-nav-loader-img">
+        <p class="page-nav-loader-title">જય શ્રી ગણેશ</p>
+        <p class="page-nav-loader-text">Loading…</p>
+        <p class="page-nav-loader-hint">Please wait while the page opens</p>
     </div>
 </div>
+
+<style>
+    .page-nav-loader {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to bottom, #ecfdf5 0%, #ffffff 45%, #fffbeb 100%);
+    }
+    .page-nav-loader.is-open {
+        display: flex !important;
+    }
+    @media (min-width: 1024px) {
+        /* Center in content area (right of 16rem sidebar) */
+        .page-nav-loader {
+            left: 16rem;
+        }
+    }
+    .page-nav-loader-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+        transform: translateY(-4vh); /* optical vertical center */
+    }
+    .page-nav-loader-img {
+        width: 7rem;
+        height: 7rem;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 15px rgba(0,0,0,0.12));
+        animation: page-nav-loader-pulse 1.4s ease-in-out infinite;
+    }
+    @media (min-width: 640px) {
+        .page-nav-loader-img {
+            width: 8rem;
+            height: 8rem;
+        }
+    }
+    .page-nav-loader-title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #15803d;
+    }
+    .page-nav-loader-text {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #334155;
+    }
+    .page-nav-loader-hint {
+        margin: 0;
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+    @keyframes page-nav-loader-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.85; transform: scale(1.04); }
+    }
+</style>
 
 <script>
 (function () {
@@ -20,14 +89,14 @@
     if (!loader) return;
 
     function showLoader() {
-        loader.classList.remove('hidden');
-        loader.classList.add('flex');
+        loader.hidden = false;
+        loader.classList.add('is-open');
         document.body.classList.add('overflow-hidden');
     }
 
     function hideLoader() {
-        loader.classList.add('hidden');
-        loader.classList.remove('flex');
+        loader.classList.remove('is-open');
+        loader.hidden = true;
         document.body.classList.remove('overflow-hidden');
     }
 
@@ -61,7 +130,6 @@
     }, true);
 
     window.addEventListener('pageshow', hideLoader);
-    window.addEventListener('pagehide', function () { /* keep visible during unload */ });
     document.addEventListener('DOMContentLoaded', hideLoader);
 })();
 </script>
