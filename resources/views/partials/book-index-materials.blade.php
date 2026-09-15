@@ -11,6 +11,16 @@
     use App\Support\MaterialWorkedExamples;
 
     $isExampleSubject = MaterialWorkedExamples::isExampleSubject($subject);
+    $topicRouteExtraQuery = $topicRouteExtra === [] ? '' : ('?'.http_build_query($topicRouteExtra));
+
+    // Build topic URLs without calling route() hundreds of times.
+    $studentTopicBase = null;
+    $teacherTopicBase = null;
+    if ($materialTopicRoute === 'student.material-topics.show') {
+        $studentTopicBase = url('/student/subjects/'.$subject->id.'/material-topics');
+    } elseif ($materialTopicRoute === 'teacher.books.topics.show') {
+        $teacherTopicBase = url('/teacher/books/'.$subject->id.'/topics');
+    }
 @endphp
 
 <div class="book-index-header-note">
@@ -29,10 +39,14 @@
             @php
                 $chapterNo = $material->displayChapterNo($loop->iteration);
                 $topics = $material->topics ?? collect();
-                $readyCount = $topics->filter(fn ($t) => $t->hasContent())->count();
+                $readyCount = $topics->count();
                 $chapterKey = 'material-'.$material->id;
-                $examples = $isExampleSubject ? MaterialWorkedExamples::fromMaterial($material) : collect();
-                $openExamplesDirect = $isExampleSubject && $examples->isNotEmpty();
+                $examplesCount = 0;
+                $openExamplesDirect = false;
+                if ($isExampleSubject) {
+                    $examplesCount = MaterialWorkedExamples::fromMaterial($material)->count();
+                    $openExamplesDirect = $examplesCount > 0;
+                }
                 $chapterUrl = $openExamplesDirect
                     ? route($materialChapterRoute, array_merge([
                         'subject' => $subject,
@@ -48,7 +62,7 @@
                         <div class="book-index-chapter-title">
                             <h4 class="book-index-chapter-name group-hover:text-brand-green">{{ $material->displayChapterName() }}</h4>
                             <p class="book-index-chapter-meta">
-                                {{ $examples->count() }} {{ Str::plural('example', $examples->count()) }}
+                                {{ $examplesCount }} {{ Str::plural('example', $examplesCount) }}
                                 <span class="text-brand-green"> &middot; Click to view examples</span>
                                 @if ($material->medium)
                                     <span class="text-slate-400"> &middot; {{ $material->medium }}</span>
@@ -105,33 +119,27 @@
                                     @php
                                         $topicNo = $chapterNo.'.'.($topic->topic_order ?: $loop->iteration);
                                         $topicName = $topic->displayName();
-                                        $canOpen = $topic->hasContent();
-                                        $topicUrl = $canOpen
-                                            ? route($materialTopicRoute, array_merge([
+                                        if ($studentTopicBase) {
+                                            $topicUrl = $studentTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
+                                        } elseif ($teacherTopicBase) {
+                                            $topicUrl = $teacherTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
+                                        } else {
+                                            $topicUrl = route($materialTopicRoute, array_merge([
                                                 'subject' => $subject,
                                                 'materialTopic' => $topic,
-                                            ], $topicRouteExtra))
-                                            : null;
+                                            ], $topicRouteExtra));
+                                        }
                                     @endphp
 
-                                    @if ($topicUrl)
-                                        <a href="{{ $topicUrl }}" class="book-index-topic book-index-topic--link group">
-                                            <span class="book-index-topic-no">{{ $topicNo }}</span>
-                                            <span class="book-index-topic-name group-hover:text-brand-green">{{ $topicName }}</span>
-                                            <span class="book-index-topic-dots" aria-hidden="true"></span>
-                                            <span class="book-index-topic-page">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
-                                            <span class="book-index-topic-arrow" aria-hidden="true">
-                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                            </span>
-                                        </a>
-                                    @else
-                                        <div class="book-index-topic">
-                                            <span class="book-index-topic-no">{{ $topicNo }}</span>
-                                            <span class="book-index-topic-name">{{ $topicName }}</span>
-                                            <span class="book-index-topic-dots" aria-hidden="true"></span>
-                                            <span class="book-index-topic-page text-slate-400">Soon</span>
-                                        </div>
-                                    @endif
+                                    <a href="{{ $topicUrl }}" class="book-index-topic book-index-topic--link group">
+                                        <span class="book-index-topic-no">{{ $topicNo }}</span>
+                                        <span class="book-index-topic-name group-hover:text-brand-green">{{ $topicName }}</span>
+                                        <span class="book-index-topic-dots" aria-hidden="true"></span>
+                                        <span class="book-index-topic-page">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
+                                        <span class="book-index-topic-arrow" aria-hidden="true">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                        </span>
+                                    </a>
                                 @endforeach
                             </div>
                         @else

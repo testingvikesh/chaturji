@@ -68,7 +68,9 @@ class Material extends Model
 
     public function scopeForSubject($query, Subject $subject)
     {
-        $chapterIds = $subject->chapters()->pluck('id');
+        $chapterIds = $subject->relationLoaded('chapters')
+            ? $subject->chapters->pluck('id')
+            : $subject->chapters()->pluck('id');
         $standard = $subject->relationLoaded('standard')
             ? $subject->standard
             : $subject->standard()->first();
@@ -123,32 +125,52 @@ class Material extends Model
 
     public static function forStudentSubject(Subject $subject, ?string $medium): Collection
     {
-        return self::sortAsChapters(
-            self::uniqueChapters(
-                self::query()
-                    ->forSubject($subject)
-                    ->forMedium($medium)
-                    ->with(['topics' => function ($q) {
-                        // Never eager-load section_json here — it is huge and made topic pages very slow.
-                        $q->orderBy('topic_order')
-                            ->select([
-                                'id',
-                                'material_id',
-                                'topic_order',
-                                'topic_key',
-                                'title',
-                                'title_gu',
-                                'generated',
-                                'image_url',
-                                'updated_at',
-                            ])
-                            ->where('generated', true)
-                            ->whereNotNull('section_json')
-                            ->whereRaw("TRIM(section_json) <> ''");
-                    }])
-                    ->get()
-            )
-        );
+        $mediumKey = self::normalizeMedium($medium) ?? 'any';
+        $cacheKey = 'materials:for-subject:'.$subject->id.':'.$mediumKey;
+
+        return Cache::remember($cacheKey, 300, function () use ($subject, $medium) {
+            if (! $subject->relationLoaded('standard')) {
+                $subject->load('standard');
+            }
+
+            return self::sortAsChapters(
+                self::uniqueChapters(
+                    self::query()
+                        ->forSubject($subject)
+                        ->forMedium($medium)
+                        ->with(['topics' => function ($q) {
+                            // Never eager-load section_json here — it is huge and made topic pages very slow.
+                            $q->orderBy('topic_order')
+                                ->select([
+                                    'id',
+                                    'material_id',
+                                    'topic_order',
+                                    'topic_key',
+                                    'title',
+                                    'title_gu',
+                                    'generated',
+                                    'image_url',
+                                    'updated_at',
+                                ])
+                                ->where('generated', true)
+                                ->whereNotNull('section_json')
+                                ->whereRaw("TRIM(section_json) <> ''");
+                        }])
+                        ->get()
+                )
+            );
+        });
+    }
+
+    public static function forgetStudentSubjectCache(int $subjectId, ?string $medium = null): void
+    {
+        $mediums = $medium !== null
+            ? [self::normalizeMedium($medium) ?? 'any']
+            : ['any', 'english', 'hindi', 'gujarati'];
+
+        foreach ($mediums as $mediumKey) {
+            Cache::forget('materials:for-subject:'.$subjectId.':'.$mediumKey);
+        }
     }
 
     public static function standardNumber(?Standard $standard): string
