@@ -44,6 +44,9 @@ class MaterialTopicController extends Controller
         $payload = MaterialTopicReader::forTopic($materialTopic);
         $textbookPoints = MaterialTopicReader::textbookPoints($payload['sections']);
 
+        // Warm subject chapter list cache so Back / Index stays fast.
+        Material::forStudentSubject($subject, $user->medium);
+
         return view('student.material-topics.show', [
             'user' => $user,
             'standard' => $standard,

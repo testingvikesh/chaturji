@@ -38,5 +38,6 @@
             </main>
         </div>
     </div>
+    @include('layouts.partials.page-nav-loader')
 </body>
 </html>

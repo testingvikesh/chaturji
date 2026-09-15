@@ -8,6 +8,7 @@ use App\Models\Material;
 use App\Models\MaterialTopic;
 use App\Services\MaterialJsonImporter;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class MaterialTopicReader
 {
@@ -31,25 +32,42 @@ class MaterialTopicReader
             throw new \InvalidArgumentException('This material topic has no content yet.');
         }
 
-        $material = $materialTopic->material;
+        $material = $materialTopic->relationLoaded('material')
+            ? $materialTopic->material
+            : $materialTopic->material()->first();
+
         $language = strtolower((string) ($material?->medium ?: 'english'));
         if (! in_array($language, ['english', 'hindi', 'gujarati'], true)) {
             $language = 'english';
         }
 
-        $parsed = app(MaterialJsonImporter::class)->parse(
-            [
-                'meta' => [
-                    'title' => $materialTopic->displayName(),
-                    'language' => $language,
-                ],
-                'sections' => [$section],
-            ],
-            $materialTopic->displayName(),
-            $language
-        );
+        $version = optional($materialTopic->updated_at)?->getTimestamp() ?? 0;
+        $cacheKey = 'material-topic-reader:'.$materialTopic->id.':'.$version;
 
-        $sections = collect($parsed['sections'])->values()->map(function (array $row, int $index) {
+        $cached = Cache::remember($cacheKey, 900, function () use ($materialTopic, $material, $language, $section) {
+            $parsed = app(MaterialJsonImporter::class)->parse(
+                [
+                    'meta' => [
+                        'title' => $materialTopic->displayName(),
+                        'language' => $language,
+                    ],
+                    'sections' => [$section],
+                ],
+                $materialTopic->displayName(),
+                $language
+            );
+
+            return [
+                'language' => $language,
+                'title' => $materialTopic->displayName(),
+                'total_questions' => (int) ($parsed['total_questions'] ?? count($parsed['questions'] ?? [])),
+                'sections' => array_values($parsed['sections'] ?? []),
+                'questions' => array_values($parsed['questions'] ?? []),
+                'workedExamples' => MaterialWorkedExamples::fromTopic($materialTopic)->values()->all(),
+            ];
+        });
+
+        $sections = collect($cached['sections'] ?? [])->values()->map(function (array $row, int $index) {
             $section = new ChapterContentSection([
                 'section_type' => $row['section_type'] ?? 'paragraph',
                 'title' => $row['title'] ?? null,
@@ -61,8 +79,8 @@ class MaterialTopicReader
             return $section;
         });
 
-        $questions = collect($parsed['questions'])->map(function (array $row) {
-            $question = new ChapterQuestion([
+        $questions = collect($cached['questions'] ?? [])->map(function (array $row) {
+            return new ChapterQuestion([
                 'question_type' => $row['question_type'] ?? 'short_answer',
                 'question_text' => $row['question_text'] ?? '',
                 'options' => $row['options'] ?? null,
@@ -72,8 +90,6 @@ class MaterialTopicReader
                 'metadata' => $row['metadata'] ?? null,
                 'sort_order' => $row['sort_order'] ?? 0,
             ]);
-
-            return $question;
         });
 
         $questionGroups = ChapterMaterialHelper::groupQuestions($questions);
@@ -82,12 +98,17 @@ class MaterialTopicReader
         );
 
         return [
-            'content' => self::contentProxy($materialTopic, $material, $language, (int) ($parsed['total_questions'] ?? $questions->count())),
+            'content' => self::contentProxy(
+                $materialTopic,
+                $material,
+                (string) ($cached['language'] ?? $language),
+                (int) ($cached['total_questions'] ?? $questions->count())
+            ),
             'sections' => $sections,
             'questions' => $questions,
             'questionGroups' => $questionGroups,
             'questionGroupLabels' => $questionGroupLabels,
-            'workedExamples' => MaterialWorkedExamples::fromTopic($materialTopic),
+            'workedExamples' => collect($cached['workedExamples'] ?? []),
         ];
     }
 
