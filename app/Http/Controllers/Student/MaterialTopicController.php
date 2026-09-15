@@ -113,7 +113,15 @@ class MaterialTopicController extends Controller
             'examples' => $examples,
             'backUrl' => route('student.subjects.show', $subject),
             'practiceMode' => false,
-            'readerNav' => MaterialPaperBank::readerNavTree($standard, $user->medium),
+            'readerNav' => (function () use ($standard, $user) {
+                try {
+                    return MaterialPaperBank::readerNavTree($standard, $user->medium);
+                } catch (\Throwable $e) {
+                    report($e);
+
+                    return [];
+                }
+            })(),
         ]);
     }
 

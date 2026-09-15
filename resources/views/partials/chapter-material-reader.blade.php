@@ -51,18 +51,22 @@
     $hasTextbookPdf = $material && method_exists($material, 'hasTextbookPdf') && $material->hasTextbookPdf();
     $textbookPoints = collect($textbookPoints ?? []);
     $hasTextbookPoints = $textbookPoints->isNotEmpty();
-    if ($material && method_exists($material, 'textbookPageImages')) {
-        // Prefer already-loaded lightweight topics; avoid pulling section_json blobs.
-        if (! $material->relationLoaded('topics')) {
-            $material->setRelation(
-                'topics',
-                $material->topics()
-                    ->orderBy('topic_order')
-                    ->get(['id', 'material_id', 'topic_order', 'title', 'title_gu', 'image_url', 'generated'])
-            );
+    $textbookPageImages = collect();
+    try {
+        if ($material && method_exists($material, 'textbookPageImages')) {
+            // Prefer already-loaded lightweight topics; avoid pulling section_json blobs.
+            if (! $material->relationLoaded('topics')) {
+                $material->setRelation(
+                    'topics',
+                    $material->topics()
+                        ->orderBy('topic_order')
+                        ->get(['id', 'material_id', 'topic_order', 'title', 'title_gu', 'image_url', 'generated'])
+                );
+            }
+            $textbookPageImages = $material->textbookPageImages();
         }
-        $textbookPageImages = $material->textbookPageImages();
-    } else {
+    } catch (\Throwable $e) {
+        report($e);
         $textbookPageImages = collect();
     }
     $topicPageNumber = is_object($materialTopic) ? (int) ($materialTopic->topic_order ?? 0) : 0;

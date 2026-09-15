@@ -42,9 +42,23 @@ class MaterialTopicReader
             $language = 'english';
         }
 
-        $cached = self::rememberParsed($materialTopic, $material, $language, $section);
+        try {
+            $cached = self::rememberParsed($materialTopic, $material, $language, $section);
 
-        return self::hydrate($materialTopic, $material, $cached);
+            return self::hydrate($materialTopic, $material, $cached);
+        } catch (Throwable $e) {
+            report($e);
+
+            // Never blank the whole page if parse/cache fails — show a recoverable empty reader.
+            return self::hydrate($materialTopic, $material, [
+                'language' => $language,
+                'title' => $materialTopic->displayName(),
+                'total_questions' => 0,
+                'sections' => [],
+                'questions' => [],
+                'workedExamples' => [],
+            ]);
+        }
     }
 
     /**
