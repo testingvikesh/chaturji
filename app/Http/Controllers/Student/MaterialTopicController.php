@@ -44,8 +44,12 @@ class MaterialTopicController extends Controller
         $payload = MaterialTopicReader::forTopic($materialTopic);
         $textbookPoints = MaterialTopicReader::textbookPoints($payload['sections']);
 
-        // Warm subject chapter list cache so Back / Index stays fast.
-        Material::forStudentSubject($subject, $user->medium);
+        try {
+            $readerNav = MaterialPaperBank::readerNavTree($standard, $user->medium);
+        } catch (\Throwable $e) {
+            report($e);
+            $readerNav = [];
+        }
 
         return view('student.material-topics.show', [
             'user' => $user,
@@ -67,7 +71,7 @@ class MaterialTopicController extends Controller
             'questionGroupLabels' => $payload['questionGroupLabels'],
             'textbookPoints' => $textbookPoints,
             'workedExamples' => $payload['workedExamples'] ?? collect(),
-            'readerNav' => MaterialPaperBank::readerNavTree($standard, $user->medium),
+            'readerNav' => $readerNav,
             'readerMaterialId' => $material->id,
         ]);
     }

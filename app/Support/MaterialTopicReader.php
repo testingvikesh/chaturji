@@ -9,6 +9,7 @@ use App\Models\MaterialTopic;
 use App\Services\MaterialJsonImporter;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 class MaterialTopicReader
 {
@@ -41,32 +42,100 @@ class MaterialTopicReader
             $language = 'english';
         }
 
+        $cached = self::rememberParsed($materialTopic, $material, $language, $section);
+
+        return self::hydrate($materialTopic, $material, $cached);
+    }
+
+    /**
+     * @param  array<string, mixed>  $section
+     * @return array{language:string,title:string,total_questions:int,sections:list<array>,questions:list<array>,workedExamples:list<array>}
+     */
+    private static function rememberParsed(
+        MaterialTopic $materialTopic,
+        ?Material $material,
+        string $language,
+        array $section
+    ): array {
         $version = optional($materialTopic->updated_at)?->getTimestamp() ?? 0;
-        $cacheKey = 'material-topic-reader:'.$materialTopic->id.':'.$version;
+        $cacheKey = 'material-topic-reader:v2:'.$materialTopic->id.':'.$version;
 
-        $cached = Cache::remember($cacheKey, 900, function () use ($materialTopic, $material, $language, $section) {
-            $parsed = app(MaterialJsonImporter::class)->parse(
-                [
-                    'meta' => [
-                        'title' => $materialTopic->displayName(),
-                        'language' => $language,
-                    ],
-                    'sections' => [$section],
+        try {
+            $cached = Cache::get($cacheKey);
+            if (self::isValidCache($cached)) {
+                return $cached;
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        $built = self::buildParsed($materialTopic, $language, $section);
+
+        try {
+            // Skip caching oversized payloads (can fail / corrupt on shared hosts).
+            $approx = strlen(json_encode($built, JSON_UNESCAPED_UNICODE) ?: '');
+            if ($approx > 0 && $approx < 1500000) {
+                Cache::put($cacheKey, $built, 900);
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        return $built;
+    }
+
+    /**
+     * @param  mixed  $cached
+     */
+    private static function isValidCache($cached): bool
+    {
+        return is_array($cached)
+            && isset($cached['sections'], $cached['questions'], $cached['language'])
+            && is_array($cached['sections'])
+            && is_array($cached['questions']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $section
+     * @return array{language:string,title:string,total_questions:int,sections:list<array>,questions:list<array>,workedExamples:list<array>}
+     */
+    private static function buildParsed(MaterialTopic $materialTopic, string $language, array $section): array
+    {
+        $parsed = app(MaterialJsonImporter::class)->parse(
+            [
+                'meta' => [
+                    'title' => $materialTopic->displayName(),
+                    'language' => $language,
                 ],
-                $materialTopic->displayName(),
-                $language
-            );
+                'sections' => [$section],
+            ],
+            $materialTopic->displayName(),
+            $language
+        );
 
-            return [
-                'language' => $language,
-                'title' => $materialTopic->displayName(),
-                'total_questions' => (int) ($parsed['total_questions'] ?? count($parsed['questions'] ?? [])),
-                'sections' => array_values($parsed['sections'] ?? []),
-                'questions' => array_values($parsed['questions'] ?? []),
-                'workedExamples' => MaterialWorkedExamples::fromTopic($materialTopic)->values()->all(),
-            ];
-        });
+        return [
+            'language' => $language,
+            'title' => $materialTopic->displayName(),
+            'total_questions' => (int) ($parsed['total_questions'] ?? count($parsed['questions'] ?? [])),
+            'sections' => array_values($parsed['sections'] ?? []),
+            'questions' => array_values($parsed['questions'] ?? []),
+            'workedExamples' => MaterialWorkedExamples::fromTopic($materialTopic)->values()->all(),
+        ];
+    }
 
+    /**
+     * @param  array{language:string,title?:string,total_questions:int,sections:list<array>,questions:list<array>,workedExamples?:list<array>}  $cached
+     * @return array{
+     *     content: object,
+     *     sections: Collection,
+     *     questions: Collection,
+     *     questionGroups: array<string, Collection>,
+     *     questionGroupLabels: Collection,
+     *     workedExamples: Collection
+     * }
+     */
+    private static function hydrate(MaterialTopic $materialTopic, ?Material $material, array $cached): array
+    {
         $sections = collect($cached['sections'] ?? [])->values()->map(function (array $row, int $index) {
             $section = new ChapterContentSection([
                 'section_type' => $row['section_type'] ?? 'paragraph',
@@ -101,7 +170,7 @@ class MaterialTopicReader
             'content' => self::contentProxy(
                 $materialTopic,
                 $material,
-                (string) ($cached['language'] ?? $language),
+                (string) ($cached['language'] ?? 'english'),
                 (int) ($cached['total_questions'] ?? $questions->count())
             ),
             'sections' => $sections,

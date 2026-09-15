@@ -264,17 +264,23 @@ class BookController extends Controller
 
     private function assignedReaderNav(User $teacher, ?Standard $standard, string $medium): array
     {
-        $allowedIds = TeacherSubject::query()
-            ->where('teacher_id', $teacher->id)
-            ->whereRaw('LOWER(TRIM(medium)) = ?', [$medium])
-            ->pluck('subject_id')
-            ->map(fn ($id) => (int) $id);
+        try {
+            $allowedIds = TeacherSubject::query()
+                ->where('teacher_id', $teacher->id)
+                ->whereRaw('LOWER(TRIM(medium)) = ?', [$medium])
+                ->pluck('subject_id')
+                ->map(fn ($id) => (int) $id);
 
-        return collect(MaterialPaperBank::readerNavTree($standard, $medium, 'teacher.books.topics.show', [
-            'medium' => $medium,
-        ]))
-            ->filter(fn (array $item) => $allowedIds->contains((int) ($item['id'] ?? 0)))
-            ->values()
-            ->all();
+            return collect(MaterialPaperBank::readerNavTree($standard, $medium, 'teacher.books.topics.show', [
+                'medium' => $medium,
+            ]))
+                ->filter(fn (array $item) => $allowedIds->contains((int) ($item['id'] ?? 0)))
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [];
+        }
     }
 }

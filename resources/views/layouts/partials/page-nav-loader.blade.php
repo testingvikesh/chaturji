@@ -32,7 +32,6 @@
         display: flex !important;
     }
     @media (min-width: 1024px) {
-        /* Center in content area (right of 16rem sidebar) */
         .page-nav-loader {
             left: 16rem;
         }
@@ -45,7 +44,7 @@
         gap: 0.75rem;
         padding: 1.5rem;
         text-align: center;
-        transform: translateY(-4vh); /* optical vertical center */
+        transform: translateY(-4vh);
     }
     .page-nav-loader-img {
         width: 7rem;
@@ -91,14 +90,24 @@
     function showLoader() {
         loader.hidden = false;
         loader.classList.add('is-open');
+        document.documentElement.classList.add('page-nav-loading');
         document.body.classList.add('overflow-hidden');
     }
 
     function hideLoader() {
         loader.classList.remove('is-open');
         loader.hidden = true;
+        document.documentElement.classList.remove('page-nav-loading');
         document.body.classList.remove('overflow-hidden');
     }
+
+    // Always clear any stuck loader / body lock as soon as this page is usable.
+    hideLoader();
+    window.addEventListener('pageshow', hideLoader);
+    window.addEventListener('load', hideLoader);
+    document.addEventListener('DOMContentLoaded', hideLoader);
+    setTimeout(hideLoader, 0);
+    setTimeout(hideLoader, 1500);
 
     function shouldShowForLink(a) {
         if (!a || a.target === '_blank' || a.hasAttribute('download')) return false;
@@ -128,8 +137,5 @@
         if (!shouldShowForLink(a)) return;
         showLoader();
     }, true);
-
-    window.addEventListener('pageshow', hideLoader);
-    document.addEventListener('DOMContentLoaded', hideLoader);
 })();
 </script>
