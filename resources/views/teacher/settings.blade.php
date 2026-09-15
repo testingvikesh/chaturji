@@ -78,8 +78,20 @@
                                 </p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     @foreach ($rows as $row)
-                                        <span class="inline-flex items-center rounded-full bg-white border border-brand-green-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white border border-brand-green-100 pl-3 pr-1 py-1 text-xs font-semibold text-slate-700">
                                             {{ $row->subject?->name ?? 'Subject' }}
+                                            <form method="POST" action="{{ route('teacher.settings.subjects.destroy', $row) }}" class="inline" onsubmit="return confirm('Remove {{ $row->subject?->name ?? 'this subject' }} from your assignment?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        class="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600"
+                                                        title="Remove {{ $row->subject?->name ?? 'subject' }}"
+                                                        aria-label="Remove {{ $row->subject?->name ?? 'subject' }}">
+                                                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
                                         </span>
                                     @endforeach
                                 </div>
@@ -141,6 +153,26 @@
                     </div>
                     <div x-show="medium && standardId && currentSubjects().length === 0" x-cloak class="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-400 text-center">
                         No material subjects found for this medium and standard.
+                    </div>
+
+                    <div x-show="medium && standardId && selected.length" x-cloak class="mb-3">
+                        <p class="text-xs font-semibold text-slate-600 mb-2">Selected (click × to remove)</p>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="id in selected" :key="'chip-'+id">
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-green-50 border border-brand-green-100 pl-3 pr-1 py-1 text-xs font-semibold text-brand-green">
+                                    <span x-text="(currentSubjects().find(s => String(s.id) === String(id)) || {}).name || ('#'+id)"></span>
+                                    <button type="button"
+                                            class="inline-flex h-5 w-5 items-center justify-center rounded-full text-brand-green/70 hover:bg-white hover:text-red-600"
+                                            @click="selected = selected.filter(x => x !== id)"
+                                            title="Remove"
+                                            aria-label="Remove selected subject">
+                                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
+                                        </svg>
+                                    </button>
+                                </span>
+                            </template>
+                        </div>
                     </div>
 
                     <div x-show="medium && standardId && currentSubjects().length" class="grid sm:grid-cols-2 gap-3">

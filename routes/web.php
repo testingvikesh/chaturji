@@ -159,6 +159,7 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/books/{subject}/topics/{materialTopic}', [TeacherBookController::class, 'topic'])->name('books.topics.show');
     Route::get('/settings', [TeacherSettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [TeacherSettingController::class, 'update'])->name('settings.update');
+    Route::delete('/settings/subjects/{teacherSubject}', [TeacherSettingController::class, 'destroySubject'])->name('settings.subjects.destroy');
     Route::get('/profile', [TeacherProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [TeacherProfileController::class, 'update'])->name('profile.update');
     Route::get('/change-password', [TeacherProfileController::class, 'editPassword'])->name('change-password');

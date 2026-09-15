@@ -140,6 +140,18 @@ class SettingController extends Controller
             ->with('success', 'Your medium, standard and subjects were saved.');
     }
 
+    public function destroySubject(TeacherSubject $teacherSubject): RedirectResponse
+    {
+        abort_unless((int) $teacherSubject->teacher_id === (int) auth()->id(), 403);
+
+        $name = $teacherSubject->subject?->name ?: 'Subject';
+        $teacherSubject->delete();
+
+        return redirect()
+            ->route('teacher.settings.edit')
+            ->with('success', $name.' was removed from your assignment.');
+    }
+
     private function assignedGroups(int $teacherId)
     {
         return TeacherSubject::query()
