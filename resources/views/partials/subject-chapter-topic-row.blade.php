@@ -10,6 +10,37 @@
     'pages' => [],
 ])
 
+@once
+    <style>
+        .material-reader-meta-row {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+        .material-reader-meta-chip {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+            justify-content: flex-start !important;
+            text-align: left !important;
+        }
+        .material-reader-meta-select {
+            max-width: 100% !important;
+            min-width: 0 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+        }
+        @media (min-width: 640px) {
+            .material-reader-meta-row {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+        }
+    </style>
+@endonce
+
 @php
     $metaChipBase = 'material-reader-meta-chip flex min-h-10 w-full min-w-0 max-w-full items-center gap-1.5 overflow-hidden rounded-xl border-2 px-3 py-2 text-xs sm:text-sm font-semibold leading-snug shadow-sm';
     $metaChipLabel = 'shrink-0 uppercase tracking-wide text-[10px] sm:text-xs text-slate-600';
