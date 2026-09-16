@@ -96,21 +96,34 @@
                 <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-7 w-7 object-contain shrink-0 drop-shadow">
                 <span class="font-bold text-sm truncate">Teacher Panel</span>
             </div>
-            <div class="relative shrink-0">
-                <button type="button"
-                        class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25"
-                        @click="open = !open"
-                        :aria-expanded="open.toString()"
-                        aria-label="Toggle menu">
-                    <svg x-show="!open" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                    <svg x-show="open" x-cloak class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-                @if ($unreadNotifications > 0)
-                    <span class="pointer-events-none absolute -right-1 -top-1 z-10 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold leading-none text-white shadow ring-2 ring-brand-green"
-                          x-show="!open"
-                          x-cloak
-                          aria-hidden="true">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>
-                @endif
+            <div class="flex items-center gap-1.5 shrink-0">
+                <form method="POST" action="{{ route('logout') }}" onsubmit="return confirm('Logout?')">
+                    @csrf
+                    <button type="submit"
+                            class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25"
+                            title="Logout"
+                            aria-label="Logout">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                    </button>
+                </form>
+                <div class="relative">
+                    <button type="button"
+                            class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25"
+                            @click="open = !open"
+                            :aria-expanded="open.toString()"
+                            aria-label="Toggle menu">
+                        <svg x-show="!open" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        <svg x-show="open" x-cloak class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    @if ($unreadNotifications > 0)
+                        <span class="pointer-events-none absolute -right-1 -top-1 z-10 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold leading-none text-white shadow ring-2 ring-brand-green"
+                              x-show="!open"
+                              x-cloak
+                              aria-hidden="true">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
