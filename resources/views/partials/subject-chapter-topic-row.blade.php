@@ -11,10 +11,10 @@
 ])
 
 @php
-    $metaChipBase = 'material-reader-meta-chip flex min-h-9 w-full items-center justify-center gap-1 rounded-lg border-2 px-2 py-1.5 text-xs sm:text-sm font-semibold leading-snug shadow-sm text-center';
-    $metaChipLabel = 'shrink-0 uppercase text-slate-600';
+    $metaChipBase = 'material-reader-meta-chip flex min-h-10 w-full min-w-0 max-w-full items-center gap-1.5 overflow-hidden rounded-xl border-2 px-3 py-2 text-xs sm:text-sm font-semibold leading-snug shadow-sm';
+    $metaChipLabel = 'shrink-0 uppercase tracking-wide text-[10px] sm:text-xs text-slate-600';
     $metaChipSep = 'shrink-0 text-slate-400';
-    $metaChipValue = 'min-w-0 break-words leading-snug';
+    $metaChipValue = 'min-w-0 flex-1 truncate leading-snug';
     $chapterDisplay = $chapterName ?: '—';
     $topicDisplay = $topicName ?: '—';
     $canChange = is_array($readerNav) && count($readerNav) > 0;
@@ -24,15 +24,15 @@
     $currentChapter = collect($chapters)->firstWhere('id', (int) $materialId) ?? ($chapters[0] ?? null);
     $topics = $currentChapter['topics'] ?? [];
 
-    $selectBase = 'material-reader-meta-select appearance-none bg-transparent border-0 p-0 m-0 font-semibold text-xs sm:text-sm leading-snug cursor-pointer focus:outline-none focus:ring-0 max-w-[12rem] sm:max-w-[16rem] truncate text-center';
+    $selectBase = 'material-reader-meta-select appearance-none bg-transparent border-0 p-0 m-0 font-semibold text-xs sm:text-sm leading-snug cursor-pointer focus:outline-none focus:ring-0 min-w-0 w-full max-w-full truncate';
 @endphp
 
 @if ($canChange)
-    <div class="material-reader-meta-row border-b-2 border-brand-green-200 bg-gradient-to-r from-brand-green-50 via-white to-amber-50 px-2 py-2.5 sm:px-4 sm:py-3" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.5rem;width:100%;">
+    <div class="material-reader-meta-row border-b-2 border-brand-green-200 bg-gradient-to-r from-brand-green-50 via-white to-amber-50 px-2 py-2.5 sm:px-4 sm:py-3">
         <label class="{{ $metaChipBase }} border-brand-green bg-white cursor-pointer hover:bg-brand-green-50 transition" title="Change subject">
             <span class="{{ $metaChipLabel }}">Subject</span>
             <span class="{{ $metaChipSep }}">:</span>
-            <span class="relative inline-flex min-w-0 max-w-full items-center gap-0.5">
+            <span class="relative flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
                 <select
                     class="{{ $selectBase }} text-brand-green"
                     aria-label="Change subject"
@@ -54,7 +54,7 @@
         <label class="{{ $metaChipBase }} border-slate-300 bg-slate-50 cursor-pointer hover:bg-slate-100 transition" title="Change chapter">
             <span class="{{ $metaChipLabel }}">Chapter</span>
             <span class="{{ $metaChipSep }}">:</span>
-            <span class="relative inline-flex min-w-0 max-w-full items-center gap-0.5">
+            <span class="relative flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
                 <select
                     class="{{ $selectBase }} text-slate-800"
                     aria-label="Change chapter"
@@ -77,7 +77,7 @@
             <label class="{{ $metaChipBase }} border-amber-400 bg-amber-50 cursor-pointer hover:bg-amber-100 transition" title="Change page">
                 <span class="{{ $metaChipLabel }} text-amber-800">Page</span>
                 <span class="{{ $metaChipSep }} text-amber-500">:</span>
-                <span class="relative inline-flex min-w-0 max-w-full items-center gap-0.5">
+                <span class="relative flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
                     <select
                         class="{{ $selectBase }} text-amber-900"
                         aria-label="Change page"
@@ -97,7 +97,7 @@
             <label class="{{ $metaChipBase }} border-amber-400 bg-amber-50 cursor-pointer hover:bg-amber-100 transition" title="Change topic">
                 <span class="{{ $metaChipLabel }} text-amber-800">Topic</span>
                 <span class="{{ $metaChipSep }} text-amber-500">:</span>
-                <span class="relative inline-flex min-w-0 max-w-full items-center gap-0.5">
+                <span class="relative flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
                     <select
                         class="{{ $selectBase }} text-amber-900"
                         aria-label="Change topic"
@@ -118,7 +118,7 @@
         @endif
     </div>
 @else
-    <div class="material-reader-meta-row border-b-2 border-brand-green-200 bg-gradient-to-r from-brand-green-50 via-white to-amber-50 px-2 py-2.5 sm:px-4 sm:py-3" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.5rem;width:100%;">
+    <div class="material-reader-meta-row border-b-2 border-brand-green-200 bg-gradient-to-r from-brand-green-50 via-white to-amber-50 px-2 py-2.5 sm:px-4 sm:py-3">
         <div class="{{ $metaChipBase }} border-brand-green bg-white" title="{{ $subjectName }}">
             <span class="{{ $metaChipLabel }}">Subject</span>
             <span class="{{ $metaChipSep }}">:</span>

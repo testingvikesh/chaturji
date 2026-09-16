@@ -1069,9 +1069,16 @@
 
     .material-reader-meta-row {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
         gap: 0.5rem;
         width: 100%;
+        min-width: 0;
+    }
+
+    @media (min-width: 640px) {
+        .material-reader-meta-row {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
     }
 
     .subject-chapter-topic-sticky {
@@ -1080,16 +1087,22 @@
 
     .subject-chapter-topic-sticky-wrap {
         @apply sticky z-40 top-14 lg:top-0 mb-4 shadow-lg shadow-slate-200/50;
+        min-width: 0;
+        max-width: 100%;
     }
 
     .material-reader-meta-chip {
         min-width: 0;
-        justify-content: center;
-        text-align: center;
+        max-width: 100%;
+        overflow: hidden;
+        justify-content: flex-start;
+        text-align: left;
     }
 
     .material-reader-meta-select {
         text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
     }
 
     .material-reader-meta-select option {
