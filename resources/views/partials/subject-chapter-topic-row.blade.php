@@ -28,7 +28,7 @@
 @endphp
 
 @if ($canChange)
-    <div class="material-reader-meta-row border-b-2 border-brand-green-200 bg-gradient-to-r from-brand-green-50 via-white to-amber-50 px-2 py-2.5 sm:px-4 sm:py-3">
+    <div class="material-reader-meta-row border-b-2 border-brand-green-200 bg-gradient-to-r from-brand-green-50 via-white to-amber-50 px-2 py-2.5 sm:px-4 sm:py-3 grid grid-cols-1 sm:grid-cols-3 gap-2 w-full min-w-0">
         <label class="{{ $metaChipBase }} border-brand-green bg-white cursor-pointer hover:bg-brand-green-50 transition" title="Change subject">
             <span class="{{ $metaChipLabel }}">Subject</span>
             <span class="{{ $metaChipSep }}">:</span>
@@ -118,7 +118,7 @@
         @endif
     </div>
 @else
-    <div class="material-reader-meta-row border-b-2 border-brand-green-200 bg-gradient-to-r from-brand-green-50 via-white to-amber-50 px-2 py-2.5 sm:px-4 sm:py-3">
+    <div class="material-reader-meta-row border-b-2 border-brand-green-200 bg-gradient-to-r from-brand-green-50 via-white to-amber-50 px-2 py-2.5 sm:px-4 sm:py-3 grid grid-cols-1 sm:grid-cols-3 gap-2 w-full min-w-0">
         <div class="{{ $metaChipBase }} border-brand-green bg-white" title="{{ $subjectName }}">
             <span class="{{ $metaChipLabel }}">Subject</span>
             <span class="{{ $metaChipSep }}">:</span>
