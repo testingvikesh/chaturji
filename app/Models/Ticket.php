@@ -33,6 +33,7 @@ class Ticket extends Model
         'subject_id',
         'chapter_id',
         'chapter_name',
+        'chapter_no',
         'subject',
         'message',
         'status',
@@ -78,7 +79,8 @@ class Ticket extends Model
         return filled($this->medium)
             || filled($this->standard_id)
             || filled($this->subject_id)
-            || filled($this->chapter_name);
+            || filled($this->chapter_name)
+            || filled($this->chapter_no);
     }
 
     public function missingChapterSummary(): ?string
@@ -88,11 +90,16 @@ class Ticket extends Model
         }
 
         $medium = Standard::MEDIUMS[$this->medium] ?? ucfirst((string) $this->medium);
+        $chapter = trim(implode(' ', array_filter([
+            filled($this->chapter_no) ? 'Ch. '.$this->chapter_no : null,
+            $this->chapter_name,
+        ])));
+
         $parts = array_filter([
             $medium ?: null,
             $this->standard?->name,
             $this->curriculumSubject?->name,
-            $this->chapter_name,
+            $chapter !== '' ? $chapter : null,
         ]);
 
         return $parts === [] ? null : implode(' · ', $parts);

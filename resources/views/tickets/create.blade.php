@@ -27,14 +27,11 @@
                       medium: @js(old('medium', $initialMedium ?: '')),
                       standardId: @js((string) old('standard_id', '')),
                       subjectId: @js((string) old('subject_id', '')),
-                      chapterId: @js((string) old('chapter_id', '')),
                       chapterName: @js(old('chapter_name', '')),
+                      chapterNo: @js(old('chapter_no', '')),
                       subjects: [],
-                      chapters: [],
                       loadingSubjects: false,
-                      loadingChapters: false,
                       subjectsUrl: @js($subjectsUrl),
-                      chaptersUrl: @js($chaptersUrl),
                       standards: @js($standards->map(fn ($s) => ['id' => (string) $s->id, 'name' => $s->name])->values()),
                       mediums: @js($mediums),
                       onPick(event, target) {
@@ -72,10 +69,7 @@
                       },
                       async loadSubjects() {
                           this.subjects = [];
-                          this.chapters = [];
                           this.subjectId = '';
-                          this.chapterId = '';
-                          this.chapterName = '';
                           if (!this.medium || !this.standardId) return;
                           this.loadingSubjects = true;
                           try {
@@ -88,40 +82,11 @@
                               this.loadingSubjects = false;
                           }
                       },
-                      async loadChapters() {
-                          this.chapters = [];
-                          this.chapterId = '';
-                          this.chapterName = '';
-                          if (!this.medium || !this.subjectId) return;
-                          this.loadingChapters = true;
-                          try {
-                              const url = this.chaptersUrl + '?medium=' + encodeURIComponent(this.medium) + '&subject_id=' + encodeURIComponent(this.subjectId);
-                              const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                              this.chapters = res.ok ? await res.json() : [];
-                          } catch (e) {
-                              this.chapters = [];
-                          } finally {
-                              this.loadingChapters = false;
-                          }
-                      },
-                      chooseChapter(id) {
-                          this.chapterId = String(id || '');
-                          const found = this.chapters.find(c => String(c.id) === String(id));
-                          this.chapterName = found ? found.name : this.chapterName;
-                      },
                       init() {
                           if (this.medium && this.standardId) {
+                              const keepSubject = this.subjectId;
                               this.loadSubjects().then(() => {
-                                  if (this.subjectId) {
-                                      const keepSubject = this.subjectId;
-                                      const keepChapter = this.chapterId;
-                                      const keepName = this.chapterName;
-                                      this.subjectId = keepSubject;
-                                      return this.loadChapters().then(() => {
-                                          this.chapterId = keepChapter;
-                                          if (keepName) this.chapterName = keepName;
-                                      });
-                                  }
+                                  this.subjectId = keepSubject;
                               });
                           }
                       }
@@ -179,13 +144,12 @@
                 <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-4">
                     <div>
                         <h3 class="text-sm font-bold text-amber-900">Missing Chapter Upload</h3>
-                        <p class="text-xs text-amber-800/80 mt-0.5">Select medium, standard, subject and chapter, then upload the missing chapter files. Leave blank if not needed.</p>
+                        <p class="text-xs text-amber-800/80 mt-0.5">Select medium &amp; standard, choose subject, then enter chapter name and chapter no. Leave blank if not needed.</p>
                     </div>
 
                     <input type="hidden" name="medium" :value="medium">
                     <input type="hidden" name="standard_id" :value="standardId">
                     <input type="hidden" name="subject_id" :value="subjectId">
-                    <input type="hidden" name="chapter_id" :value="chapterId">
 
                     <div class="grid sm:grid-cols-2 gap-3">
                         <div>
@@ -208,32 +172,40 @@
                             </select>
                             @error('standard_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                         </div>
-                        <div>
-                            <label class="admin-label">Subject</label>
-                            <select class="admin-select" x-model="subjectId" :disabled="!medium || !standardId || loadingSubjects" @change="loadChapters()">
-                                <option value="" x-text="loadingSubjects ? 'Loading…' : (!medium || !standardId ? 'Select medium & standard first' : 'Choose subject')"></option>
-                                <template x-for="item in subjects" :key="item.id">
-                                    <option :value="String(item.id)" x-text="item.name"></option>
-                                </template>
-                            </select>
-                            @error('subject_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
-                        </div>
-                        <div>
-                            <label class="admin-label">Chapter</label>
-                            <select class="admin-select" x-model="chapterId" :disabled="!subjectId || loadingChapters" @change="chooseChapter(chapterId)">
-                                <option value="" x-text="loadingChapters ? 'Loading…' : (!subjectId ? 'Select subject first' : 'Choose chapter (or type below)')"></option>
-                                <template x-for="item in chapters" :key="item.id">
-                                    <option :value="String(item.id)" x-text="item.name"></option>
-                                </template>
-                            </select>
-                            @error('chapter_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
-                        </div>
                     </div>
 
                     <div>
-                        <label class="admin-label">Chapter name</label>
-                        <input type="text" name="chapter_name" x-model="chapterName" maxlength="255" class="admin-input" placeholder="Chapter name (required for missing chapter upload)">
-                        @error('chapter_name')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+                        <label class="admin-label">Subject</label>
+                        <select class="admin-select" x-model="subjectId" :disabled="!medium || !standardId || loadingSubjects">
+                            <option value="" x-text="loadingSubjects ? 'Loading…' : (!medium || !standardId ? 'Select medium & standard first' : 'Choose subject')"></option>
+                            <template x-for="item in subjects" :key="item.id">
+                                <option :value="String(item.id)" x-text="item.name"></option>
+                            </template>
+                        </select>
+                        @error('subject_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="admin-label">Chapter</label>
+                            <input type="text"
+                                   name="chapter_name"
+                                   x-model="chapterName"
+                                   maxlength="255"
+                                   class="admin-input"
+                                   placeholder="Enter chapter name">
+                            @error('chapter_name')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <label class="admin-label">Chapter No</label>
+                            <input type="text"
+                                   name="chapter_no"
+                                   x-model="chapterNo"
+                                   maxlength="64"
+                                   class="admin-input"
+                                   placeholder="Enter chapter no (e.g. 1, 2, 3)">
+                            @error('chapter_no')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+                        </div>
                     </div>
 
                     <div>

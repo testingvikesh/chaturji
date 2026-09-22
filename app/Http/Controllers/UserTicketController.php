@@ -47,7 +47,6 @@ class UserTicketController extends Controller
                 ->get(['id', 'name', 'slug']),
             'initialMedium' => Material::normalizeMedium(old('medium', $user->medium)) ?: '',
             'subjectsUrl' => route($this->routeName('subjects')),
-            'chaptersUrl' => route($this->routeName('chapters')),
         ]);
     }
 
@@ -107,6 +106,7 @@ class UserTicketController extends Controller
             'subject_id' => ['nullable', 'integer', 'exists:subjects,id'],
             'chapter_id' => ['nullable', 'integer'],
             'chapter_name' => ['nullable', 'string', 'max:255'],
+            'chapter_no' => ['nullable', 'string', 'max:64'],
             'attachments' => ['nullable', 'array', 'max:5'],
             'attachments.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,txt,zip'],
             'chapter_files' => ['nullable', 'array', 'max:5'],
@@ -122,13 +122,14 @@ class UserTicketController extends Controller
             || filled($validated['standard_id'] ?? null)
             || filled($validated['subject_id'] ?? null)
             || filled($validated['chapter_name'] ?? null)
+            || filled($validated['chapter_no'] ?? null)
             || $request->hasFile('chapter_files');
 
         if ($usingMissingChapter) {
-            foreach (['medium', 'standard_id', 'subject_id', 'chapter_name'] as $field) {
+            foreach (['medium', 'standard_id', 'subject_id', 'chapter_name', 'chapter_no'] as $field) {
                 if (blank($validated[$field] ?? null)) {
                     throw ValidationException::withMessages([
-                        $field => 'Complete medium, standard, subject and chapter for Missing Chapter Upload.',
+                        $field => 'Complete medium, standard, subject, chapter and chapter no for Missing Chapter Upload.',
                     ]);
                 }
             }
@@ -141,15 +142,17 @@ class UserTicketController extends Controller
 
             $validated['category'] = 'missing_chapter';
             $validated['medium'] = Material::normalizeMedium($validated['medium']) ?: $validated['medium'];
+            $validated['chapter_id'] = null;
 
             $standard = Standard::query()->find($validated['standard_id']);
             $subjectModel = Subject::query()->find($validated['subject_id']);
             $mediumLabel = Standard::MEDIUMS[$validated['medium']] ?? ucfirst((string) $validated['medium']);
+            $chapterLabel = trim('Ch. '.$validated['chapter_no'].' '.$validated['chapter_name']);
             $summary = trim(implode(' · ', array_filter([
                 $mediumLabel,
                 $standard?->name,
                 $subjectModel?->name,
-                $validated['chapter_name'],
+                $chapterLabel,
             ])));
 
             if (blank($validated['subject']) || $validated['subject'] === 'Missing chapter') {
@@ -166,6 +169,7 @@ class UserTicketController extends Controller
             $validated['subject_id'] = null;
             $validated['chapter_id'] = null;
             $validated['chapter_name'] = null;
+            $validated['chapter_no'] = null;
         }
 
         $files = array_merge(

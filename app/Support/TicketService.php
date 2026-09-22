@@ -30,6 +30,7 @@ class TicketService
                 'subject_id' => $data['subject_id'] ?? null,
                 'chapter_id' => $data['chapter_id'] ?? null,
                 'chapter_name' => $data['chapter_name'] ?? null,
+                'chapter_no' => $data['chapter_no'] ?? null,
                 'subject' => $data['subject'],
                 'message' => $data['message'],
                 'status' => 'open',
