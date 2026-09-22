@@ -14,6 +14,8 @@
     'readerMaterialId' => null,
     'materialTopic' => null,
     'workedExamples' => null,
+    'canEditQuestions' => false,
+    'questionEditMedium' => null,
 ])
 
 @php
@@ -21,6 +23,32 @@
     use App\Support\TeacherChapterAccess;
 
     [$sections, $questionGroups] = TeacherChapterAccess::filterMaterial($sections, $questionGroups);
+
+    $canEditQuestions = (bool) $canEditQuestions
+        && $materialTopic
+        && $subject
+        && auth()->check()
+        && (auth()->user()->role ?? null) === 'teacher';
+
+    $questionEditUrlBuilder = $canEditQuestions
+        ? function ($question) use ($subject, $materialTopic, $questionEditMedium) {
+            $key = (string) ($question->edit_key ?? '');
+            if ($key === '') {
+                return null;
+            }
+
+            $params = [
+                'subject' => $subject,
+                'materialTopic' => $materialTopic,
+                'questionKey' => $key,
+            ];
+            if ($questionEditMedium) {
+                $params['medium'] = $questionEditMedium;
+            }
+
+            return route('teacher.books.questions.edit', $params);
+        }
+        : null;
 
     $partition = ChapterMaterialHelper::partitionSections($sections);
     $introduction = $partition['introduction'];
@@ -517,6 +545,7 @@
             'toggleAnswer' => $practiceMode,
             'sectionId' => 'questions-knowledge_ladder',
             'blockClass' => $nextBlockClass(),
+            'questionEditUrlBuilder' => $questionEditUrlBuilder,
         ])
     @endif
 
@@ -531,6 +560,7 @@
             'toggleAnswer' => $practiceMode,
             'sectionId' => 'questions-line_to_line',
             'blockClass' => $nextBlockClass(),
+            'questionEditUrlBuilder' => $questionEditUrlBuilder,
         ])
     @endif
 
@@ -569,6 +599,7 @@
             'label' => $visibleQuestionLabels[$type],
             'toggleAnswer' => $practiceMode,
             'blockClass' => $nextBlockClass(),
+            'questionEditUrlBuilder' => $questionEditUrlBuilder,
         ])
     @endforeach
 

@@ -176,6 +176,7 @@ class MaterialTopicReader
         });
 
         $questions = ChapterMaterialHelper::uniqueQuestions($questions);
+        $questions = MaterialQuestionEditor::applyEdits($questions, $materialTopic->question_edits);
         $questionGroups = ChapterMaterialHelper::groupQuestions($questions);
         $questionGroupLabels = collect($questionGroups)->mapWithKeys(
             fn ($items, $type) => [$type => ChapterQuestion::labelForType((string) $type)]
@@ -194,6 +195,43 @@ class MaterialTopicReader
             'questionGroupLabels' => $questionGroupLabels,
             'workedExamples' => collect($cached['workedExamples'] ?? []),
         ];
+    }
+
+    /**
+     * Unique questions from material JSON without applying teacher edits.
+     *
+     * @return Collection<int, ChapterQuestion>
+     */
+    public static function rawUniqueQuestions(MaterialTopic $materialTopic): Collection
+    {
+        $section = $materialTopic->sectionData();
+        abort_unless(is_array($section), 404, 'Material topic has no content.');
+
+        $material = $materialTopic->relationLoaded('material')
+            ? $materialTopic->material
+            : $materialTopic->material()->first();
+
+        $language = strtolower((string) ($material?->medium ?: 'english'));
+        if (! in_array($language, ['english', 'hindi', 'gujarati'], true)) {
+            $language = 'english';
+        }
+
+        $cached = self::rememberParsed($materialTopic, $material, $language, $section);
+
+        $questions = collect($cached['questions'] ?? [])->map(function (array $row) {
+            return new ChapterQuestion([
+                'question_type' => $row['question_type'] ?? 'short_answer',
+                'question_text' => $row['question_text'] ?? '',
+                'options' => $row['options'] ?? null,
+                'answer' => is_array($row['answer'] ?? null)
+                    ? json_encode($row['answer'], JSON_UNESCAPED_UNICODE)
+                    : ($row['answer'] ?? null),
+                'metadata' => $row['metadata'] ?? null,
+                'sort_order' => $row['sort_order'] ?? 0,
+            ]);
+        });
+
+        return ChapterMaterialHelper::uniqueQuestions($questions);
     }
 
     /**

@@ -160,6 +160,8 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/books/{subject}', [TeacherBookController::class, 'show'])->name('books.show');
     Route::get('/books/{subject}/materials/{material}', [TeacherBookController::class, 'material'])->name('books.materials.show');
     Route::get('/books/{subject}/topics/{materialTopic}', [TeacherBookController::class, 'topic'])->name('books.topics.show');
+    Route::get('/books/{subject}/topics/{materialTopic}/questions/{questionKey}/edit', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'edit'])->name('books.questions.edit');
+    Route::put('/books/{subject}/topics/{materialTopic}/questions/{questionKey}', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'update'])->name('books.questions.update');
     Route::get('/settings', [TeacherSettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [TeacherSettingController::class, 'update'])->name('settings.update');
     Route::delete('/settings/subjects/{teacherSubject}', [TeacherSettingController::class, 'destroySubject'])->name('settings.subjects.destroy');
@@ -297,6 +299,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/reports/sessions', [ReportController::class, 'sessions'])->name('reports.sessions');
         Route::get('/email-logs', [EmailLogController::class, 'index'])->name('email-logs.index');
         Route::get('/email-logs/{emailLog}', [EmailLogController::class, 'show'])->name('email-logs.show');
+        Route::get('/material-question-logs', [\App\Http\Controllers\Admin\MaterialQuestionEditLogController::class, 'index'])->name('material-question-logs.index');
+        Route::get('/material-question-logs/{materialQuestionEditLog}', [\App\Http\Controllers\Admin\MaterialQuestionEditLogController::class, 'show'])->name('material-question-logs.show');
         Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index');
         Route::get('/tickets/{ticket}', [AdminTicketController::class, 'show'])->name('tickets.show');
         Route::get('/tickets/{ticket}/attachments/{attachment}', [AdminTicketController::class, 'downloadAttachment'])->name('tickets.attachments.download');

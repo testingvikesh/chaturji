@@ -19,6 +19,7 @@ class MaterialTopic extends Model
         'title_gu',
         'generated',
         'section_json',
+        'question_edits',
         'image_url',
         'updated_at',
     ];
@@ -27,6 +28,7 @@ class MaterialTopic extends Model
         'topic_order' => 'integer',
         'generated' => 'boolean',
         'updated_at' => 'datetime',
+        'question_edits' => 'array',
     ];
 
     public function material(): BelongsTo

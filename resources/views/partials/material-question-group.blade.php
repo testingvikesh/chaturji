@@ -5,6 +5,7 @@
         'toggleAnswer' => $toggleAnswer ?? false,
         'sectionId' => 'questions-'.$type,
         'blockClass' => $blockClass ?? '',
+        'questionEditUrlBuilder' => $questionEditUrlBuilder ?? null,
     ])
 @else
     <section id="questions-{{ $type }}" class="material-question-group admin-card mb-6 {{ $blockClass ?? '' }}">
@@ -25,6 +26,9 @@
                     'toggleAnswer' => $toggleAnswer ?? false,
                     'questionOnly' => true,
                     'sectionType' => $type,
+                    'questionEditUrl' => is_callable($questionEditUrlBuilder ?? null)
+                        ? ($questionEditUrlBuilder)($question)
+                        : ($questionEditUrl ?? null),
                 ])
             @endforeach
         </div>

@@ -9,6 +9,7 @@
     'sectionId' => 'questions-knowledge_ladder',
     'blockClass' => '',
     'variant' => 'ladder',
+    'questionEditUrlBuilder' => null,
 ])
 
 @php
@@ -94,6 +95,18 @@
                     <span class="knowledge-ladder-card-step">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
 
                     <p class="knowledge-ladder-card-question">{{ $question->question_text }}</p>
+
+                    @php
+                        $ladderEditUrl = is_callable($questionEditUrlBuilder)
+                            ? $questionEditUrlBuilder($question)
+                            : null;
+                    @endphp
+                    @if ($ladderEditUrl)
+                        <a href="{{ $ladderEditUrl }}"
+                           class="mt-2 inline-flex items-center gap-1 rounded-lg border border-brand-green-100 bg-brand-green-50 px-2.5 py-1 text-xs font-semibold text-brand-green hover:bg-brand-green hover:text-white transition">
+                            Edit
+                        </a>
+                    @endif
 
                     @if ($question->answer)
                         @if ($toggleAnswer)

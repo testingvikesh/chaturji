@@ -22,5 +22,7 @@
         'readerNav' => $readerNav ?? [],
         'readerMaterialId' => $readerMaterialId ?? $material->id,
         'materialTopic' => $materialTopic,
+        'canEditQuestions' => true,
+        'questionEditMedium' => $medium,
     ])
 </x-teacher-layout>

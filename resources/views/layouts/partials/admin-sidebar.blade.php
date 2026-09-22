@@ -51,6 +51,10 @@
             <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
             Ticket Report
         </a>
+        <a href="{{ route('admin.material-question-logs.index') }}" class="{{ request()->routeIs('admin.material-question-logs.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive' }}">
+            <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            Question Edits
+        </a>
         <a href="{{ route('admin.email-logs.index') }}" class="{{ request()->routeIs('admin.email-logs.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive' }}">
             <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             Email Log
@@ -104,6 +108,7 @@
             <a href="{{ route('admin.teachers.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Teachers</a>
             <a href="{{ route('admin.standards.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Curriculum</a>
             <a href="{{ route('admin.email-logs.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Emails</a>
+            <a href="{{ route('admin.material-question-logs.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Q Edits</a>
             <a href="{{ route('admin.prompts.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Prompts</a>
             <a href="{{ route('admin.settings.edit') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Settings</a>
         </div>
