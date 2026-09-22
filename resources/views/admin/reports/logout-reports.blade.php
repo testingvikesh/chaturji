@@ -86,7 +86,12 @@
                                 </td>
                                 <td class="capitalize text-sm">{{ $report->medium ?: '—' }}</td>
                                 <td class="text-sm">{{ $report->standard ?: '—' }}</td>
-                                <td class="text-sm font-medium">{{ $report->subject_name ?: '—' }}</td>
+                                <td class="text-sm font-medium">
+                                    <p>{{ $report->subject_name ?: '—' }}</p>
+                                    @if ($report->period_label)
+                                        <p class="text-xs text-slate-400">{{ $report->period_label }}@if($report->section) · Sec {{ $report->section }}@endif</p>
+                                    @endif
+                                </td>
                                 <td class="text-sm">{{ $report->chapter_name ?: '—' }}</td>
                                 <td class="text-sm text-slate-600 max-w-[12rem]">
                     <p class="truncate" title="{{ $report->topic_names ?: $report->topic_name }}">{{ \Illuminate\Support\Str::limit($report->topic_names ?: ($report->topic_name ?: '—'), 40) }}</p>

@@ -545,7 +545,7 @@
                     <h3 class="font-bold text-slate-900">Daily Teacher Update Compliance</h3>
                     <p class="text-xs text-slate-500 mt-1">
                         Based on {{ $filters['date_to'] ?: ($filters['date_from'] ?: now()->toDateString()) }}
-                        (timetable periods not configured yet — shows who updated today)
+                        — required periods from Teacher Timetable; done = syllabus updates or logout reports.
                     </p>
                 </div>
                 <div class="admin-table-wrap">
@@ -624,8 +624,8 @@
         @endif
 
         <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 mb-2">
-            Data source: teacher <strong>Today's Teaching</strong> logs.
-            Section / Period / Planned % vs timetable will unlock when those masters are added.
+            Data source: teacher <strong>Today's Teaching</strong> logs + <strong>Logout Reports</strong>.
+            Required periods come from <a href="{{ route('admin.timetable.index') }}" class="underline font-semibold">Teacher Timetable</a>.
             Drill-down: Class → Subject → Teacher → Chapter → Daily Topic → Status / Remark.
         </div>
     </div>

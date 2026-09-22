@@ -377,7 +377,7 @@ class AdminSyllabusReport
                 'chapter_id' => $log->chapter_id,
                 'topic' => $log->topic?->name ?? '—',
                 'topic_id' => $log->topic_id,
-                'period' => '—',
+                'period' => $log->period_label ?: '—',
                 'status' => $log->status,
                 'remark' => $log->notes ?: '—',
             ];
@@ -478,6 +478,7 @@ class AdminSyllabusReport
     private function dailyCompliance(array $filters): Collection
     {
         $date = $filters['date_to'] ?: ($filters['date_from'] ?: now()->toDateString());
+        $weekday = \Illuminate\Support\Carbon::parse($date)->dayOfWeekIso;
 
         $teachers = User::teachers()->where('is_approved', true)->orderBy('name')->get(['id', 'name']);
         $updates = TeachingLog::query()
@@ -486,12 +487,34 @@ class AdminSyllabusReport
             ->groupBy('teacher_id')
             ->pluck('updates_done', 'teacher_id');
 
-        return $teachers->map(function (User $teacher) use ($updates) {
-            $done = (int) ($updates[$teacher->id] ?? 0);
-            $required = max(1, $done); // no timetable yet — treat any update day as required = done baseline
-            if ($done === 0) {
-                $required = 1;
+        $logoutDone = \App\Models\TeacherLogoutReport::query()
+            ->whereDate('report_date', $date)
+            ->select('teacher_id', DB::raw('COUNT(*) as reports_done'))
+            ->groupBy('teacher_id')
+            ->pluck('reports_done', 'teacher_id');
+
+        $requiredByTeacher = \App\Models\TeacherTimetable::query()
+            ->active()
+            ->where('weekday', $weekday)
+            ->whereHas('period', fn ($q) => $q->where('is_active', true))
+            ->select('teacher_id', DB::raw('COUNT(*) as required_slots'))
+            ->groupBy('teacher_id')
+            ->pluck('required_slots', 'teacher_id');
+
+        return $teachers->map(function (User $teacher) use ($updates, $logoutDone, $requiredByTeacher) {
+            $required = (int) ($requiredByTeacher[$teacher->id] ?? 0);
+            $doneLogs = (int) ($updates[$teacher->id] ?? 0);
+            $doneLogout = (int) ($logoutDone[$teacher->id] ?? 0);
+            $done = max($doneLogs, $doneLogout);
+
+            if ($required === 0) {
+                // No timetable — keep soft baseline from updates
+                $required = $done > 0 ? $done : 1;
+                $assignedLabel = '—';
+            } else {
+                $assignedLabel = (string) $required;
             }
+
             $pending = max(0, $required - $done);
             $percent = (int) round(($done / max(1, $required)) * 100);
             if ($done === 0) {
@@ -501,10 +524,10 @@ class AdminSyllabusReport
             return [
                 'teacher_id' => $teacher->id,
                 'teacher' => $teacher->name,
-                'assigned_periods' => '—',
+                'assigned_periods' => $assignedLabel,
                 'required' => $required,
                 'done' => $done,
-                'pending' => $done === 0 ? 1 : $pending,
+                'pending' => $pending,
                 'percent' => $percent,
                 'status' => $this->statusTone($percent),
             ];

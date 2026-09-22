@@ -9,9 +9,11 @@ use App\Models\MaterialTopic;
 use App\Models\Subject;
 use App\Models\TeacherLogoutReport;
 use App\Models\TeacherSubject;
+use App\Models\TeacherTimetable;
 use App\Services\AuthActivityService;
 use App\Support\ActivityLogger;
 use App\Support\MailConfig;
+use App\Support\TeacherTimetableService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,35 +25,15 @@ use Throwable;
 
 class LogoutReportController extends Controller
 {
+    public function __construct(
+        private readonly TeacherTimetableService $timetables
+    ) {}
+
     public function create(): View
     {
         $teacher = auth()->user();
-        $assignments = TeacherSubject::query()
-            ->with(['standard:id,name,slug', 'subject:id,name,standard_id'])
-            ->where('teacher_id', $teacher->id)
-            ->orderBy('medium')
-            ->orderBy('standard_id')
-            ->get();
-
-        $options = $assignments->map(function (TeacherSubject $row) {
-            $medium = Material::normalizeMedium($row->medium) ?: $row->medium;
-            $standard = $row->standard;
-            $subject = $row->subject;
-            if (! $standard || ! $subject) {
-                return null;
-            }
-
-            return [
-                'key' => $medium.'|'.$standard->id.'|'.$subject->id,
-                'medium' => $medium,
-                'medium_label' => \App\Models\Standard::MEDIUMS[$medium] ?? ucfirst((string) $medium),
-                'standard_id' => $standard->id,
-                'standard_slug' => $standard->slug ?: $standard->name,
-                'standard_name' => $standard->name,
-                'subject_id' => $subject->id,
-                'subject_name' => $subject->name,
-            ];
-        })->filter()->values();
+        $pack = $this->timetables->logoutReportOptions($teacher);
+        $options = $pack['options'];
 
         $oldKey = old('assignment_key');
         if (! $oldKey && $options->isNotEmpty()) {
@@ -62,21 +44,20 @@ class LogoutReportController extends Controller
             'teacher' => $teacher,
             'employeeCode' => 'EMP-'.str_pad((string) $teacher->id, 4, '0', STR_PAD_LEFT),
             'options' => $options,
+            'optionsSource' => $pack['source'],
             'initialKey' => $oldKey,
             'today' => now()->toDateString(),
+            'todaySlots' => $this->timetables->forTeacherOnDate($teacher->id),
         ]);
     }
 
-    /**
-     * Chapters for logout report = book materials (same source as Teacher Books).
-     */
     public function chapters(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'assignment_key' => ['required', 'string'],
         ]);
 
-        [$medium, $standardId, $subjectId, $subject] = $this->resolveAssignedSubject(
+        [$medium, $standardId, $subjectId, $subject] = $this->resolveAssignment(
             auth()->user()->id,
             $validated['assignment_key']
         );
@@ -91,9 +72,6 @@ class LogoutReportController extends Controller
         );
     }
 
-    /**
-     * Topics for a selected material chapter.
-     */
     public function topics(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -101,7 +79,7 @@ class LogoutReportController extends Controller
             'material_id' => ['required', 'integer', 'exists:materials,id'],
         ]);
 
-        [$medium, $standardId, $subjectId, $subject] = $this->resolveAssignedSubject(
+        [$medium, $standardId, $subjectId, $subject] = $this->resolveAssignment(
             auth()->user()->id,
             $validated['assignment_key']
         );
@@ -152,21 +130,23 @@ class LogoutReportController extends Controller
             ]);
         }
 
-        [$medium, $standardId, $subjectId, $subject] = $this->resolveAssignedSubject(
+        [$medium, $standardId, $subjectId, $subject, $slot] = $this->resolveAssignment(
             $teacher->id,
-            $validated['assignment_key']
+            $validated['assignment_key'],
+            true
         );
 
-        $assigned = TeacherSubject::query()
-            ->with(['standard:id,name,slug'])
-            ->where('teacher_id', $teacher->id)
-            ->where('subject_id', $subjectId)
-            ->where('standard_id', $standardId)
-            ->whereRaw('LOWER(TRIM(medium)) = ?', [strtolower(trim((string) $medium))])
-            ->first();
-
-        abort_unless($assigned, 403, 'Selected medium / standard / subject is not assigned to you.');
-        $standard = $assigned->standard;
+        $standard = $subject->standard;
+        if (! $standard) {
+            $assigned = TeacherSubject::query()
+                ->with(['standard:id,name,slug'])
+                ->where('teacher_id', $teacher->id)
+                ->where('subject_id', $subjectId)
+                ->where('standard_id', $standardId)
+                ->whereRaw('LOWER(TRIM(medium)) = ?', [strtolower(trim((string) $medium))])
+                ->first();
+            $standard = $assigned?->standard;
+        }
 
         $material = Material::query()->findOrFail((int) $validated['material_id']);
         abort_unless($material->matchesStudentSubject($subject), 422, 'Chapter does not belong to this subject.');
@@ -200,6 +180,10 @@ class LogoutReportController extends Controller
             'standard' => $standard?->name ?: $standard?->slug,
             'subject_id' => $subject->id,
             'subject_name' => $subject->name,
+            'timetable_id' => $slot?->id,
+            'period_id' => $slot?->period_id,
+            'period_label' => $slot?->period?->displayLabel(),
+            'section' => $slot?->section,
             'chapter_id' => $material->chapter_id,
             'chapter_name' => $chapterName,
             'topic_id' => null,
@@ -226,7 +210,7 @@ class LogoutReportController extends Controller
 
         ActivityLogger::log(
             'teacher.logout_report',
-            'Logout report: '.$subject->name.' / '.$chapterName.' ('.$topics->count().' topics, '.$status.')',
+            'Logout report: '.($slot?->optionLabel() ?: $subject->name).' / '.$chapterName.' ('.$topics->count().' topics, '.$status.')',
             $report,
             [
                 'medium' => $medium,
@@ -234,6 +218,8 @@ class LogoutReportController extends Controller
                 'subject' => $subject->name,
                 'chapter' => $chapterName,
                 'material_id' => $material->id,
+                'timetable_id' => $slot?->id,
+                'period' => $slot?->period?->displayLabel(),
                 'topics' => $topics->map(fn (MaterialTopic $t) => $t->displayName())->all(),
                 'status' => $status,
                 'mail_sent' => $mailSent,
@@ -252,10 +238,34 @@ class LogoutReportController extends Controller
     }
 
     /**
-     * @return array{0: string, 1: int, 2: int, 3: Subject}
+     * @return array{0: string, 1: int, 2: int, 3: Subject, 4: ?TeacherTimetable}
      */
-    private function resolveAssignedSubject(int $teacherId, string $assignmentKey): array
+    private function resolveAssignment(int $teacherId, string $assignmentKey, bool $withSlot = false): array
     {
+        $slot = null;
+
+        if (str_starts_with($assignmentKey, 'tt|')) {
+            $slotId = (int) substr($assignmentKey, 3);
+            $slot = TeacherTimetable::query()
+                ->with(['period', 'standard:id,name,slug', 'subject:id,name,standard_id'])
+                ->active()
+                ->where('teacher_id', $teacherId)
+                ->where('id', $slotId)
+                ->first();
+
+            abort_unless($slot, 403, 'Selected timetable period is not valid for you.');
+
+            // Prefer today's weekday; still allow if admin changed day mid-session
+            $medium = Material::normalizeMedium($slot->medium) ?: $slot->medium;
+            $subject = $slot->subject ?: Subject::query()->findOrFail($slot->subject_id);
+            $subject->setRelation('standard', $slot->standard);
+            $subject->loadMissing('standard');
+
+            $this->timetables->syncTeacherSubject($slot);
+
+            return [$medium, (int) $slot->standard_id, (int) $slot->subject_id, $subject, $withSlot ? $slot : null];
+        }
+
         [$medium, $standardId, $subjectId] = array_pad(explode('|', $assignmentKey), 3, null);
         $medium = Material::normalizeMedium($medium) ?: $medium;
         $standardId = (int) $standardId;
@@ -273,7 +283,7 @@ class LogoutReportController extends Controller
         $subject = Subject::query()->findOrFail($subjectId);
         $subject->loadMissing('standard');
 
-        return [$medium, $standardId, $subjectId, $subject];
+        return [$medium, $standardId, $subjectId, $subject, null];
     }
 
     private function sendMail(TeacherLogoutReport $report): bool

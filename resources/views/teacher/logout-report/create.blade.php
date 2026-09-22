@@ -95,7 +95,11 @@
         @include('admin.partials.alert')
 
         <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4">
-            Medium / Standard / Subject come from your Settings. Select chapter, tick topics, then submit to logout.
+            @if (($optionsSource ?? '') === 'timetable')
+                Select today’s timetable period → chapter → topics → Complete / Remain → submit to logout.
+            @else
+                Medium / Standard / Subject come from Settings (no timetable today). Select chapter, tick topics, then submit to logout.
+            @endif
         </div>
 
         @if ($options->isEmpty())
@@ -121,10 +125,15 @@
                             <option value="">Select your assigned subject</option>
                             @foreach ($options as $opt)
                                 <option value="{{ $opt['key'] }}">
-                                    {{ $opt['medium_label'] }} · {{ $opt['standard_name'] }} · {{ $opt['subject_name'] }}
+                                    {{ $opt['label'] ?? (($opt['medium_label'] ?? '').' · '.($opt['standard_name'] ?? '').' · '.($opt['subject_name'] ?? '')) }}
                                 </option>
                             @endforeach
                         </select>
+                        @if (($optionsSource ?? '') === 'timetable')
+                            <p class="text-xs text-brand-green mt-1">Showing today’s timetable periods.</p>
+                        @else
+                            <p class="text-xs text-amber-700 mt-1">No timetable for today — using Settings subject assignments.</p>
+                        @endif
                         @error('assignment_key')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
 

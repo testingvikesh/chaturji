@@ -42,6 +42,9 @@
             @endif
 
             <main class="p-4 sm:p-6 lg:p-8">
+                @if (\App\Support\AdminReportCatalog::isReportsContext() && ! request()->routeIs('admin.reports.index'))
+                    @include('admin.partials.reports-nav')
+                @endif
                 {{ $slot }}
             </main>
         </div>

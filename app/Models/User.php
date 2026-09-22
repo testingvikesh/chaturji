@@ -103,6 +103,11 @@ class User extends Authenticatable
         return $this->hasMany(TeacherSubject::class, 'teacher_id');
     }
 
+    public function teacherTimetables(): HasMany
+    {
+        return $this->hasMany(TeacherTimetable::class, 'teacher_id');
+    }
+
     public function dailyOtps(): HasMany
     {
         return $this->hasMany(TeacherDailyOtp::class);

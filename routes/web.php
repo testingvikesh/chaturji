@@ -12,7 +12,9 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StandardController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Admin\SubjectController;
+use App\Http\Controllers\Admin\SchoolPeriodController;
 use App\Http\Controllers\Admin\TeacherController;
+use App\Http\Controllers\Admin\TeacherTimetableController;
 use App\Http\Controllers\Admin\TopicController;
 use App\Http\Controllers\ChapterOriginalPdfController;
 use App\Http\Controllers\MaterialPdfController;
@@ -264,6 +266,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/teachers/{teacher}/pending', [TeacherController::class, 'pending'])->name('teachers.pending');
         Route::resource('teachers', TeacherController::class)->except(['create', 'store']);
 
+        Route::get('/timetable', [TeacherTimetableController::class, 'index'])->name('timetable.index');
+        Route::get('/timetable/periods', [SchoolPeriodController::class, 'index'])->name('timetable.periods');
+        Route::post('/timetable/periods', [SchoolPeriodController::class, 'store'])->name('timetable.periods.store');
+        Route::put('/timetable/periods/{period}', [SchoolPeriodController::class, 'update'])->name('timetable.periods.update');
+        Route::delete('/timetable/periods/{period}', [SchoolPeriodController::class, 'destroy'])->name('timetable.periods.destroy');
+        Route::get('/timetable/subjects', [TeacherTimetableController::class, 'subjects'])->name('timetable.subjects');
+        Route::get('/timetable/teachers/{teacher}', [TeacherTimetableController::class, 'edit'])->name('timetable.edit');
+        Route::post('/timetable/teachers/{teacher}', [TeacherTimetableController::class, 'store'])->name('timetable.store');
+        Route::delete('/timetable/teachers/{teacher}/{timetable}', [TeacherTimetableController::class, 'destroy'])->name('timetable.destroy');
+
         Route::resource('standards', StandardController::class)->except(['show']);
         Route::get('/standards/{standard}/subjects', [SubjectController::class, 'index'])->name('standards.subjects.index');
         Route::get('/standards/{standard}/subjects/create', [SubjectController::class, 'create'])->name('standards.subjects.create');
@@ -300,6 +312,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/upload-data/{chapterContent}', [DataUploadController::class, 'show'])->name('upload-data.show');
         Route::delete('/upload-data/{chapterContent}', [DataUploadController::class, 'destroy'])->name('upload-data.destroy');
 
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/logins', [ReportController::class, 'logins'])->name('reports.logins');
         Route::get('/reports/sessions', [ReportController::class, 'sessions'])->name('reports.sessions');
         Route::get('/reports/teacher-subjects', [ReportController::class, 'teacherSubjects'])->name('reports.teacher-subjects');

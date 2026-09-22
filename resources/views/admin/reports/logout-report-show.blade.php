@@ -16,6 +16,7 @@
                 <p><span class="text-slate-500">Medium:</span> <span class="font-semibold capitalize">{{ $report->medium ?: '—' }}</span></p>
                 <p><span class="text-slate-500">Standard:</span> <span class="font-semibold">{{ $report->standard ?: '—' }}</span></p>
                 <p><span class="text-slate-500">Subject:</span> <span class="font-semibold">{{ $report->subject_name ?: '—' }}</span></p>
+                <p><span class="text-slate-500">Period:</span> <span class="font-semibold">{{ $report->period_label ?: '—' }}@if($report->section) · Sec {{ $report->section }}@endif</span></p>
                 <p><span class="text-slate-500">Chapter:</span> <span class="font-semibold">{{ $report->chapter_name ?: '—' }}</span></p>
                 <p class="sm:col-span-2"><span class="text-slate-500">Topic:</span> <span class="font-semibold">{{ $report->topic_names ?: ($report->topic_name ?: '—') }}</span></p>
                 <p><span class="text-slate-500">Status:</span> <span class="font-semibold">{{ $report->statusLabel() }}</span></p>

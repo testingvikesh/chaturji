@@ -32,6 +32,29 @@
         <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
+                    <p class="text-sm font-bold text-slate-900">Today’s timetable · {{ now()->format('l, d M Y') }}</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Set by admin · used for logout work reporting</p>
+                </div>
+            </div>
+            @if ($todaySlots->isEmpty())
+                <p class="mt-3 text-sm text-slate-500">No periods scheduled for today. Logout report will use your Settings subjects.</p>
+            @else
+                <div class="mt-3 space-y-2">
+                    @foreach ($todaySlots as $slot)
+                        <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-900">{{ $slot->period?->displayLabel() }} · {{ $slot->subject?->name }}</p>
+                                <p class="text-xs text-slate-500">{{ $slot->mediumLabel() }} · {{ $slot->standard?->name }}@if($slot->section) · Sec {{ $slot->section }}@endif</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
                     <p class="text-sm font-bold text-slate-900">Your standard & subjects</p>
                     <p class="text-xs text-slate-500 mt-0.5">Set this in Settings so other teachers cannot take the same subject</p>
                 </div>

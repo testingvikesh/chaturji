@@ -12,11 +12,19 @@ use App\Models\TeacherSubject;
 use App\Models\User;
 use App\Models\UserSession;
 use App\Support\AdminMaterialUploadReport;
+use App\Support\AdminReportCatalog;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ReportController extends Controller
 {
+    public function index(): View
+    {
+        return view('admin.reports.index', [
+            'groups' => AdminReportCatalog::groups(),
+        ]);
+    }
+
     public function logins(Request $request): View
     {
         $query = LoginLog::with('user')->whereIn('role', ['student', 'teacher'])->latest('logged_at');

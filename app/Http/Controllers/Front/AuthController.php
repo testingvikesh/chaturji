@@ -177,7 +177,16 @@ class AuthController extends Controller
         AuthActivityService::recordLogin($user, $role, $login, $request);
         AuthActivityService::startSession($user, $request);
 
-        return redirect()->intended($this->redirectForRole($role));
+        $redirect = redirect()->intended($this->redirectForRole($role));
+
+        if ($role === 'teacher') {
+            $slotCount = app(\App\Support\TeacherTimetableService::class)->requiredCountForTeacher($user->id);
+            if ($slotCount > 0) {
+                $redirect->with('success', 'Welcome back. You have '.$slotCount.' timetable period'.($slotCount === 1 ? '' : 's').' today.');
+            }
+        }
+
+        return $redirect;
     }
 
     public function registerStore(Request $request, string $role): RedirectResponse
