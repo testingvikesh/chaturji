@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Support\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TicketController extends Controller
 {
@@ -70,12 +73,23 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket): View
     {
-        $ticket->load(['user', 'replies.user']);
+        $ticket->load(['user', 'replies.user', 'attachments']);
 
         return view('admin.tickets.show', [
             'ticket' => $ticket,
             'statuses' => Ticket::STATUSES,
         ]);
+    }
+
+    public function downloadAttachment(Ticket $ticket, TicketAttachment $attachment): StreamedResponse
+    {
+        abort_unless((int) $attachment->ticket_id === (int) $ticket->id, 404);
+        abort_unless($attachment->existsOnDisk(), 404);
+
+        return Storage::disk($attachment->disk ?: 'public')->download(
+            $attachment->path,
+            $attachment->original_name
+        );
     }
 
     public function reply(Request $request, Ticket $ticket): RedirectResponse

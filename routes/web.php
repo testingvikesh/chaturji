@@ -148,6 +148,7 @@ Route::middleware(['auth', 'student'])->prefix('student')->name('student.')->gro
     Route::get('/tickets/create', [UserTicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [UserTicketController::class, 'store'])->name('tickets.store');
     Route::get('/tickets/{ticket}', [UserTicketController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/attachments/{attachment}', [UserTicketController::class, 'downloadAttachment'])->name('tickets.attachments.download');
     Route::post('/tickets/{ticket}/reply', [UserTicketController::class, 'reply'])->name('tickets.reply');
 });
 
@@ -210,6 +211,7 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/tickets/create', [UserTicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [UserTicketController::class, 'store'])->name('tickets.store');
     Route::get('/tickets/{ticket}', [UserTicketController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticket}/attachments/{attachment}', [UserTicketController::class, 'downloadAttachment'])->name('tickets.attachments.download');
     Route::post('/tickets/{ticket}/reply', [UserTicketController::class, 'reply'])->name('tickets.reply');
 
     Route::get('/notifications', [TeacherNotificationController::class, 'index'])->name('notifications.index');
@@ -293,6 +295,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/email-logs/{emailLog}', [EmailLogController::class, 'show'])->name('email-logs.show');
         Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index');
         Route::get('/tickets/{ticket}', [AdminTicketController::class, 'show'])->name('tickets.show');
+        Route::get('/tickets/{ticket}/attachments/{attachment}', [AdminTicketController::class, 'downloadAttachment'])->name('tickets.attachments.download');
         Route::post('/tickets/{ticket}/reply', [AdminTicketController::class, 'reply'])->name('tickets.reply');
         Route::patch('/tickets/{ticket}/status', [AdminTicketController::class, 'updateStatus'])->name('tickets.status');
     });

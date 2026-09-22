@@ -47,6 +47,11 @@ class Ticket extends Model
         return $this->hasMany(TicketReply::class)->oldest();
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TicketAttachment::class)->oldest();
+    }
+
     public function isClosed(): bool
     {
         return $this->status === 'closed';

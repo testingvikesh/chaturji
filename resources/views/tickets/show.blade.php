@@ -32,6 +32,11 @@
                         <span class="font-normal text-slate-400"> · {{ $ticket->created_at?->format('d M Y, h:i A') }}</span>
                     </p>
                     <p class="text-sm text-slate-800 whitespace-pre-line">{{ $ticket->message }}</p>
+                    @include('tickets.partials.attachments', [
+                        'attachments' => $ticket->attachments,
+                        'ticket' => $ticket,
+                        'downloadRoute' => $routePrefix.'.attachments.download',
+                    ])
                 </div>
 
                 @forelse ($ticket->replies as $reply)

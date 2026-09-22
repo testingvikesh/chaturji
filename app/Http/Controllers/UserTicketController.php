@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Support\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UserTicketController extends Controller
 {
@@ -20,7 +23,7 @@ class UserTicketController extends Controller
         return view('tickets.index', $this->panelData() + [
             'tickets' => Ticket::query()
                 ->where('user_id', $user->id)
-                ->withCount('replies')
+                ->withCount(['replies', 'attachments'])
                 ->latest()
                 ->paginate(15),
         ]);
@@ -39,9 +42,20 @@ class UserTicketController extends Controller
             'category' => ['required', Rule::in(array_keys(Ticket::CATEGORIES))],
             'subject' => ['required', 'string', 'max:160'],
             'message' => ['required', 'string', 'max:4000'],
+            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['file', 'max:5120', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,txt,zip'],
+        ], [
+            'attachments.max' => 'You can upload up to 5 files.',
+            'attachments.*.max' => 'Each file must be 5 MB or less.',
+            'attachments.*.mimes' => 'Allowed files: JPG, PNG, WEBP, PDF, DOC, DOCX, TXT, ZIP.',
         ]);
 
-        $ticket = $this->tickets->create(auth()->user(), $validated);
+        $files = $request->file('attachments', []) ?: [];
+        if (! is_array($files)) {
+            $files = [$files];
+        }
+
+        $ticket = $this->tickets->create(auth()->user(), $validated, array_values($files));
 
         return redirect()
             ->route($this->routeName('show'), $ticket)
@@ -51,11 +65,23 @@ class UserTicketController extends Controller
     public function show(Ticket $ticket): View
     {
         $this->assertOwner($ticket);
-        $ticket->load(['replies.user', 'user']);
+        $ticket->load(['replies.user', 'user', 'attachments']);
 
         return view('tickets.show', $this->panelData() + [
             'ticket' => $ticket,
         ]);
+    }
+
+    public function downloadAttachment(Ticket $ticket, TicketAttachment $attachment): StreamedResponse
+    {
+        $this->assertOwner($ticket);
+        abort_unless((int) $attachment->ticket_id === (int) $ticket->id, 404);
+        abort_unless($attachment->existsOnDisk(), 404);
+
+        return Storage::disk($attachment->disk ?: 'public')->download(
+            $attachment->path,
+            $attachment->original_name
+        );
     }
 
     public function reply(Request $request, Ticket $ticket): RedirectResponse

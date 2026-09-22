@@ -3,19 +3,24 @@
 namespace App\Support;
 
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Models\TicketReply;
 use App\Models\User;
 use App\Notifications\TicketRepliedNotification;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 class TicketService
 {
     public function __construct(private TicketMailer $mailer) {}
 
-    public function create(User $user, array $data): Ticket
+    /**
+     * @param  list<UploadedFile>  $files
+     */
+    public function create(User $user, array $data, array $files = []): Ticket
     {
-        $ticket = DB::transaction(function () use ($user, $data) {
-            return Ticket::query()->create([
+        $ticket = DB::transaction(function () use ($user, $data, $files) {
+            $ticket = Ticket::query()->create([
                 'ticket_no' => Ticket::nextNumber(),
                 'user_id' => $user->id,
                 'role' => in_array($user->role, ['student', 'teacher'], true) ? $user->role : 'student',
@@ -24,9 +29,13 @@ class TicketService
                 'message' => $data['message'],
                 'status' => 'open',
             ]);
+
+            $this->storeAttachments($ticket, $user, $files);
+
+            return $ticket;
         });
 
-        $this->mailer->created($ticket->load('user'));
+        $this->mailer->created($ticket->load(['user', 'attachments']));
 
         return $ticket;
     }
@@ -66,5 +75,33 @@ class TicketService
     public function reopen(Ticket $ticket): void
     {
         $ticket->update(['status' => 'open']);
+    }
+
+    /**
+     * @param  list<UploadedFile>  $files
+     */
+    private function storeAttachments(Ticket $ticket, User $user, array $files): void
+    {
+        foreach ($files as $file) {
+            if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                continue;
+            }
+
+            $path = $file->store('tickets/'.$ticket->id, 'public');
+
+            if (! $path) {
+                continue;
+            }
+
+            TicketAttachment::query()->create([
+                'ticket_id' => $ticket->id,
+                'user_id' => $user->id,
+                'disk' => 'public',
+                'path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime' => $file->getClientMimeType() ?: $file->getMimeType(),
+                'size' => (int) $file->getSize(),
+            ]);
+        }
     }
 }
