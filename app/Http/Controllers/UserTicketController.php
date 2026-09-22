@@ -34,12 +34,17 @@ class UserTicketController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $user = auth()->user();
+        $type = old('ticket_type', $request->query('type'));
+        $type = in_array($type, ['issue', 'missing'], true) ? $type : null;
 
         return view('tickets.create', $this->panelData() + [
-            'categories' => Ticket::CATEGORIES,
+            'ticketType' => $type,
+            'categories' => collect(Ticket::CATEGORIES)
+                ->reject(fn ($label, $key) => $key === 'missing_chapter')
+                ->all(),
             'mediums' => Standard::MEDIUMS,
             'standards' => Standard::query()
                 ->where('is_active', true)
@@ -97,97 +102,99 @@ class UserTicketController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'category' => ['required', Rule::in(array_keys(Ticket::CATEGORIES))],
-            'subject' => ['required', 'string', 'max:160'],
-            'message' => ['required', 'string', 'max:4000'],
-            'medium' => ['nullable', Rule::in(array_keys(Standard::MEDIUMS))],
-            'standard_id' => ['nullable', 'integer', 'exists:standards,id'],
-            'subject_id' => ['nullable', 'integer', 'exists:subjects,id'],
-            'chapter_id' => ['nullable', 'integer'],
-            'chapter_name' => ['nullable', 'string', 'max:255'],
-            'chapter_no' => ['nullable', 'string', 'max:64'],
-            'attachments' => ['nullable', 'array', 'max:5'],
-            'attachments.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,txt,zip'],
-            'chapter_files' => ['nullable', 'array', 'max:5'],
-            'chapter_files.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,txt,zip'],
-        ], [
-            'attachments.max' => 'You can upload up to 5 general files.',
-            'attachments.*.max' => 'Each file must be 10 MB or less.',
-            'chapter_files.max' => 'You can upload up to 5 chapter files.',
-            'chapter_files.*.max' => 'Each chapter file must be 10 MB or less.',
-        ]);
+        $type = $request->input('ticket_type');
 
-        $usingMissingChapter = filled($validated['medium'] ?? null)
-            || filled($validated['standard_id'] ?? null)
-            || filled($validated['subject_id'] ?? null)
-            || filled($validated['chapter_name'] ?? null)
-            || filled($validated['chapter_no'] ?? null)
-            || $request->hasFile('chapter_files');
-
-        if ($usingMissingChapter) {
-            foreach (['medium', 'standard_id', 'subject_id', 'chapter_name', 'chapter_no'] as $field) {
-                if (blank($validated[$field] ?? null)) {
-                    throw ValidationException::withMessages([
-                        $field => 'Complete medium, standard, subject, chapter and chapter no for Missing Chapter Upload.',
-                    ]);
-                }
-            }
-
-            if (! $request->hasFile('chapter_files') && ! $request->hasFile('attachments')) {
-                throw ValidationException::withMessages([
-                    'chapter_files' => 'Please upload at least one chapter file.',
-                ]);
-            }
-
-            $validated['category'] = 'missing_chapter';
-            $validated['medium'] = Material::normalizeMedium($validated['medium']) ?: $validated['medium'];
-            $validated['chapter_id'] = null;
-
-            $standard = Standard::query()->find($validated['standard_id']);
-            $subjectModel = Subject::query()->find($validated['subject_id']);
-            $mediumLabel = Standard::MEDIUMS[$validated['medium']] ?? ucfirst((string) $validated['medium']);
-            $chapterLabel = trim('Ch. '.$validated['chapter_no'].' '.$validated['chapter_name']);
-            $summary = trim(implode(' · ', array_filter([
-                $mediumLabel,
-                $standard?->name,
-                $subjectModel?->name,
-                $chapterLabel,
-            ])));
-
-            if (blank($validated['subject']) || $validated['subject'] === 'Missing chapter') {
-                $validated['subject'] = 'Missing chapter: '.($summary ?: 'upload');
-            }
-
-            $metaLine = 'Missing chapter details: '.$summary;
-            if (! str_contains($validated['message'], $metaLine)) {
-                $validated['message'] = trim($validated['message']."\n\n".$metaLine);
-            }
-        } else {
-            $validated['medium'] = null;
-            $validated['standard_id'] = null;
-            $validated['subject_id'] = null;
-            $validated['chapter_id'] = null;
-            $validated['chapter_name'] = null;
-            $validated['chapter_no'] = null;
-        }
-
-        $files = array_merge(
-            $this->normalizeFiles($request->file('attachments')),
-            $this->normalizeFiles($request->file('chapter_files'))
-        );
-
-        if (count($files) > 5) {
+        if (! in_array($type, ['issue', 'missing'], true)) {
             throw ValidationException::withMessages([
-                'attachments' => 'Total attachments cannot exceed 5 files.',
+                'ticket_type' => 'Choose Issue Ticket or Missing File Upload.',
             ]);
         }
 
+        if ($type === 'missing') {
+            return $this->storeMissing($request);
+        }
+
+        return $this->storeIssue($request);
+    }
+
+    private function storeIssue(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ticket_type' => ['required', Rule::in(['issue'])],
+            'category' => ['required', Rule::in(array_keys(Ticket::CATEGORIES))],
+            'subject' => ['required', 'string', 'max:160'],
+            'message' => ['required', 'string', 'max:4000'],
+            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,txt,zip'],
+        ], [
+            'attachments.max' => 'You can upload up to 5 files.',
+            'attachments.*.max' => 'Each file must be 10 MB or less.',
+        ]);
+
+        if (($validated['category'] ?? '') === 'missing_chapter') {
+            $validated['category'] = 'other';
+        }
+
+        $validated['medium'] = null;
+        $validated['standard_id'] = null;
+        $validated['subject_id'] = null;
+        $validated['chapter_id'] = null;
+        $validated['chapter_name'] = null;
+        $validated['chapter_no'] = null;
+
+        $files = $this->normalizeFiles($request->file('attachments'));
         $ticket = $this->tickets->create(auth()->user(), $validated, $files);
 
         return redirect()
             ->route($this->routeName('show'), $ticket)
             ->with('success', 'Ticket '.$ticket->ticket_no.' generated.');
+    }
+
+    private function storeMissing(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ticket_type' => ['required', Rule::in(['missing'])],
+            'medium' => ['required', Rule::in(array_keys(Standard::MEDIUMS))],
+            'standard_id' => ['required', 'integer', 'exists:standards,id'],
+            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
+            'chapter_name' => ['required', 'string', 'max:255'],
+            'chapter_no' => ['required', 'string', 'max:64'],
+            'message' => ['nullable', 'string', 'max:4000'],
+            'chapter_files' => ['required', 'array', 'min:1', 'max:5'],
+            'chapter_files.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,txt,zip'],
+        ], [
+            'chapter_files.required' => 'Please upload at least one missing file.',
+            'chapter_files.min' => 'Please upload at least one missing file.',
+            'chapter_files.*.max' => 'Each file must be 10 MB or less.',
+        ]);
+
+        $validated['medium'] = Material::normalizeMedium($validated['medium']) ?: $validated['medium'];
+        $validated['category'] = 'missing_chapter';
+        $validated['chapter_id'] = null;
+
+        $standard = Standard::query()->find($validated['standard_id']);
+        $subjectModel = Subject::query()->find($validated['subject_id']);
+        $mediumLabel = Standard::MEDIUMS[$validated['medium']] ?? ucfirst((string) $validated['medium']);
+        $chapterLabel = trim('Ch. '.$validated['chapter_no'].' '.$validated['chapter_name']);
+        $summary = trim(implode(' · ', array_filter([
+            $mediumLabel,
+            $standard?->name,
+            $subjectModel?->name,
+            $chapterLabel,
+        ])));
+
+        $validated['subject'] = 'Missing file: '.($summary ?: 'upload');
+        $note = trim((string) ($validated['message'] ?? ''));
+        $validated['message'] = $note !== ''
+            ? $note."\n\nMissing file details: ".$summary
+            : 'Please add this missing chapter file.'."\n\nMissing file details: ".$summary;
+
+        $files = $this->normalizeFiles($request->file('chapter_files'));
+        $ticket = $this->tickets->create(auth()->user(), $validated, $files);
+
+        return redirect()
+            ->route($this->routeName('show'), $ticket)
+            ->with('success', 'Ticket '.$ticket->ticket_no.' generated for missing file upload.');
     }
 
     public function show(Ticket $ticket): View
