@@ -14,11 +14,14 @@
 <body class="font-sans antialiased">
     <div class="admin-shell min-h-screen lg:pl-64">
         @include('layouts.partials.admin-sidebar')
+        @include('layouts.partials.top-right-logout', [
+            'action' => route('admin.logout'),
+        ])
 
         <div class="lg:pt-0 pt-14">
             @if (isset($header))
                 <header class="admin-header">
-                    <div class="px-4 sm:px-6 lg:px-8 py-5">
+                    <div class="px-4 sm:px-6 lg:px-8 py-5 pr-16">
                         {{ $header }}
                     </div>
                 </header>
