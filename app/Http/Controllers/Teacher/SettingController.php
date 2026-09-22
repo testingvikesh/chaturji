@@ -17,9 +17,7 @@ use Illuminate\View\View;
 
 class SettingController extends Controller
 {
-    /** Std 11 & 12: up to 2 teachers may share one subject. Other standards: 1 teacher only. */
-    private const SHARED_GRADES = [11, 12];
-
+    /** Every standard: up to 2 teachers may share the same subject. */
     private const SHARED_MAX_TEACHERS = 2;
 
     public function edit(): View
@@ -108,12 +106,8 @@ class SettingController extends Controller
             }
 
             if ($conflicts !== []) {
-                $hint = in_array($grade, self::SHARED_GRADES, true)
-                    ? 'Standard '.$grade.' allows up to '.self::SHARED_MAX_TEACHERS.' teachers per subject.'
-                    : 'This subject is already taken by another teacher.';
-
                 throw ValidationException::withMessages([
-                    'subject_ids' => $hint.' '.implode(' · ', $conflicts),
+                    'subject_ids' => 'Each subject allows up to '.self::SHARED_MAX_TEACHERS.' teachers. '.implode(' · ', $conflicts),
                 ]);
             }
 
@@ -257,6 +251,6 @@ class SettingController extends Controller
 
     private static function maxTeachersForGrade(int $grade): int
     {
-        return in_array($grade, self::SHARED_GRADES, true) ? self::SHARED_MAX_TEACHERS : 1;
+        return self::SHARED_MAX_TEACHERS;
     }
 }

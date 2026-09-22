@@ -3,7 +3,7 @@
         <div>
             <span class="admin-section-label">Teacher</span>
             <h2 class="admin-page-title">Settings</h2>
-            <p class="admin-page-subtitle">Select medium, then standard, then subjects. For Standard 11 &amp; 12, up to <strong>2 teachers</strong> can share the same subject. Other standards stay 1 teacher per subject.</p>
+            <p class="admin-page-subtitle">Select medium, then standard, then subjects. For <strong>every standard</strong>, up to <strong>2 teachers</strong> can share the same subject.</p>
         </div>
     </x-slot>
 
@@ -32,8 +32,7 @@
                 return this.standardMeta()?.grade || 0;
             },
             isSharedStandard() {
-                const n = this.standardNumber();
-                return n === 11 || n === 12;
+                return !!this.standardId;
             },
             chooseMedium(value) {
                 this.medium = value || '';
@@ -191,17 +190,16 @@
                         </template>
                     </select>
                     @error('standard_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
-                    <p class="text-xs text-brand-green mt-2" x-show="isSharedStandard()" x-cloak>
-                        Standard <span x-text="standardNumber()"></span>: same subject can be selected by up to 2 teachers.
+                    <p class="text-xs text-brand-green mt-2" x-show="standardId" x-cloak>
+                        Same subject can be selected by up to 2 teachers for this standard.
                     </p>
                 </div>
 
                 <div>
                     <label class="admin-label">3. Select subjects</label>
-                    <p class="text-xs text-slate-500 mb-3"
-                       x-text="isSharedStandard()
-                           ? 'Tap cards to select. For Std ' + standardNumber() + ', up to 2 teachers may share one subject.'
-                           : 'Locked subjects already belong to another teacher for this medium.'"></p>
+                    <p class="text-xs text-slate-500 mb-3">
+                        Tap cards to select. Up to 2 teachers may share one subject. Locked means both slots are full.
+                    </p>
 
                     <div x-show="!medium" class="rounded-xl border border-dashed border-slate-200 p-6 text-sm text-slate-400 text-center">
                         Choose a medium first.
