@@ -88,7 +88,9 @@
                                 <td class="text-sm">{{ $report->standard ?: '—' }}</td>
                                 <td class="text-sm font-medium">{{ $report->subject_name ?: '—' }}</td>
                                 <td class="text-sm">{{ $report->chapter_name ?: '—' }}</td>
-                                <td class="text-sm text-slate-600">{{ $report->topic_name ?: '—' }}</td>
+                                <td class="text-sm text-slate-600 max-w-[12rem]">
+                    <p class="truncate" title="{{ $report->topic_names ?: $report->topic_name }}">{{ \Illuminate\Support\Str::limit($report->topic_names ?: ($report->topic_name ?: '—'), 40) }}</p>
+                </td>
                                 <td>
                                     @if ($report->chk_complete)
                                         <span class="admin-badge-green">Complete</span>

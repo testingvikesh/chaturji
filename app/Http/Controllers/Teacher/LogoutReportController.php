@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Mail\TeacherLogoutReportMail;
 use App\Models\Chapter;
 use App\Models\Material;
-use App\Models\Standard;
 use App\Models\Subject;
 use App\Models\TeacherLogoutReport;
 use App\Models\TeacherSubject;
@@ -18,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Throwable;
 
@@ -33,23 +33,36 @@ class LogoutReportController extends Controller
             ->orderBy('standard_id')
             ->get();
 
-        $mediums = $assignments
-            ->pluck('medium')
-            ->map(fn ($m) => Material::normalizeMedium($m) ?: $m)
-            ->filter()
-            ->unique()
-            ->values();
+        $options = $assignments->map(function (TeacherSubject $row) {
+            $medium = Material::normalizeMedium($row->medium) ?: $row->medium;
+            $standard = $row->standard;
+            $subject = $row->subject;
+            if (! $standard || ! $subject) {
+                return null;
+            }
 
-        if ($mediums->isEmpty() && $teacher->medium) {
-            $mediums = collect([Material::normalizeMedium($teacher->medium) ?: $teacher->medium]);
+            return [
+                'key' => $medium.'|'.$standard->id.'|'.$subject->id,
+                'medium' => $medium,
+                'medium_label' => \App\Models\Standard::MEDIUMS[$medium] ?? ucfirst((string) $medium),
+                'standard_id' => $standard->id,
+                'standard_slug' => $standard->slug ?: $standard->name,
+                'standard_name' => $standard->name,
+                'subject_id' => $subject->id,
+                'subject_name' => $subject->name,
+            ];
+        })->filter()->values();
+
+        $oldKey = old('assignment_key');
+        if (! $oldKey && $options->isNotEmpty()) {
+            $oldKey = $options->first()['key'];
         }
 
         return view('teacher.logout-report.create', [
             'teacher' => $teacher,
             'employeeCode' => 'EMP-'.str_pad((string) $teacher->id, 4, '0', STR_PAD_LEFT),
-            'mediums' => $mediums,
-            'assignments' => $assignments,
-            'standards' => Standard::query()->where('is_active', true)->orderedByNumber()->get(['id', 'name', 'slug']),
+            'options' => $options,
+            'initialKey' => $oldKey,
             'today' => now()->toDateString(),
         ]);
     }
@@ -59,16 +72,10 @@ class LogoutReportController extends Controller
         $teacher = auth()->user();
 
         $validated = $request->validate([
-            'medium' => ['required', 'string', 'max:32'],
-            'standard' => ['required', 'string', 'max:50'],
-            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
+            'assignment_key' => ['required', 'string'],
             'chapter_id' => ['required', 'integer', 'exists:chapters,id'],
-            'topic_id' => ['nullable', 'integer', 'exists:topics,id'],
-            'chk_medium' => ['nullable', 'boolean'],
-            'chk_standard' => ['nullable', 'boolean'],
-            'chk_subject' => ['nullable', 'boolean'],
-            'chk_chapter' => ['nullable', 'boolean'],
-            'chk_topic' => ['nullable', 'boolean'],
+            'topic_ids' => ['nullable', 'array'],
+            'topic_ids.*' => ['integer', 'exists:topics,id'],
             'chk_complete' => ['nullable', 'boolean'],
             'chk_remain' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -76,45 +83,72 @@ class LogoutReportController extends Controller
 
         $chkComplete = $request->boolean('chk_complete');
         $chkRemain = $request->boolean('chk_remain');
-
         if (! $chkComplete && ! $chkRemain) {
-            return back()
-                ->withInput()
-                ->withErrors(['chk_complete' => 'Select Complete or Remain before logout.']);
+            throw ValidationException::withMessages([
+                'chk_complete' => 'Select Complete or Remain before logout.',
+            ]);
         }
 
-        $subject = Subject::query()->findOrFail((int) $validated['subject_id']);
+        [$medium, $standardId, $subjectId] = array_pad(explode('|', $validated['assignment_key']), 3, null);
+        $medium = Material::normalizeMedium($medium) ?: $medium;
+        $standardId = (int) $standardId;
+        $subjectId = (int) $subjectId;
+
+        $assigned = TeacherSubject::query()
+            ->with(['standard:id,name,slug', 'subject:id,name'])
+            ->where('teacher_id', $teacher->id)
+            ->where('subject_id', $subjectId)
+            ->where('standard_id', $standardId)
+            ->whereRaw('LOWER(TRIM(medium)) = ?', [strtolower(trim((string) $medium))])
+            ->first();
+
+        abort_unless($assigned, 403, 'Selected medium / standard / subject is not assigned to you.');
+
+        $subject = $assigned->subject;
+        $standard = $assigned->standard;
         $chapter = Chapter::query()->findOrFail((int) $validated['chapter_id']);
         abort_unless((int) $chapter->subject_id === (int) $subject->id, 422);
 
-        $topic = null;
-        if (! empty($validated['topic_id'])) {
-            $topic = Topic::query()->find((int) $validated['topic_id']);
-            if ($topic && (int) $topic->chapter_id !== (int) $chapter->id) {
-                $topic = null;
-            }
+        $topicIds = collect($validated['topic_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $topics = Topic::query()
+            ->where('chapter_id', $chapter->id)
+            ->whereIn('id', $topicIds)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'name']);
+
+        if ($topicIds->isNotEmpty() && $topics->isEmpty()) {
+            throw ValidationException::withMessages([
+                'topic_ids' => 'Select valid topics for this chapter.',
+            ]);
         }
 
-        $medium = Material::normalizeMedium($validated['medium']) ?: $validated['medium'];
         $status = $chkComplete ? 'complete' : 'remain';
+        $firstTopic = $topics->first();
 
         $report = TeacherLogoutReport::query()->create([
             'teacher_id' => $teacher->id,
             'report_date' => now()->toDateString(),
             'employee_code' => 'EMP-'.str_pad((string) $teacher->id, 4, '0', STR_PAD_LEFT),
             'medium' => $medium,
-            'standard' => $validated['standard'],
+            'standard' => $standard?->name ?: $standard?->slug,
             'subject_id' => $subject->id,
             'subject_name' => $subject->name,
             'chapter_id' => $chapter->id,
             'chapter_name' => $chapter->name,
-            'topic_id' => $topic?->id,
-            'topic_name' => $topic?->name,
-            'chk_medium' => $request->boolean('chk_medium'),
-            'chk_standard' => $request->boolean('chk_standard'),
-            'chk_subject' => $request->boolean('chk_subject'),
-            'chk_chapter' => $request->boolean('chk_chapter'),
-            'chk_topic' => $request->boolean('chk_topic'),
+            'topic_id' => $firstTopic?->id,
+            'topic_name' => $firstTopic?->name,
+            'topic_ids' => $topics->pluck('id')->all(),
+            'topic_names' => $topics->pluck('name')->implode(', '),
+            'chk_medium' => true,
+            'chk_standard' => true,
+            'chk_subject' => true,
+            'chk_chapter' => true,
+            'chk_topic' => $topics->isNotEmpty(),
             'chk_complete' => $chkComplete,
             'chk_remain' => $chkRemain && ! $chkComplete,
             'status' => $status,
@@ -130,14 +164,14 @@ class LogoutReportController extends Controller
 
         ActivityLogger::log(
             'teacher.logout_report',
-            'Logout report: '.$subject->name.' / '.$chapter->name.' ('.$status.')',
+            'Logout report: '.$subject->name.' / '.$chapter->name.' ('.$topics->count().' topics, '.$status.')',
             $report,
             [
                 'medium' => $medium,
-                'standard' => $validated['standard'],
+                'standard' => $standard?->name,
                 'subject' => $subject->name,
                 'chapter' => $chapter->name,
-                'topic' => $topic?->name,
+                'topics' => $topics->pluck('name')->all(),
                 'status' => $status,
                 'mail_sent' => $mailSent,
             ],

@@ -9,7 +9,7 @@
     <tr><td style="padding: 6px 0; color: #64748b;">Standard</td><td style="padding: 6px 0;">{{ $report->standard ?: '—' }}</td></tr>
     <tr><td style="padding: 6px 0; color: #64748b;">Subject</td><td style="padding: 6px 0;">{{ $report->subject_name ?: '—' }}</td></tr>
     <tr><td style="padding: 6px 0; color: #64748b;">Chapter</td><td style="padding: 6px 0;">{{ $report->chapter_name ?: '—' }}</td></tr>
-    <tr><td style="padding: 6px 0; color: #64748b;">Topic</td><td style="padding: 6px 0;">{{ $report->topic_name ?: '—' }}</td></tr>
+    <tr><td style="padding: 6px 0; color: #64748b;">Topic</td><td style="padding: 6px 0;">{{ $report->topic_names ?: ($report->topic_name ?: '—') }}</td></tr>
     <tr><td style="padding: 6px 0; color: #64748b;">Checked</td><td style="padding: 6px 0;">{{ implode(', ', $report->checkedLabels()) ?: '—' }}</td></tr>
     <tr><td style="padding: 6px 0; color: #64748b;">Status</td><td style="padding: 6px 0;">{{ $report->statusLabel() }}</td></tr>
     @if ($report->notes)

@@ -17,7 +17,7 @@
                 <p><span class="text-slate-500">Standard:</span> <span class="font-semibold">{{ $report->standard ?: '—' }}</span></p>
                 <p><span class="text-slate-500">Subject:</span> <span class="font-semibold">{{ $report->subject_name ?: '—' }}</span></p>
                 <p><span class="text-slate-500">Chapter:</span> <span class="font-semibold">{{ $report->chapter_name ?: '—' }}</span></p>
-                <p class="sm:col-span-2"><span class="text-slate-500">Topic:</span> <span class="font-semibold">{{ $report->topic_name ?: '—' }}</span></p>
+                <p class="sm:col-span-2"><span class="text-slate-500">Topic:</span> <span class="font-semibold">{{ $report->topic_names ?: ($report->topic_name ?: '—') }}</span></p>
                 <p><span class="text-slate-500">Status:</span> <span class="font-semibold">{{ $report->statusLabel() }}</span></p>
                 <p><span class="text-slate-500">Mail:</span> <span class="font-semibold">{{ $report->mail_sent ? 'Sent' : 'Not sent' }}</span></p>
                 <p class="sm:col-span-2"><span class="text-slate-500">Checked:</span> <span class="font-semibold">{{ implode(' · ', $report->checkedLabels()) ?: '—' }}</span></p>

@@ -19,6 +19,8 @@ class TeacherLogoutReport extends Model
         'chapter_name',
         'topic_id',
         'topic_name',
+        'topic_ids',
+        'topic_names',
         'chk_medium',
         'chk_standard',
         'chk_subject',
@@ -34,6 +36,7 @@ class TeacherLogoutReport extends Model
 
     protected $casts = [
         'report_date' => 'date',
+        'topic_ids' => 'array',
         'chk_medium' => 'boolean',
         'chk_standard' => 'boolean',
         'chk_subject' => 'boolean',
