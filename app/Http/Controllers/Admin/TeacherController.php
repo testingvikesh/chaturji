@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LoginLog;
 use App\Models\User;
 use App\Models\UserSession;
+use App\Support\ActivityLogger;
 use App\Support\TeacherOtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -108,6 +109,13 @@ class TeacherController extends Controller
         TeacherOtpService::ensureForTeacher($teacher);
         TeacherOtpService::notifyTodayOtpToTeacher($teacher);
 
+        ActivityLogger::log(
+            'admin.user.approve',
+            'Approved teacher '.$teacher->name,
+            $teacher,
+            ['target_role' => 'teacher']
+        );
+
         return redirect()
             ->back()
             ->with('success', $teacher->name.' has been approved and can now login. Today\'s OTP is in Notifications.');
@@ -117,6 +125,13 @@ class TeacherController extends Controller
     {
         $this->ensureTeacher($teacher);
         $teacher->update(['is_approved' => false]);
+
+        ActivityLogger::log(
+            'admin.user.pending',
+            'Set teacher '.$teacher->name.' to pending',
+            $teacher,
+            ['target_role' => 'teacher']
+        );
 
         return redirect()
             ->back()

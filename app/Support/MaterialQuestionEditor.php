@@ -138,6 +138,18 @@ class MaterialQuestionEditor
             ]);
         });
 
+        ActivityLogger::log(
+            'teacher.question.update',
+            'Edited '.$type.' question on '.$materialTopic->displayName(),
+            $materialTopic,
+            [
+                'question_key' => $questionKey,
+                'question_type' => $type,
+                'topic_title' => $materialTopic->displayName(),
+            ],
+            $teacher
+        );
+
         self::forgetReaderCache($materialTopic);
     }
 

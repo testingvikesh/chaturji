@@ -7,6 +7,7 @@ use App\Models\LoginLog;
 use App\Models\Standard;
 use App\Models\User;
 use App\Models\UserSession;
+use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -114,6 +115,13 @@ class StudentController extends Controller
         $this->ensureStudent($student);
         $student->update(['is_approved' => true]);
 
+        ActivityLogger::log(
+            'admin.user.approve',
+            'Approved student '.$student->name,
+            $student,
+            ['target_role' => 'student']
+        );
+
         return redirect()
             ->back()
             ->with('success', $student->name.' has been approved and can now login.');
@@ -123,6 +131,13 @@ class StudentController extends Controller
     {
         $this->ensureStudent($student);
         $student->update(['is_approved' => false]);
+
+        ActivityLogger::log(
+            'admin.user.pending',
+            'Set student '.$student->name.' to pending',
+            $student,
+            ['target_role' => 'student']
+        );
 
         return redirect()
             ->back()

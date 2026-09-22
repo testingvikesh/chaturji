@@ -41,6 +41,15 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        AuthActivityService::recordLogin(
+            Auth::user(),
+            'admin',
+            (string) $request->input('email', Auth::user()?->email),
+            $request,
+            'success'
+        );
+        AuthActivityService::startSession(Auth::user(), $request);
+
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

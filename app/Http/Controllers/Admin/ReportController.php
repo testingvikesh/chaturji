@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\LoginLog;
 use App\Models\Material;
 use App\Models\Standard;
@@ -152,6 +153,70 @@ class ReportController extends Controller
                 'without_subjects' => $teachersWithoutSubjects,
                 'unique_subjects' => $uniqueSubjects,
             ],
+        ]);
+    }
+
+    public function activity(Request $request): View
+    {
+        $query = ActivityLog::query()->with('user:id,name,mobile,email,role')->latest('created_at');
+
+        if ($role = $request->string('role')->trim()->toString()) {
+            $query->where('role', $role);
+        }
+
+        if ($action = $request->string('action')->trim()->toString()) {
+            $query->where('action', $action);
+        }
+
+        if ($from = $request->date('from')) {
+            $query->whereDate('created_at', '>=', $from);
+        }
+
+        if ($to = $request->date('to')) {
+            $query->whereDate('created_at', '<=', $to);
+        }
+
+        if ($search = $request->string('search')->trim()->toString()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                    ->orWhere('action', 'like', "%{$search}%")
+                    ->orWhere('ip_address', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($u) use ($search) {
+                        $u->where('name', 'like', "%{$search}%")
+                            ->orWhere('mobile', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $actions = ActivityLog::query()
+            ->select('action')
+            ->distinct()
+            ->orderBy('action')
+            ->pluck('action');
+
+        return view('admin.reports.activity', [
+            'logs' => $query->paginate(30)->withQueryString(),
+            'filters' => $request->only(['role', 'action', 'from', 'to', 'search']),
+            'actionOptions' => $actions,
+            'actionLabels' => ActivityLog::ACTION_LABELS,
+            'summary' => [
+                'today' => ActivityLog::query()->whereDate('created_at', today())->count(),
+                'total' => ActivityLog::query()->count(),
+                'admin' => ActivityLog::query()->where('role', 'admin')->count(),
+                'teacher' => ActivityLog::query()->where('role', 'teacher')->count(),
+                'student' => ActivityLog::query()->where('role', 'student')->count(),
+            ],
+        ]);
+    }
+
+    public function activityShow(ActivityLog $activityLog): View
+    {
+        $activityLog->load('user:id,name,mobile,email,role');
+
+        return view('admin.reports.activity-show', [
+            'log' => $activityLog,
+            'actionLabels' => ActivityLog::ACTION_LABELS,
         ]);
     }
 }

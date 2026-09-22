@@ -7,6 +7,7 @@ use App\Models\TicketAttachment;
 use App\Models\TicketReply;
 use App\Models\User;
 use App\Notifications\TicketRepliedNotification;
+use App\Support\ActivityLogger;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -43,6 +44,18 @@ class TicketService
 
         $this->mailer->created($ticket->load(['user', 'attachments', 'standard', 'curriculumSubject']));
 
+        ActivityLogger::log(
+            'ticket.create',
+            'Created ticket '.$ticket->ticket_no,
+            $ticket,
+            [
+                'ticket_no' => $ticket->ticket_no,
+                'category' => $ticket->category,
+                'subject' => $ticket->subject,
+            ],
+            $user
+        );
+
         return $ticket;
     }
 
@@ -70,17 +83,48 @@ class TicketService
 
         $this->mailer->replied($ticket->fresh('user'), $reply);
 
+        ActivityLogger::log(
+            'ticket.reply',
+            ($asAdmin ? 'Admin' : 'User').' replied to ticket '.$ticket->ticket_no,
+            $ticket,
+            [
+                'ticket_no' => $ticket->ticket_no,
+                'as_admin' => $asAdmin,
+            ],
+            $user
+        );
+
         return $reply;
     }
 
     public function close(Ticket $ticket): void
     {
         $ticket->update(['status' => 'closed']);
+
+        ActivityLogger::log(
+            'ticket.status',
+            'Closed ticket '.$ticket->ticket_no,
+            $ticket,
+            [
+                'ticket_no' => $ticket->ticket_no,
+                'status' => 'closed',
+            ]
+        );
     }
 
     public function reopen(Ticket $ticket): void
     {
         $ticket->update(['status' => 'open']);
+
+        ActivityLogger::log(
+            'ticket.status',
+            'Reopened ticket '.$ticket->ticket_no,
+            $ticket,
+            [
+                'ticket_no' => $ticket->ticket_no,
+                'status' => 'open',
+            ]
+        );
     }
 
     /**

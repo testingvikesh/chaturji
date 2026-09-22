@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\Standard;
+use App\Support\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -41,6 +42,8 @@ class ProfileController extends Controller
             'standard' => $validated['standard'],
         ]);
 
+        ActivityLogger::log('profile.update', 'Updated profile', $user);
+
         return redirect()
             ->route('student.profile.edit')
             ->with('success', 'Profile updated successfully.');
@@ -61,6 +64,8 @@ class ProfileController extends Controller
         $request->user()->update([
             'password' => Hash::make($validated['password']),
         ]);
+
+        ActivityLogger::log('profile.password', 'Changed password', $request->user());
 
         return redirect()
             ->route('student.change-password')

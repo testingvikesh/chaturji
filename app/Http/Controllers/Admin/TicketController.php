@@ -117,7 +117,14 @@ class TicketController extends Controller
         match ($validated['status']) {
             'closed' => $this->tickets->close($ticket),
             'open' => $this->tickets->reopen($ticket),
-            default => $ticket->update(['status' => $validated['status']]),
+            default => tap($ticket->update(['status' => $validated['status']]), function () use ($ticket, $validated) {
+                \App\Support\ActivityLogger::log(
+                    'ticket.status',
+                    'Set ticket '.$ticket->ticket_no.' to '.$validated['status'],
+                    $ticket,
+                    ['ticket_no' => $ticket->ticket_no, 'status' => $validated['status']]
+                );
+            }),
         };
 
         return back()->with('success', 'Ticket status updated.');

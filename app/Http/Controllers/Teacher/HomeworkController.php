@@ -9,6 +9,7 @@ use App\Models\HomeworkQuestion;
 use App\Models\Standard;
 use App\Services\QuestionPaperGeneratorService;
 use App\Services\StudentNotificationService;
+use App\Support\ActivityLogger;
 use App\Support\PaperTypeHelper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -103,6 +104,13 @@ class HomeworkController extends Controller
         if ($homework->isPublished()) {
             StudentNotificationService::homeworkAssigned($homework);
         }
+
+        ActivityLogger::log(
+            'teacher.homework.create',
+            'Created homework: '.$homework->title,
+            $homework,
+            ['title' => $homework->title, 'status' => $homework->status ?? null]
+        );
 
         return redirect()->route('teacher.homework.show', $homework)
             ->with('success', 'Homework created successfully.');

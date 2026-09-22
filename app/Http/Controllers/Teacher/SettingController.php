@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Support\ActivityLogger;
 use App\Support\TeacherOtpService;
 use App\Models\Material;
 use App\Models\Standard;
@@ -129,6 +130,18 @@ class SettingController extends Controller
             $teacher->update(['medium' => $medium]);
         });
 
+        ActivityLogger::log(
+            'teacher.settings.update',
+            'Saved subjects for '.$medium.' / '.$standard->name.' ('.$validIds->count().' selected)',
+            $standard,
+            [
+                'medium' => $medium,
+                'standard_id' => $standard->id,
+                'subject_ids' => $validIds->all(),
+            ],
+            $teacher
+        );
+
         return redirect()
             ->route('teacher.settings.edit')
             ->with('success', 'Your medium, standard and subjects were saved.');
@@ -139,7 +152,22 @@ class SettingController extends Controller
         abort_unless((int) $teacherSubject->teacher_id === (int) auth()->id(), 403);
 
         $name = $teacherSubject->subject?->name ?: 'Subject';
+        $medium = $teacherSubject->medium;
+        $standardId = $teacherSubject->standard_id;
+        $subjectId = $teacherSubject->subject_id;
         $teacherSubject->delete();
+
+        ActivityLogger::log(
+            'teacher.settings.remove_subject',
+            'Removed subject '.$name,
+            null,
+            [
+                'medium' => $medium,
+                'standard_id' => $standardId,
+                'subject_id' => $subjectId,
+                'subject_name' => $name,
+            ]
+        );
 
         return redirect()
             ->route('teacher.settings.edit')
@@ -161,6 +189,18 @@ class SettingController extends Controller
             ->where('medium', $medium)
             ->where('standard_id', $validated['standard_id'])
             ->delete();
+
+        ActivityLogger::log(
+            'teacher.settings.clear_group',
+            'Cleared subject group ('.$deleted.' removed)',
+            null,
+            [
+                'medium' => $medium,
+                'standard_id' => (int) $validated['standard_id'],
+                'deleted' => $deleted,
+            ],
+            $teacher
+        );
 
         return redirect()
             ->route('teacher.settings.edit')

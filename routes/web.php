@@ -298,6 +298,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/reports/logins', [ReportController::class, 'logins'])->name('reports.logins');
         Route::get('/reports/sessions', [ReportController::class, 'sessions'])->name('reports.sessions');
         Route::get('/reports/teacher-subjects', [ReportController::class, 'teacherSubjects'])->name('reports.teacher-subjects');
+        Route::get('/reports/activity', [ReportController::class, 'activity'])->name('reports.activity');
+        Route::get('/reports/activity/{activityLog}', [ReportController::class, 'activityShow'])->name('reports.activity.show');
         Route::get('/email-logs', [EmailLogController::class, 'index'])->name('email-logs.index');
         Route::get('/email-logs/{emailLog}', [EmailLogController::class, 'show'])->name('email-logs.show');
         Route::get('/material-question-logs', [\App\Http\Controllers\Admin\MaterialQuestionEditLogController::class, 'index'])->name('material-question-logs.index');

@@ -9,6 +9,7 @@ use App\Models\ExamQuestion;
 use App\Models\Standard;
 use App\Services\QuestionPaperGeneratorService;
 use App\Services\StudentNotificationService;
+use App\Support\ActivityLogger;
 use App\Support\PaperTypeHelper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -105,6 +106,13 @@ class ExamController extends Controller
         if ($exam->isPublished()) {
             StudentNotificationService::examPublished($exam);
         }
+
+        ActivityLogger::log(
+            'teacher.exam.create',
+            'Created exam: '.$exam->title,
+            $exam,
+            ['title' => $exam->title, 'status' => $exam->status ?? null]
+        );
 
         return redirect()->route('teacher.exams.show', $exam)
             ->with('success', 'Exam created successfully.');

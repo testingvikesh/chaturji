@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\LoginLog;
 use App\Models\User;
 use App\Models\UserSession;
+use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -24,7 +25,7 @@ class AuthActivityService
     ): LoginLog {
         $method = filter_var($loginIdentifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'mobile';
 
-        return LoginLog::create([
+        $log = LoginLog::create([
             'user_id' => $user?->id,
             'role' => $role,
             'login_identifier' => $loginIdentifier,
@@ -34,6 +35,21 @@ class AuthActivityService
             'status' => $status,
             'logged_at' => now(),
         ]);
+
+        ActivityLogger::log(
+            $status === 'success' ? 'auth.login' : 'auth.login_failed',
+            ($status === 'success' ? 'Logged in' : 'Login failed').' as '.$role.' ('.$loginIdentifier.')',
+            $user,
+            [
+                'role' => $role,
+                'login_identifier' => $loginIdentifier,
+                'login_method' => $method,
+                'status' => $status,
+            ],
+            $user
+        );
+
+        return $log;
     }
 
     public static function startSession(User $user, Request $request): UserSession
@@ -95,6 +111,8 @@ class AuthActivityService
 
     public static function endSession(Request $request): void
     {
+        $user = auth()->user();
+
         UserSession::query()
             ->where('session_id', $request->session()->getId())
             ->where('is_active', true)
@@ -102,5 +120,15 @@ class AuthActivityService
                 'is_active' => false,
                 'logged_out_at' => now(),
             ]);
+
+        if ($user instanceof User) {
+            ActivityLogger::log(
+                'auth.logout',
+                'Logged out',
+                $user,
+                ['role' => $user->role],
+                $user
+            );
+        }
     }
 }
