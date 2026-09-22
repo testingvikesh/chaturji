@@ -7,6 +7,7 @@ use App\Models\Material;
 use App\Models\MaterialTopic;
 use App\Models\Standard;
 use App\Models\Subject;
+use App\Support\MaterialPaperBank;
 use App\Support\MaterialTopicReader;
 use App\Support\MaterialWorkedExamples;
 use Illuminate\Http\Request;
@@ -199,20 +200,21 @@ class MaterialBrowserController extends Controller
     }
 
     /**
-     * @return array<int, array{label: string, url: string, active?: bool}>
+     * @return list<array{id:int,name:string,url:string,chapters:list<array{id:int,name:string,url:string,topics:list<array{id:int,name:string,url:string}>}>}>
      */
     private function readerNav(?Standard $standard, string $medium): array
     {
-        if (! $standard) {
+        try {
+            return MaterialPaperBank::readerNavTree(
+                $standard,
+                $medium,
+                'admin.materials.topics.show',
+                ['medium' => $medium]
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
             return [];
         }
-
-        $subjects = Material::subjectsForStudent($standard, $medium);
-
-        return $subjects->map(fn (Subject $s) => [
-            'label' => $s->name,
-            'url' => route('admin.materials.subject', ['medium' => $medium, 'subject' => $s]),
-            'active' => false,
-        ])->values()->all();
     }
 }

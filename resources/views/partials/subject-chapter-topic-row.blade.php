@@ -71,9 +71,9 @@
                 >
                     @foreach ($readerNav as $navSubject)
                         <option
-                            value="{{ $navSubject['url'] }}"
-                            @selected((int) $navSubject['id'] === (int) $subjectId)
-                        >{{ $navSubject['name'] }}</option>
+                            value="{{ $navSubject['url'] ?? '' }}"
+                            @selected((int) ($navSubject['id'] ?? 0) === (int) $subjectId)
+                        >{{ $navSubject['name'] ?? ($navSubject['label'] ?? 'Subject') }}</option>
                     @endforeach
                 </select>
                 <svg class="h-3.5 w-3.5 shrink-0 text-brand-green pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -93,9 +93,9 @@
                 >
                     @foreach ($chapters as $navChapter)
                         <option
-                            value="{{ $navChapter['url'] }}"
-                            @selected((int) $navChapter['id'] === (int) $materialId)
-                        >{{ $navChapter['name'] }}</option>
+                            value="{{ $navChapter['url'] ?? '' }}"
+                            @selected((int) ($navChapter['id'] ?? 0) === (int) $materialId)
+                        >{{ $navChapter['name'] ?? 'Chapter' }}</option>
                     @endforeach
                 </select>
                 <svg class="h-3.5 w-3.5 shrink-0 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -136,9 +136,9 @@
                     >
                         @foreach ($topics as $navTopic)
                             <option
-                                value="{{ $navTopic['url'] }}"
-                                @selected((int) $navTopic['id'] === (int) $topicId)
-                            >{{ $navTopic['name'] }}</option>
+                                value="{{ $navTopic['url'] ?? '' }}"
+                                @selected((int) ($navTopic['id'] ?? 0) === (int) $topicId)
+                            >{{ $navTopic['name'] ?? 'Topic' }}</option>
                         @endforeach
                     </select>
                     <svg class="h-3.5 w-3.5 shrink-0 text-amber-700 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

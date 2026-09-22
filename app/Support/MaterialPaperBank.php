@@ -83,6 +83,7 @@ class MaterialPaperBank
             'student.material-topics.show' => 'student.materials.show',
             'teacher.books.topics.show' => 'teacher.books.materials.show',
             'student.self-practice.material-topics.show' => 'student.self-practice.materials.show',
+            'admin.materials.topics.show' => 'admin.materials.materials.show',
             default => null,
         };
     }
