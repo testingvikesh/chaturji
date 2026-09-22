@@ -86,11 +86,26 @@
                     @endauth
                 </div>
 
-                {{-- Mobile toggle --}}
-                <button @click="mobileOpen = !mobileOpen" class="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-brand-green hover:bg-brand-green/5">
-                    <svg x-show="!mobileOpen" class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                    <svg x-show="mobileOpen" x-cloak class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
+                {{-- Mobile: menu + logout (far right) --}}
+                <div class="lg:hidden flex items-center gap-1.5 shrink-0">
+                    <button @click="mobileOpen = !mobileOpen" class="inline-flex items-center justify-center p-2 rounded-md text-brand-green hover:bg-brand-green/5" aria-label="Toggle menu">
+                        <svg x-show="!mobileOpen" class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        <svg x-show="mobileOpen" x-cloak class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    @auth
+                        <form method="POST" action="{{ route('logout') }}" class="inline" onsubmit="return confirm('Logout?')">
+                            @csrf
+                            <button type="submit"
+                                    class="inline-flex h-10 w-10 items-center justify-center rounded-md text-brand-green hover:bg-brand-green/5"
+                                    title="Logout"
+                                    aria-label="Logout">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                </svg>
+                            </button>
+                        </form>
+                    @endauth
+                </div>
             </div>
         </div>
     </div>

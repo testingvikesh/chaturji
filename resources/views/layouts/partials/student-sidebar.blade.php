@@ -7,13 +7,16 @@
 @endphp
 
 <aside class="fixed inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-brand-green-darker via-brand-green to-brand-green-light text-white hidden lg:flex lg:flex-col shadow-xl">
-    <div class="flex items-center gap-2.5 px-5 h-16 border-b border-white/15">
+    <div class="flex items-center gap-2.5 px-4 h-16 border-b border-white/15">
         <img src="{{ asset('images/brand/logo.png') }}" alt="Gses Chaturji" class="h-10 w-10 shrink-0 object-contain drop-shadow-lg">
         <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-10 w-10 shrink-0 object-contain drop-shadow-lg">
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
             <p class="font-bold text-white leading-tight">Student Panel</p>
             <p class="text-[11px] text-brand-gold/90 font-medium truncate">Gses Chaturji</p>
         </div>
+        @include('layouts.partials.logout-icon-button', [
+            'confirm' => 'Are you sure you want to logout?',
+        ])
     </div>
 
     <nav class="flex-1 px-3 py-5 space-y-0.5">
@@ -103,17 +106,6 @@
                 </div>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-                <form method="POST" action="{{ route('logout') }}" onsubmit="return confirm('Logout?')">
-                    @csrf
-                    <button type="submit"
-                            class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25"
-                            title="Logout"
-                            aria-label="Logout">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                        </svg>
-                    </button>
-                </form>
                 <div class="relative">
                     <button type="button"
                             class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25"
@@ -130,6 +122,7 @@
                               aria-hidden="true">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>
                     @endif
                 </div>
+                @include('layouts.partials.logout-icon-button')
             </div>
         </div>
     </div>

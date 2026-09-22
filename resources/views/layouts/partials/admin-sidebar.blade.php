@@ -1,11 +1,16 @@
 <aside class="fixed inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-slate-900 via-slate-900 to-brand-green-darker text-slate-100 hidden lg:flex lg:flex-col shadow-xl">
-    <div class="flex items-center gap-2.5 px-5 h-16 border-b border-white/10">
+    <div class="flex items-center gap-2.5 px-4 h-16 border-b border-white/10">
         <img src="{{ asset('images/brand/logo.png') }}" alt="Gses Chaturji" class="h-10 w-10 shrink-0 object-contain drop-shadow-lg">
         <img src="{{ asset('images/brand/ganpati.png') }}" alt="Shree Ganpati" class="h-10 w-10 shrink-0 object-contain drop-shadow-lg">
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
             <p class="font-bold text-white leading-tight">Admin Panel</p>
             <p class="text-[11px] text-brand-gold/90 font-medium truncate">Homework Manager</p>
         </div>
+        @include('layouts.partials.logout-icon-button', [
+            'action' => route('admin.logout'),
+            'confirm' => 'Are you sure you want to logout?',
+            'tone' => 'dark',
+        ])
     </div>
 
     <nav class="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
@@ -102,9 +107,9 @@
 </aside>
 
 <div class="lg:hidden fixed top-0 inset-x-0 z-30 bg-slate-900 text-white shadow-lg">
-    <div class="flex items-center justify-between px-4 h-14">
-        <span class="font-bold text-sm">Admin Panel</span>
-        <div class="flex items-center gap-1.5 text-[11px] overflow-x-auto">
+    <div class="flex items-center gap-2 px-3 h-14">
+        <span class="font-bold text-sm shrink-0">Admin</span>
+        <div class="flex items-center gap-1.5 text-[11px] overflow-x-auto flex-1 min-w-0">
             <a href="{{ route('admin.dashboard') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Dash 1</a>
             <a href="{{ route('admin.dashboard.materials') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Materials</a>
             <a href="{{ route('admin.dashboard.syllabus') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Syllabus</a>
@@ -116,5 +121,9 @@
             <a href="{{ route('admin.prompts.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Prompts</a>
             <a href="{{ route('admin.settings.edit') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Settings</a>
         </div>
+        @include('layouts.partials.logout-icon-button', [
+            'action' => route('admin.logout'),
+            'tone' => 'dark',
+        ])
     </div>
 </div>
