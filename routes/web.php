@@ -164,6 +164,8 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/books/{subject}/topics/{materialTopic}/questions/{questionKey}/edit', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'edit'])->name('books.questions.edit');
     Route::put('/books/{subject}/topics/{materialTopic}/questions/{questionKey}', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'update'])->name('books.questions.update');
     Route::get('/logout-report', [LogoutReportController::class, 'create'])->name('logout-report.create');
+    Route::get('/logout-report/chapters', [LogoutReportController::class, 'chapters'])->name('logout-report.chapters');
+    Route::get('/logout-report/topics', [LogoutReportController::class, 'topics'])->name('logout-report.topics');
     Route::post('/logout-report', [LogoutReportController::class, 'store'])->name('logout-report.store');
     Route::get('/settings', [TeacherSettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [TeacherSettingController::class, 'update'])->name('settings.update');

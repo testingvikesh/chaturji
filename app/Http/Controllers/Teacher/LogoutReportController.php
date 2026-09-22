@@ -4,15 +4,15 @@ namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Mail\TeacherLogoutReportMail;
-use App\Models\Chapter;
 use App\Models\Material;
+use App\Models\MaterialTopic;
 use App\Models\Subject;
 use App\Models\TeacherLogoutReport;
 use App\Models\TeacherSubject;
-use App\Models\Topic;
 use App\Services\AuthActivityService;
 use App\Support\ActivityLogger;
 use App\Support\MailConfig;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -67,15 +67,78 @@ class LogoutReportController extends Controller
         ]);
     }
 
+    /**
+     * Chapters for logout report = book materials (same source as Teacher Books).
+     */
+    public function chapters(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'assignment_key' => ['required', 'string'],
+        ]);
+
+        [$medium, $standardId, $subjectId, $subject] = $this->resolveAssignedSubject(
+            auth()->user()->id,
+            $validated['assignment_key']
+        );
+
+        $materials = Material::forStudentSubject($subject, $medium);
+
+        return response()->json(
+            $materials->values()->map(fn (Material $m) => [
+                'id' => $m->id,
+                'name' => $m->displayChapterName(),
+            ])->all()
+        );
+    }
+
+    /**
+     * Topics for a selected material chapter.
+     */
+    public function topics(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'assignment_key' => ['required', 'string'],
+            'material_id' => ['required', 'integer', 'exists:materials,id'],
+        ]);
+
+        [$medium, $standardId, $subjectId, $subject] = $this->resolveAssignedSubject(
+            auth()->user()->id,
+            $validated['assignment_key']
+        );
+
+        $material = Material::query()->findOrFail((int) $validated['material_id']);
+        abort_unless($material->matchesStudentSubject($subject), 422);
+        $normalized = Material::normalizeMedium($medium);
+        abort_unless(
+            $normalized === null
+            || Material::normalizeMedium($material->medium) === $normalized
+            || Material::normalizeMedium($material->medium) === null,
+            422
+        );
+
+        $topics = MaterialTopic::query()
+            ->where('material_id', $material->id)
+            ->where('generated', true)
+            ->orderBy('topic_order')
+            ->get(['id', 'title', 'title_gu', 'topic_order']);
+
+        return response()->json(
+            $topics->map(fn (MaterialTopic $t) => [
+                'id' => $t->id,
+                'name' => $t->displayName(),
+            ])->all()
+        );
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $teacher = auth()->user();
 
         $validated = $request->validate([
             'assignment_key' => ['required', 'string'],
-            'chapter_id' => ['required', 'integer', 'exists:chapters,id'],
+            'material_id' => ['required', 'integer', 'exists:materials,id'],
             'topic_ids' => ['nullable', 'array'],
-            'topic_ids.*' => ['integer', 'exists:topics,id'],
+            'topic_ids.*' => ['integer', 'exists:material_topics,id'],
             'chk_complete' => ['nullable', 'boolean'],
             'chk_remain' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -89,13 +152,13 @@ class LogoutReportController extends Controller
             ]);
         }
 
-        [$medium, $standardId, $subjectId] = array_pad(explode('|', $validated['assignment_key']), 3, null);
-        $medium = Material::normalizeMedium($medium) ?: $medium;
-        $standardId = (int) $standardId;
-        $subjectId = (int) $subjectId;
+        [$medium, $standardId, $subjectId, $subject] = $this->resolveAssignedSubject(
+            $teacher->id,
+            $validated['assignment_key']
+        );
 
         $assigned = TeacherSubject::query()
-            ->with(['standard:id,name,slug', 'subject:id,name'])
+            ->with(['standard:id,name,slug'])
             ->where('teacher_id', $teacher->id)
             ->where('subject_id', $subjectId)
             ->where('standard_id', $standardId)
@@ -103,25 +166,23 @@ class LogoutReportController extends Controller
             ->first();
 
         abort_unless($assigned, 403, 'Selected medium / standard / subject is not assigned to you.');
-
-        $subject = $assigned->subject;
         $standard = $assigned->standard;
-        $chapter = Chapter::query()->findOrFail((int) $validated['chapter_id']);
-        abort_unless((int) $chapter->subject_id === (int) $subject->id, 422);
+
+        $material = Material::query()->findOrFail((int) $validated['material_id']);
+        abort_unless($material->matchesStudentSubject($subject), 422, 'Chapter does not belong to this subject.');
 
         $topicIds = collect($validated['topic_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
 
-        $topics = Topic::query()
-            ->where('chapter_id', $chapter->id)
+        $topics = MaterialTopic::query()
+            ->where('material_id', $material->id)
             ->whereIn('id', $topicIds)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->get(['id', 'name']);
+            ->orderBy('topic_order')
+            ->get();
 
-        if ($topicIds->isNotEmpty() && $topics->isEmpty()) {
+        if ($topicIds->isNotEmpty() && $topics->count() !== $topicIds->count()) {
             throw ValidationException::withMessages([
                 'topic_ids' => 'Select valid topics for this chapter.',
             ]);
@@ -129,6 +190,7 @@ class LogoutReportController extends Controller
 
         $status = $chkComplete ? 'complete' : 'remain';
         $firstTopic = $topics->first();
+        $chapterName = $material->displayChapterName();
 
         $report = TeacherLogoutReport::query()->create([
             'teacher_id' => $teacher->id,
@@ -138,12 +200,12 @@ class LogoutReportController extends Controller
             'standard' => $standard?->name ?: $standard?->slug,
             'subject_id' => $subject->id,
             'subject_name' => $subject->name,
-            'chapter_id' => $chapter->id,
-            'chapter_name' => $chapter->name,
-            'topic_id' => $firstTopic?->id,
-            'topic_name' => $firstTopic?->name,
+            'chapter_id' => $material->chapter_id,
+            'chapter_name' => $chapterName,
+            'topic_id' => null,
+            'topic_name' => $firstTopic?->displayName(),
             'topic_ids' => $topics->pluck('id')->all(),
-            'topic_names' => $topics->pluck('name')->implode(', '),
+            'topic_names' => $topics->map(fn (MaterialTopic $t) => $t->displayName())->implode(', '),
             'chk_medium' => true,
             'chk_standard' => true,
             'chk_subject' => true,
@@ -164,14 +226,15 @@ class LogoutReportController extends Controller
 
         ActivityLogger::log(
             'teacher.logout_report',
-            'Logout report: '.$subject->name.' / '.$chapter->name.' ('.$topics->count().' topics, '.$status.')',
+            'Logout report: '.$subject->name.' / '.$chapterName.' ('.$topics->count().' topics, '.$status.')',
             $report,
             [
                 'medium' => $medium,
                 'standard' => $standard?->name,
                 'subject' => $subject->name,
-                'chapter' => $chapter->name,
-                'topics' => $topics->pluck('name')->all(),
+                'chapter' => $chapterName,
+                'material_id' => $material->id,
+                'topics' => $topics->map(fn (MaterialTopic $t) => $t->displayName())->all(),
                 'status' => $status,
                 'mail_sent' => $mailSent,
             ],
@@ -186,6 +249,31 @@ class LogoutReportController extends Controller
         return redirect()
             ->route('home')
             ->with('success', 'Work report submitted'.($mailSent ? ' and emailed' : '').'. You are logged out.');
+    }
+
+    /**
+     * @return array{0: string, 1: int, 2: int, 3: Subject}
+     */
+    private function resolveAssignedSubject(int $teacherId, string $assignmentKey): array
+    {
+        [$medium, $standardId, $subjectId] = array_pad(explode('|', $assignmentKey), 3, null);
+        $medium = Material::normalizeMedium($medium) ?: $medium;
+        $standardId = (int) $standardId;
+        $subjectId = (int) $subjectId;
+
+        $assigned = TeacherSubject::query()
+            ->where('teacher_id', $teacherId)
+            ->where('subject_id', $subjectId)
+            ->where('standard_id', $standardId)
+            ->whereRaw('LOWER(TRIM(medium)) = ?', [strtolower(trim((string) $medium))])
+            ->exists();
+
+        abort_unless($assigned, 403, 'Selected medium / standard / subject is not assigned to you.');
+
+        $subject = Subject::query()->findOrFail($subjectId);
+        $subject->loadMissing('standard');
+
+        return [$medium, $standardId, $subjectId, $subject];
     }
 
     private function sendMail(TeacherLogoutReport $report): bool

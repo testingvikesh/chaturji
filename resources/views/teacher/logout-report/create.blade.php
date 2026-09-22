@@ -11,17 +11,19 @@
          x-data="{
             options: @js($options),
             assignmentKey: @js($initialKey ?: ''),
-            chapterId: @js((string) old('chapter_id', '')),
+            materialId: @js((string) old('material_id', '')),
             selectedTopics: @js(collect(old('topic_ids', []))->map(fn ($id) => (string) $id)->values()),
             chapters: [],
             topics: [],
+            loadingChapters: false,
+            loadingTopics: false,
             chkComplete: @js((bool) old('chk_complete', true)),
             chkRemain: @js((bool) old('chk_remain', false)),
             get current() {
                 return this.options.find(o => o.key === this.assignmentKey) || null;
             },
             async onAssignmentChange() {
-                this.chapterId = '';
+                this.materialId = '';
                 this.selectedTopics = [];
                 this.chapters = [];
                 this.topics = [];
@@ -29,23 +31,65 @@
             },
             async loadChapters() {
                 const cur = this.current;
-                if (!cur) { this.chapters = []; return; }
-                const res = await fetch('{{ route('teacher.curriculum.chapters') }}?subject_id=' + cur.subject_id);
-                this.chapters = await res.json();
+                if (!cur || !this.assignmentKey) { this.chapters = []; return; }
+                this.loadingChapters = true;
+                try {
+                    const res = await fetch('{{ route('teacher.logout-report.chapters') }}?assignment_key=' + encodeURIComponent(this.assignmentKey), {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+                    this.chapters = res.ok ? await res.json() : [];
+                    this.$nextTick(() => this.syncChapterSelect());
+                } catch (e) {
+                    this.chapters = [];
+                } finally {
+                    this.loadingChapters = false;
+                }
+            },
+            syncChapterSelect() {
+                const sel = this.$refs.chapterSelect;
+                if (!sel) return;
+                const keep = this.materialId;
+                while (sel.options.length > 1) sel.remove(1);
+                this.chapters.forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = String(c.id);
+                    o.textContent = c.name;
+                    sel.appendChild(o);
+                });
+                if (keep && this.chapters.some(c => String(c.id) === String(keep))) {
+                    sel.value = String(keep);
+                    this.materialId = String(keep);
+                } else if (!keep) {
+                    sel.value = '';
+                }
             },
             async loadTopics(keepSelection = false) {
                 if (!keepSelection) this.selectedTopics = [];
                 this.topics = [];
-                if (!this.chapterId) return;
-                const res = await fetch('{{ route('teacher.curriculum.topics') }}?chapter_id=' + this.chapterId);
-                this.topics = await res.json();
+                if (!this.materialId || !this.assignmentKey) return;
+                this.loadingTopics = true;
+                try {
+                    const url = '{{ route('teacher.logout-report.topics') }}'
+                        + '?assignment_key=' + encodeURIComponent(this.assignmentKey)
+                        + '&material_id=' + encodeURIComponent(this.materialId);
+                    const res = await fetch(url, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+                    this.topics = res.ok ? await res.json() : [];
+                } catch (e) {
+                    this.topics = [];
+                } finally {
+                    this.loadingTopics = false;
+                }
             },
             pickComplete() { this.chkComplete = true; this.chkRemain = false; },
             pickRemain() { this.chkRemain = true; this.chkComplete = false; }
          }"
          x-init="
             if (assignmentKey) {
-                loadChapters().then(() => { if (chapterId) return loadTopics(true); });
+                loadChapters().then(() => { if (materialId) return loadTopics(true); });
             }
          ">
         @include('admin.partials.alert')
@@ -86,13 +130,20 @@
 
                     <div>
                         <label class="admin-label">Chapter <span class="text-red-500">*</span></label>
-                        <select name="chapter_id" x-model="chapterId" @change="loadTopics()" required class="admin-select">
+                        <select name="material_id"
+                                x-ref="chapterSelect"
+                                x-model="materialId"
+                                @change="loadTopics()"
+                                required
+                                class="admin-select"
+                                :disabled="loadingChapters || !assignmentKey">
                             <option value="">Select chapter</option>
-                            <template x-for="c in chapters" :key="c.id">
-                                <option :value="String(c.id)" x-text="c.name"></option>
-                            </template>
                         </select>
-                        @error('chapter_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+                        <p class="text-xs text-slate-500 mt-1" x-show="loadingChapters" x-cloak>Loading chapters…</p>
+                        <p class="text-xs text-amber-700 mt-1" x-show="!loadingChapters && assignmentKey && chapters.length === 0" x-cloak>
+                            No chapters found in Books for this subject.
+                        </p>
+                        @error('material_id')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
 
                     <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
@@ -101,8 +152,9 @@
                             <span class="text-xs text-slate-500" x-text="selectedTopics.length + ' selected'"></span>
                         </div>
 
-                        <div x-show="!chapterId" class="text-sm text-slate-400">Select a chapter to load topics.</div>
-                        <div x-show="chapterId && topics.length === 0" x-cloak class="text-sm text-slate-400">No topics found for this chapter.</div>
+                        <div x-show="!materialId" class="text-sm text-slate-400">Select a chapter to load topics.</div>
+                        <div x-show="materialId && loadingTopics" x-cloak class="text-sm text-slate-400">Loading topics…</div>
+                        <div x-show="materialId && !loadingTopics && topics.length === 0" x-cloak class="text-sm text-slate-400">No topics found for this chapter.</div>
 
                         <div class="space-y-2 max-h-64 overflow-y-auto" x-show="topics.length > 0" x-cloak>
                             <template x-for="t in topics" :key="t.id">
