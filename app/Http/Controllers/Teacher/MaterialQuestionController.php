@@ -112,10 +112,13 @@ class MaterialQuestionController extends Controller
             ?: $material->medium;
         $medium = Material::normalizeMedium($medium) ?: $medium;
 
+        $medium = strtolower(trim((string) $medium));
+
         $assigned = TeacherSubject::query()
             ->where('teacher_id', $teacher->id)
             ->where('subject_id', $subject->id)
-            ->where('medium', $medium)
+            ->where('standard_id', $subject->standard_id)
+            ->whereRaw('LOWER(TRIM(medium)) = ?', [$medium])
             ->exists();
 
         abort_unless($assigned, 403);
