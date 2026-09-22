@@ -31,25 +31,14 @@ class SettingController extends Controller
 
         $initialMedium = old('medium', $first?->medium ?: ($teacher->medium ?: ''));
         $initialMedium = Material::normalizeMedium($initialMedium) ?: $initialMedium;
-
-        $initialSelections = old('assignments');
-        if (! is_array($initialSelections)) {
-            $initialSelections = [];
-            foreach ($assignedGroups as $rows) {
-                $row = $rows->first();
-                $medium = Material::normalizeMedium($row?->medium) ?: $row?->medium;
-                if ($medium !== $initialMedium) {
-                    continue;
-                }
-                $sid = (string) $row->standard_id;
-                $initialSelections[$sid] = $rows->pluck('subject_id')->map(fn ($id) => (string) $id)->values()->all();
-            }
+        $initialStandardId = (string) old('standard_id', $first?->standard_id ?: '');
+        $initialSubjectIds = old('subject_ids');
+        if (! is_array($initialSubjectIds)) {
+            $initialSubjectIds = $firstGroup
+                ? $firstGroup->pluck('subject_id')->map(fn ($id) => (string) $id)->values()->all()
+                : [];
         } else {
-            $normalized = [];
-            foreach ($initialSelections as $standardId => $ids) {
-                $normalized[(string) $standardId] = array_map('strval', is_array($ids) ? $ids : []);
-            }
-            $initialSelections = $normalized;
+            $initialSubjectIds = array_map('strval', $initialSubjectIds);
         }
 
         return view('teacher.settings', [
@@ -59,7 +48,8 @@ class SettingController extends Controller
             'assignedGroups' => $assignedGroups,
             'formData' => $this->formData($teacher->id),
             'initialMedium' => $initialMedium,
-            'initialSelections' => $initialSelections,
+            'initialStandardId' => $initialStandardId,
+            'initialSubjectIds' => $initialSubjectIds,
         ]);
     }
 
@@ -69,86 +59,77 @@ class SettingController extends Controller
 
         $validated = $request->validate([
             'medium' => ['required', Rule::in(array_keys(Standard::MEDIUMS))],
-            'assignments' => ['nullable', 'array'],
-            'assignments.*' => ['nullable', 'array'],
-            'assignments.*.*' => ['integer', 'exists:subjects,id'],
+            'standard_id' => ['required', 'integer', 'exists:standards,id'],
+            'subject_ids' => ['nullable', 'array'],
+            'subject_ids.*' => ['integer', 'exists:subjects,id'],
         ]);
 
         $medium = Material::normalizeMedium($validated['medium']) ?: $validated['medium'];
-        $assignments = collect($validated['assignments'] ?? []);
 
-        $standards = Standard::query()
+        $standard = Standard::query()
+            ->where('id', $validated['standard_id'])
             ->where('is_active', true)
-            ->get()
-            ->keyBy('id');
+            ->firstOrFail();
 
-        $prepared = [];
+        $subjectIds = collect($validated['subject_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
 
-        foreach ($assignments as $standardId => $subjectIds) {
-            $standard = $standards->get((int) $standardId);
-            if (! $standard) {
-                continue;
-            }
+        $grade = self::gradeNumber($standard);
+        $maxTeachers = self::maxTeachersForGrade($grade);
 
-            $ids = collect($subjectIds)->map(fn ($id) => (int) $id)->unique()->values();
-            $allowedIds = Material::subjectsForStudent($standard, $medium)->pluck('id')->map(fn ($id) => (int) $id);
-            $validIds = $ids->intersect($allowedIds)->values();
+        $allowedIds = Material::subjectsForStudent($standard, $medium)->pluck('id')->map(fn ($id) => (int) $id);
+        $validIds = $subjectIds->intersect($allowedIds)->values();
 
-            if ($ids->diff($validIds)->isNotEmpty()) {
-                throw ValidationException::withMessages([
-                    'assignments' => 'Select subjects that belong to '.$standard->name.' for the chosen medium.',
-                ]);
-            }
-
-            $prepared[] = [
-                'standard' => $standard,
-                'subject_ids' => $validIds,
-                'grade' => self::gradeNumber($standard),
-                'max_teachers' => self::maxTeachersForGrade(self::gradeNumber($standard)),
-            ];
+        if ($subjectIds->diff($validIds)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'subject_ids' => 'Select subjects that belong to the chosen medium and standard.',
+            ]);
         }
 
-        DB::transaction(function () use ($teacher, $medium, $prepared) {
+        DB::transaction(function () use ($teacher, $standard, $medium, $validIds, $maxTeachers, $grade) {
             $conflicts = [];
 
-            foreach ($prepared as $row) {
-                foreach ($row['subject_ids'] as $subjectId) {
-                    $others = TeacherSubject::query()
-                        ->with(['teacher:id,name', 'subject:id,name'])
-                        ->where('medium', $medium)
-                        ->where('subject_id', $subjectId)
-                        ->where('teacher_id', '!=', $teacher->id)
-                        ->lockForUpdate()
-                        ->get();
+            foreach ($validIds as $subjectId) {
+                $others = TeacherSubject::query()
+                    ->with(['teacher:id,name', 'subject:id,name'])
+                    ->where('medium', $medium)
+                    ->where('subject_id', $subjectId)
+                    ->where('teacher_id', '!=', $teacher->id)
+                    ->lockForUpdate()
+                    ->get();
 
-                    if ($others->count() >= $row['max_teachers']) {
-                        $names = $others->map(fn (TeacherSubject $item) => $item->teacher?->name ?: 'Teacher')->implode(', ');
-                        $subjectName = $others->first()?->subject?->name ?: 'Subject';
-                        $conflicts[] = $row['standard']->name.': '.$subjectName.' ('.$others->count().'/'.$row['max_teachers'].': '.$names.')';
-                    }
+                if ($others->count() >= $maxTeachers) {
+                    $names = $others->map(fn (TeacherSubject $row) => $row->teacher?->name ?: 'Teacher')->implode(', ');
+                    $subjectName = $others->first()?->subject?->name ?: 'Subject';
+                    $conflicts[] = $subjectName.' (already '.$others->count().'/'.$maxTeachers.': '.$names.')';
                 }
             }
 
             if ($conflicts !== []) {
+                $hint = in_array($grade, self::SHARED_GRADES, true)
+                    ? 'Standard '.$grade.' allows up to '.self::SHARED_MAX_TEACHERS.' teachers per subject.'
+                    : 'This subject is already taken by another teacher.';
+
                 throw ValidationException::withMessages([
-                    'assignments' => 'Some subjects are full. '.implode(' · ', $conflicts),
+                    'subject_ids' => $hint.' '.implode(' · ', $conflicts),
                 ]);
             }
 
             TeacherSubject::query()
                 ->where('teacher_id', $teacher->id)
                 ->where('medium', $medium)
+                ->where('standard_id', $standard->id)
                 ->delete();
 
-            foreach ($prepared as $row) {
-                foreach ($row['subject_ids'] as $subjectId) {
-                    TeacherSubject::query()->create([
-                        'teacher_id' => $teacher->id,
-                        'medium' => $medium,
-                        'standard_id' => $row['standard']->id,
-                        'subject_id' => $subjectId,
-                    ]);
-                }
+            foreach ($validIds as $subjectId) {
+                TeacherSubject::query()->create([
+                    'teacher_id' => $teacher->id,
+                    'medium' => $medium,
+                    'standard_id' => $standard->id,
+                    'subject_id' => $subjectId,
+                ]);
             }
 
             $teacher->update(['medium' => $medium]);
@@ -156,7 +137,7 @@ class SettingController extends Controller
 
         return redirect()
             ->route('teacher.settings.edit')
-            ->with('success', 'Assignments saved for all standards under this medium.');
+            ->with('success', 'Your medium, standard and subjects were saved.');
     }
 
     public function destroySubject(TeacherSubject $teacherSubject): RedirectResponse
