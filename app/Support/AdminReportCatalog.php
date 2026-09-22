@@ -74,11 +74,32 @@ class AdminReportCatalog
                 'description' => 'Logins, sessions and platform activity trail',
                 'reports' => [
                     [
-                        'title' => 'Login Report',
-                        'description' => 'Student and teacher login success / failed attempts',
+                        'title' => 'Login Reports',
+                        'description' => 'Choose student or teacher login activity',
                         'route' => 'admin.reports.logins',
                         'match' => ['admin.reports.logins'],
                         'badge' => null,
+                    ],
+                    [
+                        'title' => 'Student Login Report',
+                        'description' => 'Student success / failed logins with medium & standard',
+                        'route' => 'admin.reports.student-logins',
+                        'match' => ['admin.reports.student-logins'],
+                        'badge' => null,
+                    ],
+                    [
+                        'title' => 'Teacher Login Report',
+                        'description' => 'Teacher success / failed logins with employee code',
+                        'route' => 'admin.reports.teacher-logins',
+                        'match' => ['admin.reports.teacher-logins'],
+                        'badge' => null,
+                    ],
+                    [
+                        'title' => 'Student Work Report',
+                        'description' => 'Logins + exam/homework/objective attempts — work done or not',
+                        'route' => 'admin.reports.student-work',
+                        'match' => ['admin.reports.student-work'],
+                        'badge' => 'New',
                     ],
                     [
                         'title' => 'Session Report',

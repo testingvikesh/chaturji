@@ -32,6 +32,7 @@ use App\Http\Controllers\Student\SelfPracticeController as StudentSelfPracticeCo
 use App\Http\Controllers\Student\MaterialTopicController as StudentMaterialTopicController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use App\Http\Controllers\Student\TopicController as StudentTopicController;
+use App\Http\Controllers\Student\WorkAttemptController as StudentWorkAttemptController;
 use App\Http\Controllers\Teacher\CurriculumController as TeacherCurriculumController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\ExamController as TeacherExamController;
@@ -126,6 +127,7 @@ Route::middleware(['auth', 'student'])->prefix('student')->name('student.')->gro
     Route::get('/exams/{exam}/print', [StudentExamController::class, 'printPaper'])->name('exams.print');
     Route::get('/exams/{exam}', [StudentExamController::class, 'show'])->name('exams.show');
     Route::post('/exams/{exam}/submit-answer-pdf', [StudentExamController::class, 'submitAnswerPdf'])->name('exams.submit-answer-pdf');
+    Route::post('/work-attempts/objective', [StudentWorkAttemptController::class, 'storeObjective'])->name('work-attempts.objective');
 
     Route::get('/homework', [StudentHomeworkController::class, 'index'])->name('homework.index');
     Route::get('/homework/create', [StudentHomeworkController::class, 'create'])->name('homework.create');
@@ -314,6 +316,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/logins', [ReportController::class, 'logins'])->name('reports.logins');
+        Route::get('/reports/student-logins', [ReportController::class, 'studentLogins'])->name('reports.student-logins');
+        Route::get('/reports/teacher-logins', [ReportController::class, 'teacherLogins'])->name('reports.teacher-logins');
+        Route::get('/reports/student-work', [ReportController::class, 'studentWork'])->name('reports.student-work');
         Route::get('/reports/sessions', [ReportController::class, 'sessions'])->name('reports.sessions');
         Route::get('/reports/teacher-subjects', [ReportController::class, 'teacherSubjects'])->name('reports.teacher-subjects');
         Route::get('/reports/chapter-list', [ReportController::class, 'chapterList'])->name('reports.chapter-list');

@@ -298,6 +298,24 @@ class ExamController extends BaseStudentController
                 ->startExamSubmission($exam, $user, $primary, $extraImages);
 
             \App\Jobs\ProcessExamAnswerSheet::dispatchAfterResponse($submission->id);
+
+            try {
+                \App\Models\StudentWorkAttempt::query()->create([
+                    'user_id' => $user->id,
+                    'work_type' => \App\Models\StudentWorkAttempt::TYPE_EXAM_SHEET,
+                    'paper_type' => 'exam',
+                    'paper_id' => $exam->id,
+                    'answered_count' => 0,
+                    'correct_count' => 0,
+                    'total_objective' => 0,
+                    'earned_marks' => 0,
+                    'max_marks' => (float) ($exam->total_marks ?? 0),
+                    'status' => 'submitted',
+                    'attempted_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         } catch (\Throwable $exception) {
             return redirect()
                 ->route('student.exams.show', $exam)

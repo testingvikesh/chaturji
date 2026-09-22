@@ -120,7 +120,14 @@
 @endforeach
 
 @if ($interactiveAttempt && ($objectiveStats['count'] ?? 0) > 0)
-    <div id="objective-submit-bar" class="admin-card overflow-hidden">
+    @php $workMeta = $workAttemptMeta ?? []; @endphp
+    <div id="objective-submit-bar"
+         class="admin-card overflow-hidden"
+         data-work-store-url="{{ $workMeta['store_url'] ?? '' }}"
+         data-work-paper-type="{{ $workMeta['paper_type'] ?? '' }}"
+         data-work-paper-id="{{ $workMeta['paper_id'] ?? '' }}"
+         data-work-max-marks="{{ $workMeta['max_marks'] ?? ($objectiveStats['max_marks'] ?? 0) }}"
+         data-work-total-objective="{{ $workMeta['total_objective'] ?? ($objectiveStats['count'] ?? 0) }}">
         <div class="admin-card-top"></div>
         <div class="px-5 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>

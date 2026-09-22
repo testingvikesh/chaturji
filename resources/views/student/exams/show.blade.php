@@ -65,6 +65,13 @@
                 'interactiveAttempt' => true,
                 'objectiveStats' => $objectiveStats,
                 'subjectiveStats' => $subjectiveStats,
+                'workAttemptMeta' => [
+                    'paper_type' => 'exam',
+                    'paper_id' => $exam->id,
+                    'max_marks' => (float) ($objectiveStats['max_marks'] ?? 0),
+                    'total_objective' => (int) ($objectiveStats['count'] ?? 0),
+                    'store_url' => route('student.work-attempts.objective'),
+                ],
                 'paperHeader' => [
                     'title' => $exam->title,
                     'className' => $user->standardLabel(),

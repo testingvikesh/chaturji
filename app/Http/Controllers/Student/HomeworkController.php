@@ -351,6 +351,24 @@ class HomeworkController extends BaseStudentController
                 ->startHomeworkSubmission($homework, $user, $primary, $extraImages);
 
             \App\Jobs\ProcessHomeworkAnswerSheet::dispatchAfterResponse($submission->id);
+
+            try {
+                \App\Models\StudentWorkAttempt::query()->create([
+                    'user_id' => $user->id,
+                    'work_type' => \App\Models\StudentWorkAttempt::TYPE_HOMEWORK_SHEET,
+                    'paper_type' => 'homework',
+                    'paper_id' => $homework->id,
+                    'answered_count' => 0,
+                    'correct_count' => 0,
+                    'total_objective' => 0,
+                    'earned_marks' => 0,
+                    'max_marks' => (float) ($homework->total_marks ?? 0),
+                    'status' => 'submitted',
+                    'attempted_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         } catch (\Throwable $exception) {
             return redirect()->route('student.homework.show', $homework)->with('error', $exception->getMessage());
         }

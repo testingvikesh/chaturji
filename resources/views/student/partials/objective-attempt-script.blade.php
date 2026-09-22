@@ -364,7 +364,46 @@
             submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
         }
 
+        saveWorkAttempt(answered, correct, earned);
         showSuccessModal(earned, correct);
+    }
+
+    function saveWorkAttempt(answered, correct, earned) {
+        if (!submitBar) {
+            return;
+        }
+        const url = submitBar.dataset.workStoreUrl || '';
+        const paperType = submitBar.dataset.workPaperType || '';
+        const paperId = submitBar.dataset.workPaperId || '';
+        if (!url || !paperType || !paperId) {
+            return;
+        }
+
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const maxMarks = Number(submitBar.dataset.workMaxMarks || 0);
+        const totalObjective = Number(submitBar.dataset.workTotalObjective || 0);
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                paper_type: paperType,
+                paper_id: Number(paperId),
+                answered_count: answered,
+                correct_count: correct,
+                total_objective: totalObjective,
+                earned_marks: earned,
+                max_marks: maxMarks,
+            }),
+        }).catch(function () {
+            // Keep UI success even if logging fails.
+        });
     }
 
     document.addEventListener('click', function (event) {
