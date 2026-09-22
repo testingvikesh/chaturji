@@ -16,10 +16,13 @@
     // Build topic URLs without calling route() hundreds of times.
     $studentTopicBase = null;
     $teacherTopicBase = null;
+    $adminTopicBase = null;
     if ($materialTopicRoute === 'student.material-topics.show') {
         $studentTopicBase = url('/student/subjects/'.$subject->id.'/material-topics');
     } elseif ($materialTopicRoute === 'teacher.books.topics.show') {
         $teacherTopicBase = url('/teacher/books/'.$subject->id.'/topics');
+    } elseif ($materialTopicRoute === 'admin.materials.topics.show') {
+        $adminTopicBase = url('/admin/materials/'.($topicRouteExtra['medium'] ?? 'english').'/subjects/'.$subject->id.'/topics');
     }
 @endphp
 
@@ -124,6 +127,8 @@
                                             $topicUrl = $studentTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
                                         } elseif ($teacherTopicBase) {
                                             $topicUrl = $teacherTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
+                                        } elseif ($adminTopicBase) {
+                                            $topicUrl = $adminTopicBase.'/'.$topic->id;
                                         } else {
                                             $topicUrl = route($materialTopicRoute, array_merge([
                                                 'subject' => $subject,

@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StandardController;
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Admin\SubjectController;
+use App\Http\Controllers\Admin\MaterialBrowserController;
 use App\Http\Controllers\Admin\SchoolPeriodController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Admin\TeacherTimetableController;
@@ -248,6 +249,24 @@ Route::prefix('admin')->name('admin.')->group(function () {
         })->name('dashboard.reporting');
         Route::get('/dashboard/materials', [DashboardController::class, 'materials'])->name('dashboard.materials');
         Route::get('/dashboard/syllabus', [SyllabusDashboardController::class, 'index'])->name('dashboard.syllabus');
+
+        Route::get('/materials', [MaterialBrowserController::class, 'index'])->name('materials.index');
+        Route::get('/materials/{medium}', [MaterialBrowserController::class, 'medium'])
+            ->where('medium', 'english|gujarati|hindi')
+            ->name('materials.medium');
+        Route::get('/materials/{medium}/standards/{standard}', [MaterialBrowserController::class, 'standard'])
+            ->where('medium', 'english|gujarati|hindi')
+            ->name('materials.standard');
+        Route::get('/materials/{medium}/subjects/{subject}', [MaterialBrowserController::class, 'subject'])
+            ->where('medium', 'english|gujarati|hindi')
+            ->name('materials.subject');
+        Route::get('/materials/{medium}/subjects/{subject}/topics/{materialTopic}', [MaterialBrowserController::class, 'topic'])
+            ->where('medium', 'english|gujarati|hindi')
+            ->name('materials.topics.show');
+        Route::get('/materials/{medium}/subjects/{subject}/materials/{material}', [MaterialBrowserController::class, 'material'])
+            ->where('medium', 'english|gujarati|hindi')
+            ->name('materials.materials.show');
+
         Route::get('/change-password', [ChangePasswordController::class, 'edit'])->name('change-password');
         Route::get('/prompts', [PromptController::class, 'index'])->name('prompts.index');
         Route::get('/prompts/{prompt}', [PromptController::class, 'edit'])->name('prompts.edit');
