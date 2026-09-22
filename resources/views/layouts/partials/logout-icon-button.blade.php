@@ -1,15 +1,11 @@
-@props([
-    'action' => null,
-    'confirm' => 'Logout?',
-    'tone' => 'light',
-])
-
 @php
-    $action = $action ?: route('logout');
+    $action = $action ?? route('logout');
+    $confirm = $confirm ?? 'Logout?';
+    $tone = $tone ?? 'panel';
     $btnClass = match ($tone) {
         'dark' => 'inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition',
-        'panel' => 'inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-brand-green shadow-md hover:bg-brand-green hover:text-white hover:border-brand-green transition',
-        default => 'inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 text-white transition',
+        'light' => 'inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 text-white transition',
+        default => 'inline-flex h-10 w-10 items-center justify-center rounded-xl border-2 border-brand-green bg-white text-brand-green shadow-sm hover:bg-brand-green hover:text-white transition',
     };
 @endphp
 
