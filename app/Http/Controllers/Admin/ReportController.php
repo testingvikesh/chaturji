@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoginLog;
+use App\Models\Material;
+use App\Models\Standard;
+use App\Models\TeacherSubject;
+use App\Models\User;
 use App\Models\UserSession;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -77,6 +81,76 @@ class ReportController extends Controller
                 'today' => UserSession::whereIn('role', ['student', 'teacher'])->whereDate('logged_in_at', today())->count(),
                 'student' => UserSession::where('role', 'student')->where('is_active', true)->where('expires_at', '>', now())->count(),
                 'teacher' => UserSession::where('role', 'teacher')->where('is_active', true)->where('expires_at', '>', now())->count(),
+            ],
+        ]);
+    }
+
+    public function teacherSubjects(Request $request): View
+    {
+        $search = $request->string('search')->trim()->toString();
+        $medium = Material::normalizeMedium($request->string('medium')->trim()->toString()) ?: '';
+        $standardId = $request->integer('standard_id') ?: null;
+        $assignment = $request->string('assignment')->trim()->toString();
+
+        $query = User::teachers()
+            ->with([
+                'teacherSubjects' => function ($q) use ($medium, $standardId) {
+                    $q->with(['subject:id,name,standard_id', 'standard:id,name'])
+                        ->when($medium !== '', fn ($inner) => $inner->whereRaw('LOWER(TRIM(medium)) = ?', [$medium]))
+                        ->when($standardId, fn ($inner) => $inner->where('standard_id', $standardId))
+                        ->orderBy('medium')
+                        ->orderBy('standard_id')
+                        ->orderBy('subject_id');
+                },
+            ])
+            ->orderBy('name');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('mobile', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($medium !== '' || $standardId) {
+            $query->whereHas('teacherSubjects', function ($q) use ($medium, $standardId) {
+                if ($medium !== '') {
+                    $q->whereRaw('LOWER(TRIM(medium)) = ?', [$medium]);
+                }
+                if ($standardId) {
+                    $q->where('standard_id', $standardId);
+                }
+            });
+        }
+
+        if ($assignment === 'assigned') {
+            $query->has('teacherSubjects');
+        } elseif ($assignment === 'unassigned') {
+            $query->doesntHave('teacherSubjects');
+        }
+
+        $teachers = $query->paginate(20)->withQueryString();
+
+        $totalAssignments = TeacherSubject::query()->count();
+        $teachersWithSubjects = User::teachers()->has('teacherSubjects')->count();
+        $teachersWithoutSubjects = User::teachers()->doesntHave('teacherSubjects')->count();
+        $uniqueSubjects = (int) TeacherSubject::query()->selectRaw('COUNT(DISTINCT subject_id) as aggregate')->value('aggregate');
+
+        return view('admin.reports.teacher-subjects', [
+            'teachers' => $teachers,
+            'standards' => Standard::query()->orderedByNumber()->get(['id', 'name']),
+            'filters' => [
+                'search' => $search,
+                'medium' => $medium,
+                'standard_id' => $standardId ? (string) $standardId : '',
+                'assignment' => $assignment,
+            ],
+            'summary' => [
+                'assignments' => $totalAssignments,
+                'with_subjects' => $teachersWithSubjects,
+                'without_subjects' => $teachersWithoutSubjects,
+                'unique_subjects' => $uniqueSubjects,
             ],
         ]);
     }
