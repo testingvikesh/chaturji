@@ -60,19 +60,14 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Teacher chapter detail visibility (by client IP)
+    | Teacher chapter detail visibility
     |--------------------------------------------------------------------------
     |
-    | Teachers on these IPs can see Introduction, Trailer, Importance,
-    | Knowledge Ladder, Line to Line, What I Like, and 32 ગુણ / 64 કળા / 16 સંસ્કાર.
-    | Teachers on any other IP will not see those blocks.
-    | Students are not affected. Comma-separated list in TEACHER_CHAPTER_DETAIL_IPS.
+    | Previously limited by TEACHER_CHAPTER_DETAIL_IPS. IP restriction removed —
+    | Introduction, Trailer, Importance, Knowledge Ladder, etc. are shown to all.
     |
     */
 
-    'teacher_chapter_detail_ips' => array_values(array_filter(array_map(
-        'trim',
-        explode(',', (string) env('TEACHER_CHAPTER_DETAIL_IPS', '103.81.116.121'))
-    ))),
+    'teacher_chapter_detail_ips' => [],
 
 ];
