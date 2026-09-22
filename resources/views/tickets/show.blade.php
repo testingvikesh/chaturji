@@ -26,6 +26,8 @@
             <div class="p-5 space-y-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Conversation</p>
 
+                @include('tickets.partials.missing-chapter', ['ticket' => $ticket])
+
                 <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <p class="text-xs font-semibold text-slate-500 mb-1">
                         You

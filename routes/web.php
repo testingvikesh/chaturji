@@ -147,6 +147,8 @@ Route::middleware(['auth', 'student'])->prefix('student')->name('student.')->gro
     Route::get('/tickets', [UserTicketController::class, 'index'])->name('tickets.index');
     Route::get('/tickets/create', [UserTicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [UserTicketController::class, 'store'])->name('tickets.store');
+    Route::get('/tickets/options/subjects', [UserTicketController::class, 'subjects'])->name('tickets.subjects');
+    Route::get('/tickets/options/chapters', [UserTicketController::class, 'chapters'])->name('tickets.chapters');
     Route::get('/tickets/{ticket}', [UserTicketController::class, 'show'])->name('tickets.show');
     Route::get('/tickets/{ticket}/attachments/{attachment}', [UserTicketController::class, 'downloadAttachment'])->name('tickets.attachments.download');
     Route::post('/tickets/{ticket}/reply', [UserTicketController::class, 'reply'])->name('tickets.reply');
@@ -210,6 +212,8 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/tickets', [UserTicketController::class, 'index'])->name('tickets.index');
     Route::get('/tickets/create', [UserTicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [UserTicketController::class, 'store'])->name('tickets.store');
+    Route::get('/tickets/options/subjects', [UserTicketController::class, 'subjects'])->name('tickets.subjects');
+    Route::get('/tickets/options/chapters', [UserTicketController::class, 'chapters'])->name('tickets.chapters');
     Route::get('/tickets/{ticket}', [UserTicketController::class, 'show'])->name('tickets.show');
     Route::get('/tickets/{ticket}/attachments/{attachment}', [UserTicketController::class, 'downloadAttachment'])->name('tickets.attachments.download');
     Route::post('/tickets/{ticket}/reply', [UserTicketController::class, 'reply'])->name('tickets.reply');

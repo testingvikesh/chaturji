@@ -73,7 +73,7 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket): View
     {
-        $ticket->load(['user', 'replies.user', 'attachments']);
+        $ticket->load(['user', 'replies.user', 'attachments', 'standard', 'curriculumSubject']);
 
         return view('admin.tickets.show', [
             'ticket' => $ticket,

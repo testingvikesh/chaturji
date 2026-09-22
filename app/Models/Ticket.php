@@ -19,6 +19,7 @@ class Ticket extends Model
         'homework' => 'Homework',
         'account' => 'Account',
         'technical' => 'Technical',
+        'missing_chapter' => 'Missing Chapter',
         'other' => 'Other',
     ];
 
@@ -27,6 +28,11 @@ class Ticket extends Model
         'user_id',
         'role',
         'category',
+        'medium',
+        'standard_id',
+        'subject_id',
+        'chapter_id',
+        'chapter_name',
         'subject',
         'message',
         'status',
@@ -42,6 +48,16 @@ class Ticket extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function standard(): BelongsTo
+    {
+        return $this->belongsTo(Standard::class);
+    }
+
+    public function curriculumSubject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class, 'subject_id');
+    }
+
     public function replies(): HasMany
     {
         return $this->hasMany(TicketReply::class)->oldest();
@@ -55,6 +71,31 @@ class Ticket extends Model
     public function isClosed(): bool
     {
         return $this->status === 'closed';
+    }
+
+    public function hasMissingChapterMeta(): bool
+    {
+        return filled($this->medium)
+            || filled($this->standard_id)
+            || filled($this->subject_id)
+            || filled($this->chapter_name);
+    }
+
+    public function missingChapterSummary(): ?string
+    {
+        if (! $this->hasMissingChapterMeta()) {
+            return null;
+        }
+
+        $medium = Standard::MEDIUMS[$this->medium] ?? ucfirst((string) $this->medium);
+        $parts = array_filter([
+            $medium ?: null,
+            $this->standard?->name,
+            $this->curriculumSubject?->name,
+            $this->chapter_name,
+        ]);
+
+        return $parts === [] ? null : implode(' · ', $parts);
     }
 
     public function categoryLabel(): string

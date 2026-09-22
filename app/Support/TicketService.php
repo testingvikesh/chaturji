@@ -25,6 +25,11 @@ class TicketService
                 'user_id' => $user->id,
                 'role' => in_array($user->role, ['student', 'teacher'], true) ? $user->role : 'student',
                 'category' => $data['category'],
+                'medium' => $data['medium'] ?? null,
+                'standard_id' => $data['standard_id'] ?? null,
+                'subject_id' => $data['subject_id'] ?? null,
+                'chapter_id' => $data['chapter_id'] ?? null,
+                'chapter_name' => $data['chapter_name'] ?? null,
                 'subject' => $data['subject'],
                 'message' => $data['message'],
                 'status' => 'open',
@@ -35,7 +40,7 @@ class TicketService
             return $ticket;
         });
 
-        $this->mailer->created($ticket->load(['user', 'attachments']));
+        $this->mailer->created($ticket->load(['user', 'attachments', 'standard', 'curriculumSubject']));
 
         return $ticket;
     }
