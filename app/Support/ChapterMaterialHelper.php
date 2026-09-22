@@ -32,6 +32,7 @@ class ChapterMaterialHelper
      */
     public static function groupQuestions(Collection $questions): array
     {
+        $questions = self::uniqueQuestions($questions);
         $grouped = $questions->groupBy('question_type');
         $result = [];
 
@@ -56,6 +57,50 @@ class ChapterMaterialHelper
         }
 
         return ChapterQuestion::filterReaderGroups($result);
+    }
+
+    /**
+     * Keep first occurrence only when the same question text appears more than once.
+     *
+     * @param  Collection<int, mixed>  $questions
+     * @return Collection<int, mixed>
+     */
+    public static function uniqueQuestions(Collection $questions): Collection
+    {
+        $seen = [];
+
+        return $questions
+            ->filter(function ($question) use (&$seen) {
+                $raw = is_object($question)
+                    ? (string) ($question->question_text ?? '')
+                    : (string) ($question['question_text'] ?? '');
+
+                $key = self::normalizeQuestionKey($raw);
+                if ($key === '') {
+                    return true;
+                }
+
+                if (isset($seen[$key])) {
+                    return false;
+                }
+
+                $seen[$key] = true;
+
+                return true;
+            })
+            ->values();
+    }
+
+    public static function normalizeQuestionKey(string $text): string
+    {
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = mb_strtolower(trim($text));
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/^(?:q(?:uestion)?\s*)?\d+[\.\)\:\-\s]*/iu', '', $text) ?? $text;
+        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', '', $text) ?? $text;
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return trim($text);
     }
 
     /**

@@ -175,6 +175,7 @@ class MaterialTopicReader
             ]);
         });
 
+        $questions = ChapterMaterialHelper::uniqueQuestions($questions);
         $questionGroups = ChapterMaterialHelper::groupQuestions($questions);
         $questionGroupLabels = collect($questionGroups)->mapWithKeys(
             fn ($items, $type) => [$type => ChapterQuestion::labelForType((string) $type)]
@@ -185,7 +186,7 @@ class MaterialTopicReader
                 $materialTopic,
                 $material,
                 (string) ($cached['language'] ?? 'english'),
-                (int) ($cached['total_questions'] ?? $questions->count())
+                $questions->count()
             ),
             'sections' => $sections,
             'questions' => $questions,
