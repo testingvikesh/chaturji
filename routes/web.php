@@ -298,6 +298,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/reports/logins', [ReportController::class, 'logins'])->name('reports.logins');
         Route::get('/reports/sessions', [ReportController::class, 'sessions'])->name('reports.sessions');
         Route::get('/reports/teacher-subjects', [ReportController::class, 'teacherSubjects'])->name('reports.teacher-subjects');
+        Route::get('/reports/chapter-list', [ReportController::class, 'chapterList'])->name('reports.chapter-list');
         Route::get('/reports/activity', [ReportController::class, 'activity'])->name('reports.activity');
         Route::get('/reports/activity/{activityLog}', [ReportController::class, 'activityShow'])->name('reports.activity.show');
         Route::get('/email-logs', [EmailLogController::class, 'index'])->name('email-logs.index');

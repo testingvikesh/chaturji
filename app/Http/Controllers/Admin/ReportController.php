@@ -10,6 +10,7 @@ use App\Models\Standard;
 use App\Models\TeacherSubject;
 use App\Models\User;
 use App\Models\UserSession;
+use App\Support\AdminMaterialUploadReport;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -217,6 +218,62 @@ class ReportController extends Controller
         return view('admin.reports.activity-show', [
             'log' => $activityLog,
             'actionLabels' => ActivityLog::ACTION_LABELS,
+        ]);
+    }
+
+    public function chapterList(Request $request, AdminMaterialUploadReport $report): View
+    {
+        $payload = $report->build(
+            (string) $request->input('standard', ''),
+            (string) $request->input('subject', ''),
+            'standard',
+            'asc',
+            (string) $request->input('medium', '')
+        );
+
+        $rows = collect($payload['rows'] ?? [])->sortBy([
+            ['medium_key', 'asc'],
+            ['standard_sort', 'asc'],
+            ['subject', 'asc'],
+            ['chapter_no_sort', 'asc'],
+            ['chapter_name', 'asc'],
+        ])->values();
+
+        $groups = $rows
+            ->groupBy(fn (array $row) => ($row['medium_key'] ?? 'other').'|'.($row['standard_key'] ?? '').'|'.mb_strtolower((string) ($row['subject'] ?? '')))
+            ->map(function ($items) {
+                $first = $items->first();
+
+                return [
+                    'medium' => $first['medium'] ?? '—',
+                    'medium_key' => $first['medium_key'] ?? 'other',
+                    'standard' => $first['standard'] ?? '—',
+                    'subject' => $first['subject'] ?? '—',
+                    'chapters' => $items->values()->all(),
+                    'count' => $items->count(),
+                    'complete' => $items->where('status', 'complete')->count(),
+                ];
+            })
+            ->values();
+
+        return view('admin.reports.chapter-list', [
+            'groups' => $groups,
+            'rows' => $rows,
+            'standards' => collect($payload['standards'] ?? []),
+            'subjects' => $payload['subjects'] ?? [],
+            'filters' => [
+                'medium' => $payload['medium_filter'] ?? 'all',
+                'standard' => $payload['standard_filter'] ?? 'all',
+                'subject' => $payload['subject_filter'] ?? 'all',
+            ],
+            'summary' => [
+                'chapters' => $rows->count(),
+                'subjects' => $groups->count(),
+                'complete' => $rows->where('status', 'complete')->count(),
+                'partial' => $rows->where('status', 'partial')->count(),
+                'english' => $rows->where('medium_key', 'english')->count(),
+                'gujarati' => $rows->where('medium_key', 'gujarati')->count(),
+            ],
         ]);
     }
 }
