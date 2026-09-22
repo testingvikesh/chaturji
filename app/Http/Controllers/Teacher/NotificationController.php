@@ -22,7 +22,7 @@ class NotificationController extends Controller
                     ->orWhere('data->type', 'ticket');
             })
             ->latest()
-            ->paginate(20);
+            ->paginate(500);
 
         return view('teacher.notifications.index', [
             'user' => $user,

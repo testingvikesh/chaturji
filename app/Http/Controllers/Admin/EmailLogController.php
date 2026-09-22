@@ -35,7 +35,7 @@ class EmailLogController extends Controller
         }
 
         return view('admin.email-logs.index', [
-            'logs' => $query->paginate(20)->withQueryString(),
+            'logs' => $query->paginate(500)->withQueryString(),
             'filters' => [
                 'search' => $request->string('search')->toString(),
                 'status' => $request->string('status')->toString(),

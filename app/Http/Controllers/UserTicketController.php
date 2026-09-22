@@ -30,7 +30,7 @@ class UserTicketController extends Controller
                 ->where('user_id', $user->id)
                 ->withCount(['replies', 'attachments'])
                 ->latest()
-                ->paginate(15),
+                ->paginate(500),
         ]);
     }
 

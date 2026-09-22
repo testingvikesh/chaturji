@@ -29,7 +29,7 @@ class DataUploadController extends Controller
         $uploads = ChapterContent::query()
             ->with(['chapter.subject.standard', 'uploader'])
             ->latest()
-            ->paginate(15);
+            ->paginate(500);
 
         return view('admin.upload-data.index', compact('uploads'));
     }

@@ -43,7 +43,7 @@ class StudentController extends Controller
         }
 
         return view('admin.students.index', [
-            'students' => $query->paginate(15)->withQueryString(),
+            'students' => $query->paginate(500)->withQueryString(),
             'standards' => Standard::orderBy('sort_order')->pluck('name', 'slug'),
             'filters' => $request->only(['search', 'standard', 'medium', 'status']),
             'pendingCount' => User::students()->pending()->count(),

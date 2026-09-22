@@ -30,7 +30,7 @@ class MaterialQuestionEditLogController extends Controller
         }
 
         return view('admin.material-question-logs.index', [
-            'logs' => $query->paginate(25)->withQueryString(),
+            'logs' => $query->paginate(500)->withQueryString(),
             'filters' => [
                 'search' => $request->string('search')->toString(),
                 'medium' => $request->string('medium')->toString(),

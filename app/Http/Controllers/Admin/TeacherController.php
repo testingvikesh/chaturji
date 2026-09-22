@@ -37,7 +37,7 @@ class TeacherController extends Controller
         TeacherOtpService::generateForApprovedTeachers();
 
         return view('admin.teachers.index', [
-            'teachers' => $query->with('todayOtp')->paginate(15)->withQueryString(),
+            'teachers' => $query->with('todayOtp')->paginate(500)->withQueryString(),
             'filters' => $request->only(['search', 'status']),
             'pendingCount' => User::teachers()->pending()->count(),
         ]);

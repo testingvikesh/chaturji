@@ -43,7 +43,7 @@ class ReportController extends Controller
         }
 
         return view('admin.reports.logins', [
-            'logs' => $query->paginate(20)->withQueryString(),
+            'logs' => $query->paginate(500)->withQueryString(),
             'filters' => $request->only(['role', 'status', 'from', 'to', 'search']),
             'summary' => [
                 'today' => LoginLog::whereIn('role', ['student', 'teacher'])->whereDate('logged_at', today())->count(),
@@ -75,7 +75,7 @@ class ReportController extends Controller
         }
 
         return view('admin.reports.sessions', [
-            'sessions' => $query->paginate(20)->withQueryString(),
+            'sessions' => $query->paginate(500)->withQueryString(),
             'filters' => $request->only(['role', 'active_only', 'from', 'to']),
             'summary' => [
                 'active' => UserSession::whereIn('role', ['student', 'teacher'])->where('is_active', true)->where('expires_at', '>', now())->count(),
@@ -196,7 +196,7 @@ class ReportController extends Controller
             ->pluck('action');
 
         return view('admin.reports.activity', [
-            'logs' => $query->paginate(30)->withQueryString(),
+            'logs' => $query->paginate(500)->withQueryString(),
             'filters' => $request->only(['role', 'action', 'from', 'to', 'search']),
             'actionOptions' => $actions,
             'actionLabels' => ActivityLog::ACTION_LABELS,

@@ -50,7 +50,7 @@ class TicketController extends Controller
         }
 
         return view('admin.tickets.index', [
-            'tickets' => $query->paginate(20)->withQueryString(),
+            'tickets' => $query->paginate(500)->withQueryString(),
             'categories' => Ticket::CATEGORIES,
             'filters' => [
                 'search' => $request->string('search')->toString(),

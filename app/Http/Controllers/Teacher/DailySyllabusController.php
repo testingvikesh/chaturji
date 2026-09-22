@@ -37,7 +37,7 @@ class DailySyllabusController extends Controller
             $query->where('status', $request->string('status')->toString());
         }
 
-        $logs = $query->paginate(20)->withQueryString();
+        $logs = $query->paginate(500)->withQueryString();
 
         return view('teacher.daily-syllabus.index', [
             'teacher' => $teacher,
@@ -173,7 +173,7 @@ class DailySyllabusController extends Controller
             ->whereIn('status', [TeachingLog::STATUS_REMAINING, TeachingLog::STATUS_PARTIAL])
             ->with(['subject:id,name', 'chapter:id,name', 'topic:id,name'])
             ->latest('teaching_date')
-            ->paginate(30);
+            ->paginate(500);
 
         return view('teacher.daily-syllabus.pending', [
             'teacher' => $teacher,

@@ -20,7 +20,7 @@ class NotificationController extends BaseStudentController
                     ->orWhere('data->type', 'ticket');
             })
             ->latest()
-            ->paginate(20);
+            ->paginate(500);
 
         return view('student.notifications.index', [
             'user' => $user,
