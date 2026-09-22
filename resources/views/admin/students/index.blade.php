@@ -2,6 +2,10 @@
     <x-slot name="header">
         <x-admin.partials.page-header title="Students" subtitle="Manage registered student accounts">
             <x-slot name="actions">
+                <a href="{{ route('admin.students.upload') }}" class="admin-btn-secondary">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    Upload students
+                </a>
                 <a href="{{ route('admin.students.report') }}" class="admin-btn-primary">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     Student Report
@@ -10,7 +14,12 @@
         </x-admin.partials.page-header>
     </x-slot>
 
-    <div class="admin-page">
+    <div class="admin-page" x-data="{ selected: [], all: false,
+        toggleAll() {
+            this.all = !this.all;
+            this.selected = this.all ? @js($students->pluck('id')->map(fn ($id) => (string) $id)->values()) : [];
+        }
+    }">
         @include('admin.partials.alert')
 
         <div class="admin-card">
@@ -59,6 +68,30 @@
             </div>
         </div>
 
+        <form method="POST" action="{{ route('admin.students.send-credentials') }}" class="admin-card mb-4"
+              onsubmit="return confirm('Send login mail to selected students? Password will be reset to the value you enter.');">
+            @csrf
+            <div class="admin-card-body flex flex-wrap items-end gap-3">
+                <div class="min-w-[180px]">
+                    <label class="admin-label">Password for mail *</label>
+                    <input type="text" name="password" value="Student@123" required minlength="8" class="admin-input">
+                </div>
+                <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 pb-2">
+                    <input type="hidden" name="reset_password" value="0">
+                    <input type="checkbox" name="reset_password" value="1" class="rounded border-slate-300 text-brand-green" checked>
+                    Reset password to this value
+                </label>
+                <template x-for="id in selected" :key="id">
+                    <input type="hidden" name="student_ids[]" :value="id">
+                </template>
+                <button type="submit" class="admin-btn-primary" :disabled="selected.length === 0"
+                        :class="selected.length === 0 ? 'opacity-50 cursor-not-allowed' : ''">
+                    Send login mail (<span x-text="selected.length"></span>)
+                </button>
+                <p class="text-xs text-slate-500 w-full">Select students with email. Mail includes app login link, username (mobile) and password.</p>
+            </div>
+        </form>
+
         <div class="admin-card">
             <div class="admin-card-header">
                 <div>
@@ -70,6 +103,9 @@
                 <table class="admin-table">
                     <thead>
                         <tr>
+                            <th class="w-10">
+                                <input type="checkbox" class="rounded border-slate-300 text-brand-green" @click="toggleAll()" :checked="all">
+                            </th>
                             <th>Student</th>
                             <th>Mobile</th>
                             <th>Email</th>
@@ -82,6 +118,14 @@
                     <tbody>
                         @forelse ($students as $student)
                             <tr>
+                                <td>
+                                    <input type="checkbox"
+                                           class="rounded border-slate-300 text-brand-green"
+                                           value="{{ $student->id }}"
+                                           x-model="selected"
+                                           :disabled="!{{ $student->email ? 'true' : 'false' }}"
+                                           title="{{ $student->email ? 'Select to send mail' : 'No email — cannot send mail' }}">
+                                </td>
                                 <td>
                                     <div class="admin-user-cell">
                                         <span class="admin-avatar">{{ strtoupper(substr($student->name, 0, 2)) }}</span>
@@ -118,7 +162,7 @@
                                 </td>
                             </tr>
                         @empty
-                            @include('admin.partials.empty-row', ['colspan' => 7, 'message' => 'No students found', 'hint' => 'Students will appear here after they register from the website.'])
+                            @include('admin.partials.empty-row', ['colspan' => 8, 'message' => 'No students found', 'hint' => 'Upload students or wait for website registrations.'])
                         @endforelse
                     </tbody>
                 </table>

@@ -258,6 +258,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/settings/test-mail', [SettingController::class, 'sendTestMail'])->name('settings.test-mail');
 
         Route::get('/students/report', [StudentController::class, 'report'])->name('students.report');
+        Route::get('/students/upload', [StudentController::class, 'uploadForm'])->name('students.upload');
+        Route::get('/students/upload/template', [StudentController::class, 'uploadTemplate'])->name('students.upload.template');
+        Route::post('/students/upload', [StudentController::class, 'uploadStore'])->name('students.upload.store');
+        Route::post('/students/store-one', [StudentController::class, 'storeOne'])->name('students.store-one');
+        Route::post('/students/send-credentials', [StudentController::class, 'sendCredentials'])->name('students.send-credentials');
         Route::post('/students/{student}/approve', [StudentController::class, 'approve'])->name('students.approve');
         Route::post('/students/{student}/pending', [StudentController::class, 'pending'])->name('students.pending');
         Route::resource('students', StudentController::class)->except(['create', 'store']);
