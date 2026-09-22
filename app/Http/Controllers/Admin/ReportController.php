@@ -131,7 +131,7 @@ class ReportController extends Controller
             $query->doesntHave('teacherSubjects');
         }
 
-        $teachers = $query->paginate(20)->withQueryString();
+        $teachers = $query->paginate(500)->withQueryString();
 
         $totalAssignments = TeacherSubject::query()->count();
         $teachersWithSubjects = User::teachers()->has('teacherSubjects')->count();
