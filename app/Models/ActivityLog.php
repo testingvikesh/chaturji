@@ -47,6 +47,7 @@ class ActivityLog extends Model
         'admin.user.delete' => 'User deleted',
         'profile.update' => 'Profile updated',
         'profile.password' => 'Password changed',
+        'teacher.logout_report' => 'Teacher logout report',
     ];
 
     public function user(): BelongsTo

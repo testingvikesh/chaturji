@@ -38,6 +38,7 @@ use App\Http\Controllers\Teacher\SubjectController as TeacherSubjectController;
 use App\Http\Controllers\Teacher\TopicController as TeacherTopicController;
 use App\Http\Controllers\Teacher\TodaysExamController;
 use App\Http\Controllers\Teacher\DailySyllabusController;
+use App\Http\Controllers\Teacher\LogoutReportController;
 use App\Http\Controllers\Teacher\TodaysTeachingController;
 use App\Http\Controllers\Teacher\SettingController as TeacherSettingController;
 use App\Http\Controllers\Teacher\BookController as TeacherBookController;
@@ -162,6 +163,8 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/books/{subject}/topics/{materialTopic}', [TeacherBookController::class, 'topic'])->name('books.topics.show');
     Route::get('/books/{subject}/topics/{materialTopic}/questions/{questionKey}/edit', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'edit'])->name('books.questions.edit');
     Route::put('/books/{subject}/topics/{materialTopic}/questions/{questionKey}', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'update'])->name('books.questions.update');
+    Route::get('/logout-report', [LogoutReportController::class, 'create'])->name('logout-report.create');
+    Route::post('/logout-report', [LogoutReportController::class, 'store'])->name('logout-report.store');
     Route::get('/settings', [TeacherSettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [TeacherSettingController::class, 'update'])->name('settings.update');
     Route::delete('/settings/subjects/{teacherSubject}', [TeacherSettingController::class, 'destroySubject'])->name('settings.subjects.destroy');
@@ -299,6 +302,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/reports/sessions', [ReportController::class, 'sessions'])->name('reports.sessions');
         Route::get('/reports/teacher-subjects', [ReportController::class, 'teacherSubjects'])->name('reports.teacher-subjects');
         Route::get('/reports/chapter-list', [ReportController::class, 'chapterList'])->name('reports.chapter-list');
+        Route::get('/reports/logout-reports', [ReportController::class, 'logoutReports'])->name('reports.logout-reports');
+        Route::get('/reports/logout-reports/{teacherLogoutReport}', [ReportController::class, 'logoutReportShow'])->name('reports.logout-reports.show');
         Route::get('/reports/activity', [ReportController::class, 'activity'])->name('reports.activity');
         Route::get('/reports/activity/{activityLog}', [ReportController::class, 'activityShow'])->name('reports.activity.show');
         Route::get('/email-logs', [EmailLogController::class, 'index'])->name('email-logs.index');

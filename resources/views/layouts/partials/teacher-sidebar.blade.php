@@ -78,7 +78,7 @@
                 <p class="text-xs text-white/60 truncate">{{ Auth::user()->mobile }}</p>
             </div>
         </div>
-        <form method="POST" action="{{ route('logout') }}" onsubmit="return confirm('Are you sure you want to logout?')">
+        <form method="POST" action="{{ route('logout') }}" onsubmit="return confirm('Submit work report before logout?')">
             @csrf
             <button type="submit" class="w-full flex items-center justify-center gap-2 rounded-xl bg-white/15 hover:bg-white/20 px-3 py-2.5 text-sm font-medium text-white transition">
                 Logout
@@ -113,7 +113,11 @@
                               aria-hidden="true">{{ $unreadNotifications > 9 ? '9+' : $unreadNotifications }}</span>
                     @endif
                 </div>
-                @include('layouts.partials.logout-icon-button')
+                @unless (request()->routeIs('teacher.logout-report.*'))
+                    @include('layouts.partials.logout-icon-button', [
+                        'confirm' => 'Submit work report before logout?',
+                    ])
+                @endunless
             </div>
         </div>
     </div>

@@ -209,6 +209,12 @@ class AuthController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        $user = Auth::user();
+
+        if ($user && ($user->role ?? null) === 'teacher') {
+            return redirect()->route('teacher.logout-report.create');
+        }
+
         AuthActivityService::endSession($request);
 
         Auth::guard('web')->logout();

@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\LoginLog;
 use App\Models\Material;
 use App\Models\Standard;
+use App\Models\TeacherLogoutReport;
 use App\Models\TeacherSubject;
 use App\Models\User;
 use App\Models\UserSession;
@@ -274,6 +275,64 @@ class ReportController extends Controller
                 'english' => $rows->where('medium_key', 'english')->count(),
                 'gujarati' => $rows->where('medium_key', 'gujarati')->count(),
             ],
+        ]);
+    }
+
+    public function logoutReports(Request $request): View
+    {
+        $query = TeacherLogoutReport::query()
+            ->with(['teacher:id,name,mobile,email'])
+            ->latest('submitted_at')
+            ->latest('id');
+
+        if ($from = $request->date('from')) {
+            $query->whereDate('report_date', '>=', $from);
+        }
+        if ($to = $request->date('to')) {
+            $query->whereDate('report_date', '<=', $to);
+        }
+        if ($teacherId = $request->integer('teacher_id')) {
+            $query->where('teacher_id', $teacherId);
+        }
+        if ($status = $request->string('status')->trim()->toString()) {
+            $query->where('status', $status);
+        }
+        if ($search = $request->string('search')->trim()->toString()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('subject_name', 'like', "%{$search}%")
+                    ->orWhere('chapter_name', 'like', "%{$search}%")
+                    ->orWhere('topic_name', 'like', "%{$search}%")
+                    ->orWhere('employee_code', 'like', "%{$search}%")
+                    ->orWhereHas('teacher', fn ($t) => $t->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        return view('admin.reports.logout-reports', [
+            'reports' => $query->paginate(500)->withQueryString(),
+            'teachers' => User::teachers()->orderBy('name')->get(['id', 'name', 'mobile']),
+            'filters' => [
+                'from' => $request->string('from')->toString(),
+                'to' => $request->string('to')->toString(),
+                'teacher_id' => $request->string('teacher_id')->toString(),
+                'status' => $request->string('status')->toString(),
+                'search' => $search ?? '',
+            ],
+            'summary' => [
+                'today' => TeacherLogoutReport::query()->whereDate('report_date', today())->count(),
+                'total' => TeacherLogoutReport::query()->count(),
+                'complete' => TeacherLogoutReport::query()->where('chk_complete', true)->count(),
+                'remain' => TeacherLogoutReport::query()->where('chk_remain', true)->count(),
+                'teachers' => (int) TeacherLogoutReport::query()->selectRaw('COUNT(DISTINCT teacher_id) as aggregate')->value('aggregate'),
+            ],
+        ]);
+    }
+
+    public function logoutReportShow(TeacherLogoutReport $teacherLogoutReport): View
+    {
+        $teacherLogoutReport->load(['teacher:id,name,mobile,email']);
+
+        return view('admin.reports.logout-report-show', [
+            'report' => $teacherLogoutReport,
         ]);
     }
 }

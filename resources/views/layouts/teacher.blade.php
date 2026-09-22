@@ -25,21 +25,25 @@
                         <div class="min-w-0 flex-1">
                             {{ $header }}
                         </div>
-                        <div class="hidden lg:flex shrink-0 items-center pt-0.5">
-                            @include('layouts.partials.logout-icon-button', [
-                                'confirm' => 'Are you sure you want to logout?',
-                                'tone' => 'panel',
-                            ])
-                        </div>
+                        @unless (request()->routeIs('teacher.logout-report.*'))
+                            <div class="hidden lg:flex shrink-0 items-center pt-0.5">
+                                @include('layouts.partials.logout-icon-button', [
+                                    'confirm' => 'Submit work report before logout?',
+                                    'tone' => 'panel',
+                                ])
+                            </div>
+                        @endunless
                     </div>
                 </header>
             @else
-                <div class="hidden lg:flex justify-end px-4 sm:px-6 lg:px-8 py-3">
-                    @include('layouts.partials.logout-icon-button', [
-                        'confirm' => 'Are you sure you want to logout?',
-                        'tone' => 'panel',
-                    ])
-                </div>
+                @unless (request()->routeIs('teacher.logout-report.*'))
+                    <div class="hidden lg:flex justify-end px-4 sm:px-6 lg:px-8 py-3">
+                        @include('layouts.partials.logout-icon-button', [
+                            'confirm' => 'Submit work report before logout?',
+                            'tone' => 'panel',
+                        ])
+                    </div>
+                @endunless
             @endif
 
             <main class="p-4 sm:p-6 lg:p-8">
