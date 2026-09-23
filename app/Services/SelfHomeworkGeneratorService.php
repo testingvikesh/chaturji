@@ -140,16 +140,9 @@ class SelfHomeworkGeneratorService
             ]);
         }
 
-        foreach ($materials as $material) {
-            if (! filled($material->chapter_id)) {
-                throw ValidationException::withMessages([
-                    'chapter_ids' => 'One or more materials are not linked to a chapter.',
-                ]);
-            }
-        }
-
         $topics = $topics ?? collect();
         $primary = $materials->first();
+        $chapterId = filled($primary->chapter_id) ? (int) $primary->chapter_id : null;
 
         $plan = $requestedCounts !== []
             ? $this->buildCustomPlan($materials, $topics, $targetMarks, $requestedCounts)
@@ -172,7 +165,7 @@ class SelfHomeworkGeneratorService
             'is_self_homework' => true,
             'standard' => $student->standard,
             'subject_id' => $subject->id,
-            'chapter_id' => (int) $primary->chapter_id,
+            'chapter_id' => $chapterId,
             'topic_id' => null,
             'title' => "Self Homework ({$finalMarks} marks) — {$subject->name}",
             'description' => "{$chapterName} · {$topicLabel}",
@@ -184,7 +177,7 @@ class SelfHomeworkGeneratorService
                 'target_marks' => $targetMarks,
                 'selected_marks' => $finalMarks,
                 'total_marks' => $generated['total_marks'],
-                'chapter_id' => (int) $primary->chapter_id,
+                'chapter_id' => $chapterId,
                 'material_ids' => $materials->pluck('id')->values()->all(),
                 'material_topic_ids' => $topics->pluck('id')->values()->all(),
                 'generated_from' => 'self_homework_materials',

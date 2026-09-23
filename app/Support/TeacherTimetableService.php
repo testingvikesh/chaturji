@@ -9,6 +9,7 @@ use App\Models\TeacherTimetable;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class TeacherTimetableService
 {
@@ -17,11 +18,20 @@ class TeacherTimetableService
         return ($date ?? now())->dayOfWeekIso;
     }
 
+    public function tablesReady(): bool
+    {
+        return Schema::hasTable('school_periods') && Schema::hasTable('teacher_timetables');
+    }
+
     /**
      * @return Collection<int, TeacherTimetable>
      */
     public function forTeacherOnDate(int $teacherId, ?CarbonInterface $date = null): Collection
     {
+        if (! $this->tablesReady()) {
+            return collect();
+        }
+
         $weekday = $this->weekdayFor($date);
 
         return TeacherTimetable::query()
@@ -47,6 +57,10 @@ class TeacherTimetableService
      */
     public function weekForTeacher(int $teacherId): Collection
     {
+        if (! $this->tablesReady()) {
+            return collect();
+        }
+
         return TeacherTimetable::query()
             ->with([
                 'period',
@@ -156,6 +170,10 @@ class TeacherTimetableService
      */
     public function activePeriods(): Collection
     {
+        if (! Schema::hasTable('school_periods')) {
+            return collect();
+        }
+
         return SchoolPeriod::query()->active()->ordered()->get();
     }
 

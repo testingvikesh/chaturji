@@ -1,13 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-admin.partials.page-header title="Chapter List Report" subtitle="Medium · Standard · Subject · Chapter — printable chapter list">
-            <x-slot name="actions">
-                <button type="button" onclick="window.print()" class="admin-btn-primary print:hidden">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    Print / PDF
-                </button>
-            </x-slot>
-        </x-admin.partials.page-header>
+        <x-admin.partials.page-header title="Chapter List Report" subtitle="Medium · Standard · Subject · Chapter — printable chapter list" />
     </x-slot>
 
     <style>
@@ -93,19 +86,6 @@
                     </div>
                 </form>
             </div>
-        </div>
-
-        {{-- Printable document header --}}
-        <div class="hidden print:block mb-4 border-b-2 border-slate-800 pb-3">
-            <p class="text-xs uppercase tracking-widest text-slate-500">Gses Chaturji · Admin Report</p>
-            <h1 class="text-xl font-bold text-slate-900 mt-1">Chapter List Report</h1>
-            <p class="text-xs text-slate-600 mt-1">
-                Generated {{ now()->format('d M Y, h:i A') }}
-                · Medium: {{ ($filters['medium'] ?? 'all') === 'all' ? 'All' : ucfirst($filters['medium']) }}
-                · Standard: {{ ($filters['standard'] ?? 'all') === 'all' ? 'All' : $filters['standard'] }}
-                · Subject: {{ ($filters['subject'] ?? 'all') === 'all' ? 'All' : $filters['subject'] }}
-                · Total chapters: {{ $summary['chapters'] }}
-            </p>
         </div>
 
         @forelse ($groups as $group)

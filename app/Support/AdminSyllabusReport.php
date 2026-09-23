@@ -10,6 +10,7 @@ use App\Models\Topic;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AdminSyllabusReport
 {
@@ -493,13 +494,16 @@ class AdminSyllabusReport
             ->groupBy('teacher_id')
             ->pluck('reports_done', 'teacher_id');
 
-        $requiredByTeacher = \App\Models\TeacherTimetable::query()
-            ->active()
-            ->where('weekday', $weekday)
-            ->whereHas('period', fn ($q) => $q->where('is_active', true))
-            ->select('teacher_id', DB::raw('COUNT(*) as required_slots'))
-            ->groupBy('teacher_id')
-            ->pluck('required_slots', 'teacher_id');
+        $requiredByTeacher = collect();
+        if (Schema::hasTable('teacher_timetables') && Schema::hasTable('school_periods')) {
+            $requiredByTeacher = \App\Models\TeacherTimetable::query()
+                ->active()
+                ->where('weekday', $weekday)
+                ->whereHas('period', fn ($q) => $q->where('is_active', true))
+                ->select('teacher_id', DB::raw('COUNT(*) as required_slots'))
+                ->groupBy('teacher_id')
+                ->pluck('required_slots', 'teacher_id');
+        }
 
         return $teachers->map(function (User $teacher) use ($updates, $logoutDone, $requiredByTeacher) {
             $required = (int) ($requiredByTeacher[$teacher->id] ?? 0);
