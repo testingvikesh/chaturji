@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
-use App\Mail\TeacherLogoutReportMail;
 use App\Models\Material;
 use App\Models\MaterialTopic;
 use App\Models\Subject;
@@ -12,16 +11,13 @@ use App\Models\TeacherSubject;
 use App\Models\TeacherTimetable;
 use App\Services\AuthActivityService;
 use App\Support\ActivityLogger;
-use App\Support\MailConfig;
 use App\Support\TeacherTimetableService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Throwable;
 
 class LogoutReportController extends Controller
 {
@@ -203,11 +199,6 @@ class LogoutReportController extends Controller
             'submitted_at' => now(),
         ]);
 
-        $mailSent = $this->sendMail($report);
-        if ($mailSent) {
-            $report->update(['mail_sent' => true]);
-        }
-
         ActivityLogger::log(
             'teacher.logout_report',
             'Logout report: '.($slot?->optionLabel() ?: $subject->name).' / '.$chapterName.' ('.$topics->count().' topics, '.$status.')',
@@ -222,7 +213,6 @@ class LogoutReportController extends Controller
                 'period' => $slot?->period?->displayLabel(),
                 'topics' => $topics->map(fn (MaterialTopic $t) => $t->displayName())->all(),
                 'status' => $status,
-                'mail_sent' => $mailSent,
             ],
             $teacher
         );
@@ -234,7 +224,7 @@ class LogoutReportController extends Controller
 
         return redirect()
             ->route('home')
-            ->with('success', 'Work report submitted'.($mailSent ? ' and emailed' : '').'. You are logged out.');
+            ->with('success', 'Work report submitted. You are logged out.');
     }
 
     /**
@@ -284,24 +274,5 @@ class LogoutReportController extends Controller
         $subject->loadMissing('standard');
 
         return [$medium, $standardId, $subjectId, $subject, null];
-    }
-
-    private function sendMail(TeacherLogoutReport $report): bool
-    {
-        $to = MailConfig::adminEmail();
-        if (! $to) {
-            return false;
-        }
-
-        try {
-            MailConfig::apply();
-            Mail::to($to)->send(new TeacherLogoutReportMail($report->load('teacher')));
-
-            return true;
-        } catch (Throwable $e) {
-            report($e);
-
-            return false;
-        }
     }
 }

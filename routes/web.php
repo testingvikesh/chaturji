@@ -99,6 +99,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware(['auth'])->group(function () {
     Route::get('/chapter-content/{chapterContent}/original-pdf', [ChapterOriginalPdfController::class, 'show'])
         ->name('chapter-content.original-pdf');
+    Route::get('/materials/{material}/textbook', [MaterialPdfController::class, 'viewer'])
+        ->name('materials.textbook');
     Route::get('/materials/{material}/textbook-pdf', [MaterialPdfController::class, 'show'])
         ->name('materials.textbook-pdf');
     Route::get('/materials/{material}/textbook-page/{page}', [MaterialPdfController::class, 'page'])

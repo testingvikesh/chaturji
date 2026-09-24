@@ -273,7 +273,14 @@
             <div class="relative flex h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
                  @click.stop>
                 <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-                    <div class="min-w-0">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <button type="button"
+                                @click="closeTextbook()"
+                                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+                                aria-label="Back">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <div class="min-w-0">
                         <p class="truncate text-sm font-bold text-slate-900">Textbook</p>
                         <p class="truncate text-xs text-slate-500">
                             {{ $material?->displayChapterName() ?? ($topic->name ?? 'Material') }}
@@ -281,16 +288,11 @@
                                 · {{ $material->textbookPdfFilename() }}
                             @endif
                         </p>
+                        </div>
                     </div>
                     <div class="flex shrink-0 items-center gap-2">
-                        @if ($textbookPdfUrl)
-                            <a href="{{ $textbookPdfUrl }}"
-                               target="_blank"
-                               class="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                                Open PDF
-                            </a>
-                        @elseif ($textbookPublicUrl)
-                            <a href="{{ $textbookPublicUrl }}"
+                        @if ($textbookPdfUrl || $textbookPublicUrl)
+                            <a href="{{ route('materials.textbook', $material) }}?return={{ urlencode(url()->full()) }}"
                                target="_blank"
                                rel="noopener"
                                class="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">

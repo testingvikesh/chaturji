@@ -6,11 +6,27 @@ use App\Models\Material;
 use App\Models\Standard;
 use App\Services\S3ObjectService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MaterialPdfController extends Controller
 {
+    public function viewer(Request $request, Material $material): View
+    {
+        $user = auth()->user();
+        abort_unless($user, 403);
+        $this->authorizeAccess($user, $material);
+        abort_unless($material->hasTextbookPdf(), 404);
+
+        return view('materials.textbook-viewer', [
+            'material' => $material,
+            'pdfUrl' => route('materials.textbook-pdf', $material),
+            'backUrl' => $this->safeReturnUrl($request),
+        ]);
+    }
+
     public function show(Material $material): BinaryFileResponse|StreamedResponse|RedirectResponse
     {
         $user = auth()->user();
@@ -103,6 +119,21 @@ class MaterialPdfController extends Controller
             'Content-Disposition' => 'inline; filename="'.$filename.'"',
             'Cache-Control' => 'private, max-age=300',
         ]);
+    }
+
+    private function safeReturnUrl(Request $request): ?string
+    {
+        $return = $request->query('return');
+        if (! is_string($return) || $return === '') {
+            return null;
+        }
+
+        $host = parse_url($return, PHP_URL_HOST);
+        if ($host !== null && $host !== $request->getHost()) {
+            return null;
+        }
+
+        return $return;
     }
 
     private function authorizeAccess($user, Material $material): void
