@@ -276,13 +276,25 @@
     @endphp
 
     @if ($showTextbookModal)
+        @once
+            <style>
+                .textbook-modal { position: fixed; inset: 0; z-index: 200; display: flex; width: 100vw; height: 100dvh; background: rgba(15, 23, 42, 0.65); }
+                .textbook-modal-panel { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; max-height: 100dvh; overflow: hidden; background: #fff; }
+                .textbook-pdf-canvas, .textbook-page-list { width: 100%; max-width: 100%; }
+                .textbook-pdf-canvas canvas, .textbook-page-image { width: 100% !important; max-width: 100%; height: auto !important; }
+                @media (min-width: 1280px) {
+                    .textbook-modal { padding: 16px; }
+                    .textbook-modal-panel { width: min(1100px, 100%); height: min(96dvh, 100%); margin: auto; border-radius: 16px; }
+                }
+            </style>
+        @endonce
+        <template x-teleport="body">
         <div x-show="textbookOpen"
              x-cloak
-             class="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6"
+             class="textbook-modal"
              style="display: none;">
-            <div class="absolute inset-0 bg-slate-900/60" @click="closeTextbook()"></div>
-            <div class="relative flex h-[96vh] w-[96vw] max-w-none flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-                 @click.stop>
+            <div class="absolute inset-0" @click="closeTextbook()"></div>
+            <div class="textbook-modal-panel relative" @click.stop>
                 <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
                     <div class="flex min-w-0 items-center gap-2">
                         <button type="button"
@@ -368,6 +380,7 @@
                 </div>
             </div>
         </div>
+        </template>
     @endif
 
     @if ($content->hasOriginalPdf())
