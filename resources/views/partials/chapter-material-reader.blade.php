@@ -182,9 +182,12 @@
         this.textbookOpen = true;
         document.body.classList.add('overflow-hidden');
         this.$nextTick(() => {
+            const box = this.$root.querySelector('[data-pdf-url]');
+            if (box && window.renderTextbookPages && box.dataset.ready !== '1') {
+                window.renderTextbookPages(box);
+            }
             const el = document.getElementById(this.topicPage ? 'textbook-page-' + this.topicPage : 'textbook-pages');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            // Page-image mode: hide loader once DOM is ready
             if (document.getElementById('textbook-pages')) {
                 setTimeout(() => this.onTextbookLoaded(), 600);
             }
@@ -206,7 +209,7 @@
             setTimeout(() => el.classList.remove('ring-2', 'ring-brand-green', 'bg-emerald-50'), 1800);
         });
     }
-}" @keydown.escape.window="closeTextbook()">
+}" @keydown.escape.window="closeTextbook()" @textbook-ready="onTextbookLoaded()">
     @if ($hasSummaryLinks)
         <button type="button"
                 @click="summaryOpen = true"
@@ -270,7 +273,7 @@
              class="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6"
              style="display: none;">
             <div class="absolute inset-0 bg-slate-900/60" @click="closeTextbook()"></div>
-            <div class="relative flex h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            <div class="relative flex h-[96vh] w-[96vw] max-w-none flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
                  @click.stop>
                 <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
                     <div class="flex min-w-0 items-center gap-2">
@@ -322,7 +325,7 @@
 
                     @if ($textbookPageImages->isNotEmpty())
                         <div id="textbook-pages" class="h-full overflow-y-auto">
-                            <div class="textbook-page-list mx-auto w-full max-w-3xl space-y-4 p-3 sm:p-5">
+                            <div class="textbook-page-list mx-auto w-full space-y-4 p-3 sm:p-5">
                                 @foreach ($textbookPageImages as $image)
                                     @php
                                         $pageNo = (int) ($image['page'] ?? 0);
@@ -344,20 +347,8 @@
                                 @endforeach
                             </div>
                         </div>
-                    @elseif ($textbookPdfUrl)
-                        <iframe
-                            x-show="textbookOpen"
-                            :src="textbookOpen ? @js($textbookPdfUrl) : ''"
-                            @load="onTextbookLoaded()"
-                            class="absolute inset-0 h-full w-full border-0 bg-slate-100"
-                            title="Textbook PDF"></iframe>
-                    @elseif ($textbookPublicUrl)
-                        <iframe
-                            x-show="textbookOpen"
-                            :src="textbookOpen ? @js($textbookPublicUrl) : ''"
-                            @load="onTextbookLoaded()"
-                            class="absolute inset-0 h-full w-full border-0 bg-slate-100"
-                            title="Textbook PDF"></iframe>
+                    @elseif ($textbookPdfUrl || $textbookPublicUrl)
+                        @include('partials.textbook-pdf-canvas', ['pdfUrl' => $textbookPdfUrl ?: $textbookPublicUrl])
                     @else
                         <div class="flex h-full items-center justify-center p-6 text-center">
                             <div>

@@ -75,7 +75,12 @@
             this.textbookOpen = true;
             document.body.classList.add('overflow-hidden');
             this.$nextTick(() => {
-                const el = document.getElementById('textbook-page-' + this.currentPage);
+                const box = this.$root.querySelector('[data-pdf-url]');
+                if (box && window.renderTextbookPages && box.dataset.ready !== '1') {
+                    window.renderTextbookPages(box);
+                }
+                const el = document.getElementById('textbook-pdf-page-' + this.currentPage)
+                    || document.getElementById('textbook-page-' + this.currentPage);
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         },
@@ -86,7 +91,8 @@
             document.body.classList.remove('overflow-hidden');
         }
      }"
-     @keydown.escape.window="closeTextbook()">
+     @keydown.escape.window="closeTextbook()"
+     @textbook-ready="onTextbookLoaded()">
     <style>
         .material-reader,
         .material-reader button,
@@ -139,7 +145,7 @@
              class="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6"
              style="display: none;">
             <div class="absolute inset-0 bg-slate-900/60" @click="closeTextbook()"></div>
-            <div class="relative flex h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            <div class="relative flex h-[96vh] w-[96vw] max-w-none flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
                  @click.stop>
                 <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
                     <div class="flex min-w-0 items-center gap-2">
@@ -190,15 +196,10 @@
                         <p class="text-xs text-slate-500">Please wait while the PDF opens</p>
                     </div>
                     @if ($textbookPdfUrl || $textbookPublicUrl)
-                        <iframe
-                            x-show="textbookOpen"
-                            :src="textbookOpen ? (@js($textbookPdfUrl ?: $textbookPublicUrl) + '#page=' + currentPage) : ''"
-                            @load="onTextbookLoaded()"
-                            class="absolute inset-0 h-full w-full border-0 bg-slate-100"
-                            title="Textbook PDF"></iframe>
+                        @include('partials.textbook-pdf-canvas', ['pdfUrl' => $textbookPdfUrl ?: $textbookPublicUrl])
                     @elseif ($textbookPageImages->isNotEmpty())
                         <div id="textbook-pages" class="h-full overflow-y-auto">
-                            <div class="textbook-page-list mx-auto w-full max-w-3xl space-y-4 p-3 sm:p-5">
+                            <div class="textbook-page-list mx-auto w-full space-y-4 p-3 sm:p-5">
                                 @foreach ($textbookPageImages as $image)
                                     @php
                                         $pageNo = (int) ($image['page'] ?? 0);
