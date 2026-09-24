@@ -1,4 +1,4 @@
-<div class="textbook-pdf-canvas h-full overflow-y-auto bg-slate-200" data-pdf-url="{{ $pdfUrl }}"></div>
+<div class="textbook-pdf-canvas h-full w-full overflow-y-auto bg-slate-200" data-pdf-url="{{ $pdfUrl }}"></div>
 @once
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
@@ -43,9 +43,12 @@
                     painting = true;
                     for (const item of holders) {
                         const base = item.page.getViewport({ scale: 1 });
-                        const viewport = item.page.getViewport({ scale: Math.max(width, 1) / base.width });
+                        const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+                        const viewport = item.page.getViewport({ scale: (width / base.width) * pixelRatio });
                         item.canvas.width = viewport.width;
                         item.canvas.height = viewport.height;
+                        item.canvas.style.width = '100%';
+                        item.canvas.style.height = 'auto';
                         await item.page.render({ canvasContext: item.canvas.getContext('2d'), viewport: viewport }).promise;
                     }
                     painting = false;

@@ -75,10 +75,18 @@
             this.textbookOpen = true;
             document.body.classList.add('overflow-hidden');
             this.$nextTick(() => {
-                const box = this.$root.querySelector('[data-pdf-url]');
-                if (box && window.renderTextbookPages && box.dataset.ready !== '1') {
+                const start = () => {
+                    const box = this.$root.querySelector('[data-pdf-url]');
+                    if (!box || box.dataset.ready === '1') {
+                        return;
+                    }
+                    if (!window.renderTextbookPages) {
+                        setTimeout(start, 200);
+                        return;
+                    }
                     window.renderTextbookPages(box);
-                }
+                };
+                setTimeout(start, 150);
                 const el = document.getElementById('textbook-pdf-page-' + this.currentPage)
                     || document.getElementById('textbook-page-' + this.currentPage);
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
