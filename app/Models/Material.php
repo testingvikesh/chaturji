@@ -204,12 +204,16 @@ class Material extends Model
             $mediums[] = $own;
         }
 
-        foreach (array_unique($mediums) as $mediumKey) {
-            Cache::forget('materials:subjects-for-student:v1:'.$standard->id.':'.$mediumKey);
-            Cache::forget('materials:subjects-for-student:v2:'.$standard->id.':'.$mediumKey);
-        }
+        try {
+            foreach (array_unique($mediums) as $mediumKey) {
+                Cache::forget('materials:subjects-for-student:v1:'.$standard->id.':'.$mediumKey);
+                Cache::forget('materials:subjects-for-student:v2:'.$standard->id.':'.$mediumKey);
+            }
 
-        Cache::put('reader-nav-version:'.$standard->id, (string) now()->getTimestamp(), 86400);
+            Cache::put('reader-nav-version:'.$standard->id, (string) now()->getTimestamp(), 86400);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public static function forgetStudentSubjectCache(int $subjectId, ?string $medium = null): void
