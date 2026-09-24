@@ -192,6 +192,26 @@ class Material extends Model
         return $materials;
     }
 
+    public static function forgetStandardSubjectListCache(?Standard $standard): void
+    {
+        if (! $standard) {
+            return;
+        }
+
+        $mediums = ['any', 'english', 'hindi', 'gujarati'];
+        $own = self::normalizeMedium($standard->medium);
+        if ($own) {
+            $mediums[] = $own;
+        }
+
+        foreach (array_unique($mediums) as $mediumKey) {
+            Cache::forget('materials:subjects-for-student:v1:'.$standard->id.':'.$mediumKey);
+            Cache::forget('materials:subjects-for-student:v2:'.$standard->id.':'.$mediumKey);
+        }
+
+        Cache::put('reader-nav-version:'.$standard->id, (string) now()->getTimestamp(), 86400);
+    }
+
     public static function forgetStudentSubjectCache(int $subjectId, ?string $medium = null): void
     {
         $mediums = $medium !== null
@@ -278,7 +298,7 @@ class Material extends Model
         }
 
         $mediumKey = self::normalizeMedium($medium) ?? 'any';
-        $cacheKey = 'materials:subjects-for-student:v1:'.$standard->id.':'.$mediumKey;
+        $cacheKey = 'materials:subjects-for-student:v2:'.$standard->id.':'.$mediumKey;
 
         try {
             $cached = Cache::get($cacheKey);
@@ -316,7 +336,7 @@ class Material extends Model
             $subject->setAttribute('chapters_count', (int) $row->chapters_count);
 
             return $subject;
-        })->values();
+        })->filter(fn (Subject $subject) => $subject->is_active)->values();
 
         try {
             Cache::put($cacheKey, $subjects, 600);
@@ -338,10 +358,6 @@ class Material extends Model
             ->first();
 
         if ($subject) {
-            if (! $subject->is_active) {
-                $subject->is_active = true;
-                $subject->save();
-            }
             $subject->setRelation('standard', $standard);
 
             return $subject;

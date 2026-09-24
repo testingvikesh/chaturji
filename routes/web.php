@@ -303,7 +303,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('/timetable/teachers/{teacher}/{timetable}', [TeacherTimetableController::class, 'destroy'])->name('timetable.destroy');
 
         Route::resource('standards', StandardController::class)->except(['show']);
+        Route::get('/subjects', [SubjectController::class, 'manage'])->name('subjects.manage');
         Route::get('/standards/{standard}/subjects', [SubjectController::class, 'index'])->name('standards.subjects.index');
+        Route::put('/standards/{standard}/subjects', [SubjectController::class, 'bulkUpdate'])->name('standards.subjects.bulk');
         Route::get('/standards/{standard}/subjects/create', [SubjectController::class, 'create'])->name('standards.subjects.create');
         Route::post('/standards/{standard}/subjects', [SubjectController::class, 'store'])->name('standards.subjects.store');
         Route::get('/subjects/{subject}/edit', [SubjectController::class, 'edit'])->name('subjects.edit');

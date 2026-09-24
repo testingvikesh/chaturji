@@ -101,6 +101,7 @@ class MaterialPaperBank
 
         $cacheKey = 'reader-nav-tree:v2:'
             .$standard->id.':'
+            .(Cache::get('reader-nav-version:'.$standard->id) ?: '0').':'
             .Material::normalizeMedium($medium).':'
             .$topicRoute.':'
             .md5(json_encode($topicRouteExtra));
