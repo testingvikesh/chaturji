@@ -76,7 +76,7 @@
             document.body.classList.add('overflow-hidden');
             this.$nextTick(() => {
                 const start = () => {
-                    const box = this.$root.querySelector('[data-pdf-url]');
+                    const box = document.querySelector('.textbook-modal [data-pdf-url]');
                     if (!box || box.dataset.ready === '1') {
                         return;
                     }
@@ -148,6 +148,7 @@
     </div>
 
     @if ($showTextbook)
+        @include('partials.textbook-pdf-script')
         @once
             <style>
                 .textbook-modal { position: fixed; inset: 0; z-index: 200; display: flex; width: 100vw; height: 100dvh; background: rgba(15, 23, 42, 0.65); }

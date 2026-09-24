@@ -183,7 +183,7 @@
         document.body.classList.add('overflow-hidden');
         this.$nextTick(() => {
             const start = () => {
-                const box = this.$root.querySelector('[data-pdf-url]');
+                const box = document.querySelector('.textbook-modal [data-pdf-url]');
                 if (!box || box.dataset.ready === '1') {
                     return;
                 }
@@ -276,6 +276,7 @@
     @endphp
 
     @if ($showTextbookModal)
+        @include('partials.textbook-pdf-script')
         @once
             <style>
                 .textbook-modal { position: fixed; inset: 0; z-index: 200; display: flex; width: 100vw; height: 100dvh; background: rgba(15, 23, 42, 0.65); }
@@ -343,7 +344,9 @@
                         <p class="text-xs text-slate-500">Please wait while the PDF opens</p>
                     </div>
 
-                    @if ($textbookPageImages->isNotEmpty())
+                    @if ($textbookPdfUrl || $textbookPublicUrl)
+                        @include('partials.textbook-pdf-canvas', ['pdfUrl' => $textbookPdfUrl ?: $textbookPublicUrl])
+                    @elseif ($textbookPageImages->isNotEmpty())
                         <div id="textbook-pages" class="h-full overflow-y-auto">
                             <div class="textbook-page-list mx-auto w-full space-y-4 p-3 sm:p-5">
                                 @foreach ($textbookPageImages as $image)
@@ -367,8 +370,6 @@
                                 @endforeach
                             </div>
                         </div>
-                    @elseif ($textbookPdfUrl || $textbookPublicUrl)
-                        @include('partials.textbook-pdf-canvas', ['pdfUrl' => $textbookPdfUrl ?: $textbookPublicUrl])
                     @else
                         <div class="flex h-full items-center justify-center p-6 text-center">
                             <div>
