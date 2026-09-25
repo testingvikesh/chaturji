@@ -100,7 +100,7 @@ class AnswerSheetProcessor
         } catch (\Throwable $exception) {
             $submission->update([
                 'status' => 'failed',
-                'error_message' => $exception->getMessage(),
+                'error_message' => TextSanitizer::forDatabase($exception->getMessage()),
             ]);
 
             throw $exception;
@@ -176,7 +176,7 @@ class AnswerSheetProcessor
         } catch (\Throwable $exception) {
             $submission->update([
                 'status' => 'failed',
-                'error_message' => $exception->getMessage(),
+                'error_message' => TextSanitizer::forDatabase($exception->getMessage()),
             ]);
 
             throw $exception;
@@ -198,9 +198,9 @@ class AnswerSheetProcessor
         string $table,
     ): void {
         $payload = [
-            'extracted_text' => $extraction['text'],
+            'extracted_text' => TextSanitizer::utf8($extraction['text']),
             'extraction_method' => $extraction['method'],
-            'evaluation' => $evaluation,
+            'evaluation' => TextSanitizer::jsonSafe($evaluation),
             'score_awarded' => $evaluation['summary']['total_score'] ?? null,
             'max_score' => $evaluation['summary']['max_score'] ?? null,
             'status' => 'completed',

@@ -58,4 +58,58 @@ class TextSanitizer
 
         return $data;
     }
+
+    /**
+     * Keep valid Gujarati/UTF-8 and drop only broken bytes.
+     */
+    public static function utf8(?string $text): ?string
+    {
+        if ($text === null || $text === '') {
+            return $text;
+        }
+
+        $cleaned = @iconv('UTF-8', 'UTF-8//IGNORE', $text);
+        if ($cleaned !== false) {
+            $text = $cleaned;
+        }
+
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text) ?? $text;
+
+        return trim($text);
+    }
+
+    /**
+     * Drop invalid bytes so a JSON column can store Gujarati OCR text.
+     *
+     * @param  array<mixed>  $data
+     * @return array<mixed>
+     */
+    public static function jsonSafe(array $data): array
+    {
+        $json = json_encode(self::utf8Array($data), JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        if ($json === false) {
+            return [];
+        }
+
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param  array<mixed>  $data
+     * @return array<mixed>
+     */
+    private static function utf8Array(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_string($value)) {
+                $data[$key] = self::utf8($value);
+            } elseif (is_array($value)) {
+                $data[$key] = self::utf8Array($value);
+            }
+        }
+
+        return $data;
+    }
 }
