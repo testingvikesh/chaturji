@@ -285,6 +285,7 @@ class CorrectedAnswerSheetRenderer
 
         // Place uploaded sheet on top (full width if possible)
         $pasteX = (int) max(0, ($canvasW - $srcW) / 2);
+        $markSlots = $this->answerMarkSlots($source, $count);
         imagecopy($canvas, $source, $pasteX, 0, 0, 0, $srcW, $srcH);
         imagedestroy($source);
 
@@ -293,27 +294,28 @@ class CorrectedAnswerSheetRenderer
         imagefilledellipse($canvas, $pasteX + (int) ($srcW / 2), 36, 48, 48, $stamp);
         imageellipse($canvas, $pasteX + (int) ($srcW / 2), 36, 48, 48, $marginBlue);
 
-        // Marks on each answer block of the uploaded page (sample: red X + 0/1 + short comment)
+        // Marks in the blank space beside each answer, in one aligned column.
         $markYs = $this->resolveMarkYPositions($questionRows, $srcH, $pageHeights);
         $tick = max(26, (int) ($srcW * 0.042));
-        // Sit the tick and score just after the handwriting, not on the far page edge.
-        $markX = $pasteX + (int) round($srcW * 0.56);
+        $markX = $pasteX + (int) round($srcW * 0.62);
         $markX = min($markX, $pasteX + $srcW - $tick - 72);
-        $markX = max($pasteX + (int) round($srcW * 0.40), $markX);
 
         foreach (array_values($questionRows) as $index => $row) {
             $awarded = (int) ($row['score_awarded'] ?? 0);
             $max = max(1, (int) ($row['max_score'] ?? 1));
-            $markY = $markYs[$index] ?? (int) ($srcH * (0.12 + ($index / max(1, $count)) * 0.78));
-            $markY = max(40, min($srcH - 40, $markY));
+            $slot = $markSlots[$index] ?? null;
+            $markY = $slot['y'] ?? $markYs[$index] ?? (int) ($srcH * (0.12 + ($index / max(1, $count)) * 0.78));
+            $rowX = $slot['x'] ?? $markX;
+            $markY = max(40, min($srcH - 40, $markY - (int) round($tick * 0.35)));
+            $rowX = max($pasteX + 24, min($pasteX + $srcW - $tick - 64, $rowX));
 
             // Cross only for 0 marks; any awarded marks get a tick
             if ($awarded > 0) {
-                $this->drawTick($canvas, $markX, $markY, $tick, $red);
+                $this->drawTick($canvas, $rowX, $markY, $tick, $red);
             } else {
-                $this->drawCross($canvas, $markX, $markY, (int) ($tick * 0.92), $red);
+                $this->drawCross($canvas, $rowX, $markY, (int) ($tick * 0.92), $red);
             }
-            $sx = $markX + $tick + 4;
+            $sx = $rowX + $tick + 6;
             $this->drawAscii($canvas, max(14, (int) ($srcW * 0.026)), $sx, $markY + (int) ($tick * 0.55), $awarded.'/'.$max, $red);
             imageline($canvas, $sx, $markY + (int) ($tick * 0.62), $sx + 52, $markY + (int) ($tick * 0.62), $red);
         }
@@ -498,6 +500,176 @@ class CorrectedAnswerSheetRenderer
         imageline($grown, $marksDividerX, $srcH + 8, $marksDividerX, $newH - 20, $marginBlue);
 
         return $grown;
+    }
+
+    /**
+     * Blank space beside the handwriting, one column, each score on its answer.
+     *
+     * @return list<array{x: int, y: int}>
+     */
+    private function answerMarkSlots(\GdImage $image, int $count): array
+    {
+        $count = max(1, $count);
+        $w = imagesx($image);
+        $h = imagesy($image);
+        $pageRight = $this->paperRightEdge($image);
+        $xStart = (int) round($w * 0.05);
+        $xEnd = max($xStart + 20, $pageRight - 4);
+        $step = 2;
+        $rows = [];
+
+        for ($y = (int) round($h * 0.12); $y < (int) round($h * 0.96); $y += $step) {
+            $ink = 0;
+            $right = 0;
+            for ($x = $xStart; $x < $xEnd; $x += $step) {
+                if ($this->isHandwriting($image, $x, $y)) {
+                    $ink++;
+                    $right = $x;
+                }
+            }
+            if ($ink >= 4) {
+                $rows[] = ['y' => $y, 'right' => $right];
+            }
+        }
+
+        if (count($rows) < 6) {
+            return [];
+        }
+
+        $bands = $this->splitInkBands($rows, $count, $h);
+        $rights = [];
+        $centers = [];
+        foreach ($bands as $i => $band) {
+            $rights[$i] = 0;
+            $sum = 0;
+            foreach ($band as $row) {
+                $rights[$i] = max($rights[$i], $row['right']);
+                $sum += $row['y'];
+            }
+            $centers[$i] = (int) round($sum / max(1, count($band)));
+        }
+
+        $gap = (int) max(16, round($w * 0.018));
+        $column = max($rights) + $gap;
+        $tick = max(26, (int) round($w * 0.042));
+        $column = min($column, $pageRight - $tick - 68);
+        $column = max($xStart + 40, $column);
+
+        $slots = [];
+        for ($i = 0; $i < $count; $i++) {
+            $slots[$i] = [
+                'x' => $column,
+                'y' => $centers[$i] ?? (int) round($h * (0.22 + ($i / $count) * 0.5)),
+            ];
+        }
+
+        return $slots;
+    }
+
+    /**
+     * @param  list<array{y: int, right: int}>  $rows
+     * @return list<list<array{y: int, right: int}>>
+     */
+    private function splitInkBands(array $rows, int $count, int $height): array
+    {
+        $clusters = [];
+        $current = [$rows[0]];
+        $gap = (int) max(14, round($height * 0.025));
+        $previous = $rows[0]['y'];
+        foreach (array_slice($rows, 1) as $row) {
+            if ($row['y'] - $previous > $gap) {
+                $clusters[] = $current;
+                $current = [];
+            }
+            $current[] = $row;
+            $previous = $row['y'];
+        }
+        $clusters[] = $current;
+
+        while (count($clusters) > $count) {
+            $smallest = 0;
+            $smallestGap = PHP_INT_MAX;
+            for ($i = 0; $i < count($clusters) - 1; $i++) {
+                $left = $clusters[$i];
+                $right = $clusters[$i + 1];
+                $between = $right[0]['y'] - $left[count($left) - 1]['y'];
+                if ($between < $smallestGap) {
+                    $smallestGap = $between;
+                    $smallest = $i;
+                }
+            }
+            $clusters[$smallest] = array_merge($clusters[$smallest], $clusters[$smallest + 1]);
+            array_splice($clusters, $smallest + 1, 1);
+        }
+
+        if (count($clusters) === $count) {
+            return $clusters;
+        }
+
+        $top = $rows[0]['y'];
+        $bottom = $rows[count($rows) - 1]['y'];
+        $span = max(1, $bottom - $top);
+        $bands = array_fill(0, $count, []);
+        foreach ($rows as $row) {
+            $index = (int) min($count - 1, floor((($row['y'] - $top) / $span) * $count));
+            $bands[$index][] = $row;
+        }
+        foreach ($bands as $i => $band) {
+            if ($band === []) {
+                $y = (int) round($top + (($i + 0.5) / $count) * $span);
+                $bands[$i] = [['y' => $y, 'right' => $rows[0]['right']]];
+            }
+        }
+
+        return $bands;
+    }
+
+    private function paperRightEdge(\GdImage $image): int
+    {
+        $w = imagesx($image);
+        $h = imagesy($image);
+        $y0 = (int) round($h * 0.15);
+        $y1 = (int) round($h * 0.9);
+        for ($x = $w - 2; $x > (int) round($w * 0.45); $x -= 3) {
+            $dark = 0;
+            $n = 0;
+            for ($y = $y0; $y < $y1; $y += 4) {
+                $n++;
+                if ($this->isDarkPixel($image, $x, $y)) {
+                    $dark++;
+                }
+            }
+            if ($n > 0 && ($dark / $n) < 0.28) {
+                return $x;
+            }
+        }
+
+        return (int) round($w * 0.9);
+    }
+
+    private function isHandwriting(\GdImage $image, int $x, int $y): bool
+    {
+        $rgb = imagecolorat($image, $x, $y);
+        $r = ($rgb >> 16) & 0xFF;
+        $g = ($rgb >> 8) & 0xFF;
+        $b = $rgb & 0xFF;
+        if ($b > 150 && $b > $r + 18 && $g > 130) {
+            return false;
+        }
+        $lum = (int) ((0.3 * $r) + (0.59 * $g) + (0.11 * $b));
+
+        return $lum < 130;
+    }
+
+    private function isDarkPixel(\GdImage $image, int $x, int $y): bool
+    {
+        $rgb = imagecolorat($image, $x, $y);
+        $r = ($rgb >> 16) & 0xFF;
+        $g = ($rgb >> 8) & 0xFF;
+        $b = $rgb & 0xFF;
+        $lum = (int) ((0.3 * $r) + (0.59 * $g) + (0.11 * $b));
+
+        return $lum < 90;
     }
 
     /**
