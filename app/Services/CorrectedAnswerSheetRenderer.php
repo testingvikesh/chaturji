@@ -341,8 +341,9 @@ class CorrectedAnswerSheetRenderer
                 $this->drawCross($canvas, 28, $y - 14, 16, $red);
             }
             $this->drawAscii($canvas, 16, $contentLeft, $y, 'Q.'.$number, $darkRed);
-            $this->drawAscii($canvas, 20, $marksColX, $y, $awarded.'/'.$max, $red);
-            imageline($canvas, $marksColX, $y + 6, $marksColX + 72, $y + 6, $red);
+            $scoreX = $contentLeft + max(52, $this->lastDrawWidth + 14);
+            $this->drawAscii($canvas, 18, $scoreX, $y, $awarded.'/'.$max, $red);
+            imageline($canvas, $scoreX, $y + 6, $scoreX + 48, $y + 6, $red);
             $y += 30;
 
             foreach ($lines as $line) {
@@ -371,8 +372,9 @@ class CorrectedAnswerSheetRenderer
                 $this->drawCross($canvas, $contentLeft - 22, $y - 10, 13, $red);
             }
             $this->drawAscii($canvas, 14, $contentLeft, $y, 'Q.'.$number, $darkRed);
-            $this->drawAscii($canvas, 16, $marksColX + 30, $y, $awarded.'/'.$max, $red);
-            imageline($canvas, $marksColX + 28, $y + 4, $marksColX + 90, $y + 4, $red);
+            $scoreX = $contentLeft + max(48, $this->lastDrawWidth + 12);
+            $this->drawAscii($canvas, 16, $scoreX, $y, $awarded.'/'.$max, $red);
+            imageline($canvas, $scoreX, $y + 4, $scoreX + 46, $y + 4, $red);
             $y += 24;
         }
         $y += 8;
@@ -410,7 +412,7 @@ class CorrectedAnswerSheetRenderer
         $sigY = max($y + 8, $sumY + $sumH + 22);
         $this->drawUiLabel($canvas, 'checked_by', $contentLeft, $sigY, 14, $darkRed, $L['checked_by']);
         $this->drawAscii($canvas, 14, $contentLeft + max(70, $this->lastDrawWidth + 8), $sigY, ' :', $darkRed);
-        $this->drawAscii($canvas, 16, $contentLeft + max(90, $this->lastDrawWidth + 28), $sigY, 'AI Teacher', $red);
+        $this->drawAscii($canvas, 16, $contentLeft + max(90, $this->lastDrawWidth + 28), $sigY, 'GSES Teacher', $red);
         imageline($canvas, $contentLeft + 110, $sigY + 6, $contentLeft + 240, $sigY + 6, $red);
         imageline($canvas, $contentLeft + 120, $sigY + 12, $contentLeft + 220, $sigY + 2, $red);
         $this->drawUiLabel($canvas, 'date', $canvasW - 250, $sigY, 13, $red, $L['date']);
