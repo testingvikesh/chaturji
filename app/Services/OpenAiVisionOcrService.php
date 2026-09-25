@@ -56,16 +56,13 @@ class OpenAiVisionOcrService
             ];
         }
 
-        $response = Http::withToken($key)
-            ->timeout(60)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => config('services.openai.vision_model', 'gpt-4o-mini'),
-                'response_format' => ['type' => 'json_object'],
-                'temperature' => 0,
-                'messages' => [
-                    ['role' => 'user', 'content' => $content],
-                ],
-            ]);
+        $response = $this->chatCompletion($key, [
+            'model' => config('services.openai.vision_model', 'gpt-5.6-luna'),
+            'response_format' => ['type' => 'json_object'],
+            'messages' => [
+                ['role' => 'user', 'content' => $content],
+            ],
+        ], 60);
 
         if (! $response->successful()) {
             throw new RuntimeException('OpenAI vision OCR failed: '.$response->body());
@@ -227,15 +224,12 @@ class OpenAiVisionOcrService
             ];
         }
 
-        $response = Http::withToken($key)
-            ->timeout(55)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => config('services.openai.vision_model', 'gpt-4o-mini'),
-                'temperature' => 0,
-                'messages' => [
-                    ['role' => 'user', 'content' => $content],
-                ],
-            ]);
+        $response = $this->chatCompletion($key, [
+            'model' => config('services.openai.vision_model', 'gpt-5.6-luna'),
+            'messages' => [
+                ['role' => 'user', 'content' => $content],
+            ],
+        ], 55);
 
         if (! $response->successful()) {
             throw new RuntimeException('OpenAI vision OCR failed: '.$response->body());
@@ -263,6 +257,26 @@ class OpenAiVisionOcrService
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     */
+    private function chatCompletion(string $key, array $body, int $timeout): \Illuminate\Http\Client\Response
+    {
+        $send = function (array $payload) use ($key, $timeout) {
+            return Http::withToken($key)
+                ->timeout($timeout)
+                ->post('https://api.openai.com/v1/chat/completions', $payload);
+        };
+
+        $response = $send($body);
+        if ($response->status() === 400) {
+            unset($body['temperature'], $body['response_format']);
+            $response = $send($body);
+        }
+
+        return $response;
     }
 
     private function mimeForPath(string $path): string

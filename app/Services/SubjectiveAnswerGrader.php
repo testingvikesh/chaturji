@@ -168,12 +168,9 @@ class SubjectiveAnswerGrader
             ];
         }
 
-        $response = Http::withToken((string) config('services.openai.key'))
-            ->timeout(90)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => config('services.openai.model', 'gpt-4o-mini'),
+        $response = $this->chatCompletion([
+                'model' => config('services.openai.model', 'gpt-5.6-luna'),
                 'response_format' => ['type' => 'json_object'],
-                'temperature' => 0.45,
                 'messages' => [
                     [
                         'role' => 'system',
@@ -239,12 +236,9 @@ class SubjectiveAnswerGrader
         string $questionType,
         string $language,
     ): array {
-        $response = Http::withToken((string) config('services.openai.key'))
-            ->timeout(60)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => config('services.openai.model', 'gpt-4o-mini'),
+        $response = $this->chatCompletion([
+                'model' => config('services.openai.model', 'gpt-5.6-luna'),
                 'response_format' => ['type' => 'json_object'],
-                'temperature' => 0.45,
                 'messages' => [
                     [
                         'role' => 'system',
@@ -253,7 +247,7 @@ class SubjectiveAnswerGrader
                     [
                         'role' => 'user',
                         'content' => json_encode([
-                            'response_language' => 'English',
+                            'response_language' => \App\Support\IndicScript::containsIndic($questionText.$studentAnswer) ? 'Gujarati' : 'English',
                             'question_type' => $questionType,
                             'max_score' => $maxScore,
                             'question' => $questionText,
@@ -300,23 +294,50 @@ class SubjectiveAnswerGrader
     /**
      * @return array{is_correct: bool, score_awarded: int, feedback: string, teacher_comment: string, missing_key_points: list<string>}
      */
+    /**
+     * @param  array<string, mixed>  $body
+     */
+    private function chatCompletion(array $body): \Illuminate\Http\Client\Response
+    {
+        $send = function (array $payload) {
+            return Http::withToken((string) config('services.openai.key'))
+                ->timeout(90)
+                ->post('https://api.openai.com/v1/chat/completions', $payload);
+        };
+
+        $response = $send($body);
+        if ($response->status() === 400) {
+            unset($body['temperature'], $body['response_format']);
+            $response = $send($body);
+        }
+
+        return $response;
+    }
+
     private function gradeLocally(string $questionText, string $correctAnswer, string $studentAnswer, int $maxScore): array
     {
         $isExact = \App\Support\GujaratiTextNormalizer::answersMatch($studentAnswer, $correctAnswer);
         $overlap = $this->contentOverlapRatio($correctAnswer, $studentAnswer);
-        $score = $isExact ? $maxScore : (int) round($maxScore * max(0, min(0.85, $overlap)));
+        if ($isExact || $overlap >= 0.7) {
+            $score = $maxScore;
+        } elseif ($overlap >= 0.28) {
+            $score = max(1, (int) round($maxScore * $overlap));
+            $score = min($maxScore, $score);
+        } else {
+            $score = 0;
+        }
         $isCorrect = $score >= $maxScore;
 
-        $topic = $this->shortTopic($questionText);
+        $gujarati = \App\Support\IndicScript::containsIndic($studentAnswer.$correctAnswer);
         if ($isCorrect) {
-            $feedback = 'Excellent on '.$topic.'! You covered the main facts clearly.';
-            $comment = 'Fantastic work on '.$topic.'! Your points match the lesson beautifully. :)';
+            $feedback = $gujarati ? 'ઉત્તમ જવાબ. મુખ્ય વિચાર સ્પષ્ટ છે.' : 'Excellent. You covered the main facts clearly.';
+            $comment = $gujarati ? 'ઉત્તમ જવાબ. મુખ્ય વિચાર સ્પષ્ટ છે. :)' : 'Excellent answer. The main idea is clear. :)';
         } elseif ($score > 0) {
-            $feedback = 'Lovely progress on '.$topic.'! One more fact will make it complete.';
-            $comment = 'Wonderful effort on '.$topic.'! You are so close — keep going for full marks. :)';
+            $feedback = $gujarati ? 'સારો પ્રયત્ન. થોડું વધુ વિવરણ ઉમેરો.' : 'Good progress. One more fact will make it complete.';
+            $comment = $gujarati ? 'સારો પ્રયત્ન. પૂરા ગુણ માટે થોડું વધુ વિવરણ ઉમેરો. :)' : 'Good effort. Add a little more detail for full marks. :)';
         } else {
-            $feedback = 'Proud of your try on '.$topic.'! Review the key facts and you will shine.';
-            $comment = 'Great attitude on '.$topic.'! Keep practising — you will get this soon. :)';
+            $feedback = $gujarati ? 'જવાબ ખૂટે છે. પાઠના મુખ્ય મુદ્દા લખો.' : 'Review the key facts and try again.';
+            $comment = $gujarati ? 'સારો પ્રયાસ. પાઠના મુખ્ય મુદ્દા ફરી લખો. :)' : 'Good try. Write the main points from the lesson again. :)';
         }
 
         return $this->result(
@@ -534,13 +555,13 @@ class SubjectiveAnswerGrader
      */
     private function significantWords(string $text): array
     {
-        $text = mb_strtolower($text);
-        $parts = preg_split('/[^a-z0-9]+/i', $text) ?: [];
+        $text = mb_strtolower($text, 'UTF-8');
+        $parts = preg_split('/[^\p{L}\p{N}]+/u', $text) ?: [];
         $stop = ['the', 'and', 'for', 'was', 'were', 'that', 'this', 'with', 'from', 'into', 'a', 'an', 'of', 'to', 'in', 'on', 'it', 'is', 'are', 'be', 'as', 'by'];
         $out = [];
         foreach ($parts as $part) {
             $part = trim($part);
-            if (strlen($part) < 4 || in_array($part, $stop, true)) {
+            if (mb_strlen($part) < 2 || in_array($part, $stop, true)) {
                 continue;
             }
             $out[$part] = true;
