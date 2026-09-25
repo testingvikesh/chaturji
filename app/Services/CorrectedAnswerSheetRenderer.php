@@ -505,75 +505,17 @@ class CorrectedAnswerSheetRenderer
      */
     private function resolveMarkYPositions(array $questionRows, int $srcH, array $pageHeights): array
     {
-        $rows = array_values($questionRows);
-        $count = max(count($rows), 1);
+        $count = max(count(array_values($questionRows)), 1);
+        // Place each mark on its own answer block, in question order.
+        // Vision y positions drift (first mark lands on the date), so the order is fixed.
+        $top = (int) round($srcH * 0.18);
+        $bottomRatio = min(0.86, 0.28 + ($count * 0.12));
+        $bottom = (int) round($srcH * $bottomRatio);
+        $bottom = max($top + 40, $bottom);
+        $step = $count <= 1 ? 0 : ($bottom - $top) / ($count - 1);
         $positions = [];
-        $hasCoords = false;
-
-        foreach ($rows as $index => $row) {
-            $pageIndex = $row['page_index'] ?? null;
-            $yPercent = $row['y_percent'] ?? null;
-            if ($pageIndex === null || $yPercent === null || $pageHeights === []) {
-                $positions[$index] = null;
-                continue;
-            }
-
-            $pageIndex = max(0, (int) $pageIndex);
-            $yPercent = max(5.0, min(95.0, (float) $yPercent));
-            $offset = 0;
-            $pageH = $pageHeights[min($pageIndex, count($pageHeights) - 1)] ?? (int) ($srcH / max(1, count($pageHeights)));
-            for ($p = 0; $p < min($pageIndex, count($pageHeights)); $p++) {
-                $offset += (int) $pageHeights[$p];
-            }
-            $positions[$index] = $offset + (int) round(($yPercent / 100) * $pageH);
-            $hasCoords = true;
-        }
-
-        if (! $hasCoords) {
-            $top = (int) ($srcH * 0.08);
-            $usable = (int) ($srcH * 0.84);
-            $blockH = max(55, (int) ($usable / $count));
-            for ($i = 0; $i < $count; $i++) {
-                $positions[$i] = $top + (int) ($i * $blockH) + (int) ($blockH * 0.35);
-            }
-
-            return $positions;
-        }
-
-        // Fill gaps with even spacing between known neighbours.
-        $known = [];
-        foreach ($positions as $i => $y) {
-            if ($y !== null) {
-                $known[$i] = $y;
-            }
-        }
-        $knownIndexes = array_keys($known);
-        sort($knownIndexes);
-
         for ($i = 0; $i < $count; $i++) {
-            if ($positions[$i] !== null) {
-                continue;
-            }
-            $prev = null;
-            $next = null;
-            foreach ($knownIndexes as $ki) {
-                if ($ki < $i) {
-                    $prev = $ki;
-                }
-                if ($ki > $i && $next === null) {
-                    $next = $ki;
-                }
-            }
-            if ($prev !== null && $next !== null) {
-                $span = max(1, $next - $prev);
-                $positions[$i] = (int) round($known[$prev] + (($known[$next] - $known[$prev]) * (($i - $prev) / $span)));
-            } elseif ($prev !== null) {
-                $positions[$i] = $known[$prev] + (($i - $prev) * max(60, (int) ($srcH / max(8, $count))));
-            } elseif ($next !== null) {
-                $positions[$i] = $known[$next] - (($next - $i) * max(60, (int) ($srcH / max(8, $count))));
-            } else {
-                $positions[$i] = (int) ($srcH * (0.12 + ($i / $count) * 0.76));
-            }
+            $positions[$i] = (int) round($top + ($i * $step));
         }
 
         return $positions;

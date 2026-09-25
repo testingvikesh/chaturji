@@ -316,16 +316,7 @@ class SubjectiveAnswerGrader
 
     private function gradeLocally(string $questionText, string $correctAnswer, string $studentAnswer, int $maxScore): array
     {
-        $isExact = \App\Support\GujaratiTextNormalizer::answersMatch($studentAnswer, $correctAnswer);
-        $overlap = $this->contentOverlapRatio($correctAnswer, $studentAnswer);
-        if ($isExact || $overlap >= 0.7) {
-            $score = $maxScore;
-        } elseif ($overlap >= 0.28) {
-            $score = max(1, (int) round($maxScore * $overlap));
-            $score = min($maxScore, $score);
-        } else {
-            $score = 0;
-        }
+        $score = $this->scoreFromOverlap($studentAnswer, $correctAnswer, $maxScore);
         $isCorrect = $score >= $maxScore;
 
         $gujarati = \App\Support\IndicScript::containsIndic($studentAnswer.$correctAnswer);
@@ -356,9 +347,11 @@ class SubjectiveAnswerGrader
      */
     private function ensureSpecificFeedback(array $row, string $questionText, string $correctAnswer, string $studentAnswer): array
     {
-        $isCorrect = (bool) $row['is_correct'];
-        $score = (int) $row['score_awarded'];
         $max = max(1, (int) ($row['max_score'] ?? 1));
+        $score = max((int) $row['score_awarded'], $this->scoreFromOverlap($studentAnswer, $correctAnswer, $max));
+        $isCorrect = $score >= $max;
+        $row['score_awarded'] = $score;
+        $row['is_correct'] = $isCorrect;
         $points = $this->filterSpecificPoints($row['missing_key_points'] ?? []);
 
         if (count($points) < 2) {
@@ -531,6 +524,21 @@ class SubjectiveAnswerGrader
         }
 
         return $this->clip($q, 42);
+    }
+
+    private function scoreFromOverlap(string $studentAnswer, string $correctAnswer, int $maxScore): int
+    {
+        $maxScore = max(1, $maxScore);
+        $isExact = \App\Support\GujaratiTextNormalizer::answersMatch($studentAnswer, $correctAnswer);
+        $overlap = $this->contentOverlapRatio($correctAnswer, $studentAnswer);
+        if ($isExact || $overlap >= 0.7) {
+            return $maxScore;
+        }
+        if ($overlap >= 0.28) {
+            return min($maxScore, max(1, (int) round($maxScore * $overlap)));
+        }
+
+        return 0;
     }
 
     private function contentOverlapRatio(string $correct, string $student): float
