@@ -105,13 +105,23 @@
             </div>
             <div class="space-y-3 px-5 py-5 sm:px-6">
                 @foreach ($questions as $row)
-                    @php $ok = (int) ($row['score_awarded'] ?? 0) > 0; @endphp
+                    @php
+                        $awarded = (int) ($row['score_awarded'] ?? 0);
+                        $max = max(1, (int) ($row['max_score'] ?? 1));
+                        $ok = $awarded > 0;
+                        $comment = \App\Support\PaperLanguage::cleanTeacherComment(
+                            (string) ($row['teacher_comment'] ?? $row['feedback'] ?? ''),
+                            $lang,
+                            $awarded,
+                            $max
+                        );
+                    @endphp
                     <div class="rounded-xl border px-4 py-4 {{ $ok ? 'border-brand-green-100 bg-brand-green-50/30' : 'border-red-100 bg-red-50/20' }}">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <p class="font-semibold text-slate-900">
                                 {{ \App\Support\PaperLanguage::answerHeading($lang, (int) ($row['question_number'] ?? 0)) }}
                                 <span class="ml-2 text-sm {{ $ok ? 'text-brand-green' : 'text-red-600' }}">
-                                    {{ $ok ? '✓' : 'X' }} {{ $row['score_awarded'] ?? 0 }}/{{ $row['max_score'] ?? 1 }}
+                                    {{ $ok ? '✓' : 'X' }} {{ $awarded }}/{{ $max }}
                                 </span>
                             </p>
                         </div>
@@ -125,10 +135,10 @@
                                 <p class="text-slate-800">{{ $row['correct_answer'] ?? '—' }}</p>
                             </div>
                         </div>
-                        @if (! empty($row['teacher_comment']) || ! empty($row['feedback']))
-                            <p class="mt-2 text-sm text-red-700">
+                        @if ($comment !== '')
+                            <p class="mt-3 border-t border-red-100 pt-2 text-sm leading-6 text-red-700">
                                 <span class="font-semibold">{{ $L['teachers_comment'] }}:</span>
-                                {{ $row['teacher_comment'] ?? $row['feedback'] }}
+                                {{ $comment }}
                             </p>
                         @endif
                     </div>

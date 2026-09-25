@@ -33,8 +33,8 @@ return [
 
     'openai' => [
         'key' => env('OPENAI_API_KEY'),
-        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
-        'vision_model' => env('OPENAI_VISION_MODEL', 'gpt-4o-mini'),
+        'model' => env('OPENAI_MODEL', 'gpt-5.6-luna'),
+        'vision_model' => env('OPENAI_VISION_MODEL', 'gpt-5.6-luna'),
     ],
 
     'google_vision' => [

@@ -242,10 +242,21 @@ class CorrectedAnswerSheetRenderer
         $indic = in_array($lang, ['gu', 'hi'], true);
 
         $count = max(count($questionRows), 1);
-        // Compact: per question = heading + teacher comment only (no key-points / tip box).
-        $perBlock = $indic ? 120 : 110;
-        $feedbackH = 200 + ($count * $perBlock) + ($count * 28) + 280;
-        $canvasW = max($srcW, $indic ? 980 : 900);
+        $canvasW = max($srcW, 1100);
+        $marksColW = 120;
+        $contentLeft = 86;
+        $marksDividerX = $canvasW - 24 - $marksColW;
+        $commentWidth = max(280, $marksDividerX - $contentLeft - 48);
+        $wrapChars = max(42, (int) floor($commentWidth / 7.4));
+        $wrappedComments = [];
+        foreach (array_values($questionRows) as $row) {
+            $wrappedComments[] = array_slice($this->wrapSmart($this->teacherComment($row, 'en'), $wrapChars), 0, 4);
+        }
+        $feedbackH = 90;
+        foreach ($wrappedComments as $lines) {
+            $feedbackH += 36 + (max(1, count($lines)) * 26) + 22;
+        }
+        $feedbackH += 40 + ($count * 28) + 220;
         $canvasH = $srcH + $feedbackH;
 
         $canvas = imagecreatetruecolor($canvasW, $canvasH);
@@ -270,7 +281,6 @@ class CorrectedAnswerSheetRenderer
             imageline($canvas, 20, $ly, $canvasW - 20, $ly, $lineBlue);
         }
         imageline($canvas, 70, $srcH + 8, 70, $canvasH - 20, $marginBlue);
-        $marksDividerX = $indic ? ($canvasW - 290) : ($canvasW - 260);
         imageline($canvas, $marksDividerX, $srcH + 8, $marksDividerX, $canvasH - 20, $marginBlue);
 
         // Place uploaded sheet on top (full width if possible)
@@ -286,7 +296,8 @@ class CorrectedAnswerSheetRenderer
         // Marks on each answer block of the uploaded page (sample: red X + 0/1 + short comment)
         $markYs = $this->resolveMarkYPositions($questionRows, $srcH, $pageHeights);
         $tick = max(26, (int) ($srcW * 0.042));
-        $markX = $pasteX + max(40, (int) ($srcW * 0.78));
+        $markX = $pasteX + $srcW - $tick - 86;
+        $markX = max($pasteX + 40, $markX);
 
         foreach (array_values($questionRows) as $index => $row) {
             $awarded = (int) ($row['score_awarded'] ?? 0);
@@ -314,44 +325,34 @@ class CorrectedAnswerSheetRenderer
         $this->drawUiLabel($canvas, 'marks', $canvasW - 260, $y, 12, $red, $L['marks']);
         $y += $indic ? 38 : 34;
 
-        $contentLeft = 86;
-        $marksColX = $indic ? ($canvasW - 270) : ($canvasW - 245);
-        $commentWrap = $indic ? 36 : 48;
-        $lineGap = $indic ? 22 : 20;
+        $marksColX = $marksDividerX + 18;
 
-        foreach (array_values($questionRows) as $row) {
+        foreach (array_values($questionRows) as $index => $row) {
             $number = (int) ($row['question_number'] ?? 0);
             $awarded = (int) ($row['score_awarded'] ?? 0);
             $max = max(1, (int) ($row['max_score'] ?? 1));
-            $comment = $this->teacherComment($row, 'en');
+            $lines = $wrappedComments[$index] ?? [];
+            $rowTop = $y;
             $earnedAny = $awarded > 0;
 
-            $this->drawAnswerHeading($canvas, 15, $contentLeft, $y, $number, $darkRed, $L);
-            $this->drawAscii($canvas, 13, 30, $y, $number.'.', $red);
             if ($earnedAny) {
-                $this->drawTick($canvas, $contentLeft - 28, $y - 14, 18, $red);
+                $this->drawTick($canvas, 28, $y - 16, 18, $red);
             } else {
-                $this->drawCross($canvas, $contentLeft - 28, $y - 12, 16, $red);
+                $this->drawCross($canvas, 28, $y - 14, 16, $red);
+            }
+            $this->drawAscii($canvas, 16, $contentLeft, $y, 'Q.'.$number, $darkRed);
+            $this->drawAscii($canvas, 20, $marksColX, $y, $awarded.'/'.$max, $red);
+            imageline($canvas, $marksColX, $y + 6, $marksColX + 72, $y + 6, $red);
+            $y += 30;
+
+            foreach ($lines as $line) {
+                $this->drawPen($canvas, 14, $contentLeft, $y, $line, $red);
+                $y += 26;
             }
 
-            $this->drawAscii($canvas, 22, $marksColX + 30, $y + 4, $awarded.'/'.$max, $red);
-            imageline($canvas, $marksColX + 28, $y + 10, $marksColX + 110, $y + 10, $red);
-            $y += 28;
-
-            $this->drawLightbulb($canvas, $contentLeft, $y - 2, $red);
-            $this->drawUiLabel($canvas, 'teachers_comment', $contentLeft + 32, $y + 12, 15, $darkRed, $L['teachers_comment']);
-            $colonX = $contentLeft + 32 + max(8, $this->lastDrawWidth + 4);
-            $this->drawAscii($canvas, 15, $colonX, $y + 12, ' :', $darkRed);
-            imageline($canvas, $contentLeft + 32, $y + 15, $contentLeft + 250, $y + 15, $red);
-            imageline($canvas, $contentLeft + 32, $y + 18, $contentLeft + 230, $y + 18, $red);
-            $this->drawStar($canvas, $contentLeft + 270, $y, 12, $red);
-            $y += 34;
-            foreach (array_slice($this->wrapSmart($comment, $commentWrap), 0, 5) as $line) {
-                $this->drawPen($canvas, 13, $contentLeft + 32, $y, $line, $red);
-                $y += $lineGap;
-            }
-
-            $y += $indic ? 22 : 18;
+            $y += 10;
+            imageline($canvas, 20, $y, $canvasW - 20, $y, $lineBlue);
+            $y = max($y + 16, $rowTop + 36 + (max(1, count($lines)) * 26) + 8);
         }
 
         // Compact marks list like sample bottom (Q.1 0/1, Q.2 1/1, ...)
@@ -652,6 +653,9 @@ class CorrectedAnswerSheetRenderer
             42
         );
         $topic = trim($topic, " \t\n\r\0\x0B.,;:");
+        if ($topic === '' || IndicScript::containsIndic($topic)) {
+            $topic = 'this answer';
+        }
 
         $comment = trim((string) ($row['teacher_comment'] ?? ''));
         if (

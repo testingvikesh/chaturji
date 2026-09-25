@@ -505,8 +505,11 @@ class SubjectiveAnswerGrader
         $q = trim(preg_replace('/\s+/u', ' ', $questionText) ?? $questionText);
         $q = preg_replace('/^(what|why|how|when|where|who|which|explain|analyze|analyse|describe|discuss|define|write|state|give|list|compare)\b[\s,:]*/iu', '', $q) ?? $q;
         $q = trim($q, " \t\n\r\0\x0B?؟.");
+        if ($q === '' || \App\Support\IndicScript::containsIndic($q)) {
+            return 'this answer';
+        }
 
-        return $this->clip($q !== '' ? $q : 'this topic', 42);
+        return $this->clip($q, 42);
     }
 
     private function contentOverlapRatio(string $correct, string $student): float

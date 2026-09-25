@@ -123,6 +123,49 @@ final class PaperLanguage
         return $isCorrect ? $L['good_attempt'] : $L['incomplete_sidebar'];
     }
 
+    public static function cleanTeacherComment(string $comment, string $lang, int $awarded, int $max): string
+    {
+        $comment = trim(preg_replace('/\s+/u', ' ', $comment) ?? $comment);
+        $mixed = $comment !== ''
+            && preg_match('/\p{Gujarati}|\p{Devanagari}/u', $comment) === 1
+            && preg_match('/[A-Za-z]{5,}/', $comment) === 1;
+
+        if ($comment !== '' && ! $mixed) {
+            return $comment;
+        }
+
+        if ($lang === 'gu') {
+            if ($max > 0 && $awarded >= $max) {
+                return 'ઉત્તમ જવાબ. મુખ્ય વિચાર સ્પષ્ટ છે. :)';
+            }
+            if ($awarded > 0) {
+                return 'સારો પ્રયત્ન. પૂરા ગુણ માટે થોડું વધુ વિવરણ ઉમેરો. :)';
+            }
+
+            return 'સારો પ્રયાસ. પાઠના મુખ્ય મુદ્દા ફરી લખો. :)';
+        }
+
+        if ($lang === 'hi') {
+            if ($max > 0 && $awarded >= $max) {
+                return 'उत्तम उत्तर। मुख्य बात साफ है। :)';
+            }
+            if ($awarded > 0) {
+                return 'अच्छा प्रयास। पूरे अंक के लिए थोड़ा और विवरण लिखें। :)';
+            }
+
+            return 'अच्छा प्रयास। पाठ के मुख्य बिंदु फिर से लिखें। :)';
+        }
+
+        if ($max > 0 && $awarded >= $max) {
+            return 'Excellent answer. The main idea is clear. :)';
+        }
+        if ($awarded > 0) {
+            return 'Good effort. Add a little more detail for full marks. :)';
+        }
+
+        return 'Good try. Write the main points from the lesson again. :)';
+    }
+
     public static function answerHeading(string $lang, int $number): string
     {
         $L = self::labels($lang);
