@@ -296,8 +296,10 @@ class CorrectedAnswerSheetRenderer
         // Marks on each answer block of the uploaded page (sample: red X + 0/1 + short comment)
         $markYs = $this->resolveMarkYPositions($questionRows, $srcH, $pageHeights);
         $tick = max(26, (int) ($srcW * 0.042));
-        $markX = $pasteX + $srcW - $tick - 86;
-        $markX = max($pasteX + 40, $markX);
+        // Sit the tick and score just after the handwriting, not on the far page edge.
+        $markX = $pasteX + (int) round($srcW * 0.56);
+        $markX = min($markX, $pasteX + $srcW - $tick - 72);
+        $markX = max($pasteX + (int) round($srcW * 0.40), $markX);
 
         foreach (array_values($questionRows) as $index => $row) {
             $awarded = (int) ($row['score_awarded'] ?? 0);
