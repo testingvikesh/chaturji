@@ -46,9 +46,9 @@ class MaterialSwadhyayController extends Controller
             'material' => $material,
             'panel' => $panel,
             'backUrl' => $backUrl,
-            'groups' => $pack['groups'],
-            'labels' => $pack['labels'],
-            'total' => $pack['questions']->count(),
+            'title' => $pack['title'],
+            'sections' => $pack['sections'],
+            'total' => $pack['total'],
         ]);
     }
 }
