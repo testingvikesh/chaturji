@@ -112,6 +112,7 @@ Route::middleware(['auth', 'student'])->prefix('student')->name('student.')->gro
     Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
     Route::get('/subjects', [StudentSubjectController::class, 'index'])->name('subjects.index');
     Route::get('/subjects/{subject}', [StudentSubjectController::class, 'show'])->name('subjects.show');
+    Route::get('/subjects/{subject}/materials/{material}/swadhyay', [\App\Http\Controllers\MaterialSwadhyayController::class, 'student'])->name('materials.swadhyay');
     Route::get('/subjects/{subject}/materials/{material}', [StudentMaterialTopicController::class, 'material'])->name('materials.show');
     Route::get('/subjects/{subject}/material-topics/{materialTopic}', [StudentMaterialTopicController::class, 'show'])->name('material-topics.show');
     Route::get('/subjects/{subject}/topics/{topic}', [StudentTopicController::class, 'show'])->name('topics.show');
@@ -144,6 +145,7 @@ Route::middleware(['auth', 'student'])->prefix('student')->name('student.')->gro
 
     Route::get('/self-practice', [StudentSelfPracticeController::class, 'index'])->name('self-practice.index');
     Route::get('/self-practice/subjects/{subject}', [StudentSelfPracticeController::class, 'subject'])->name('self-practice.subject');
+    Route::get('/self-practice/subjects/{subject}/materials/{material}/swadhyay', [\App\Http\Controllers\MaterialSwadhyayController::class, 'practice'])->name('self-practice.materials.swadhyay');
     Route::get('/self-practice/subjects/{subject}/materials/{material}', [StudentSelfPracticeController::class, 'material'])->name('self-practice.materials.show');
     Route::get('/self-practice/subjects/{subject}/material-topics/{materialTopic}', [StudentSelfPracticeController::class, 'materialTopic'])->name('self-practice.material-topics.show');
     Route::get('/self-practice/subjects/{subject}/chapters/{chapter}', [StudentSelfPracticeController::class, 'chapter'])->name('self-practice.chapter');
@@ -166,6 +168,7 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/dashboard', [TeacherDashboardController::class, 'index'])->name('dashboard');
     Route::get('/books', [TeacherBookController::class, 'index'])->name('books.index');
     Route::get('/books/{subject}', [TeacherBookController::class, 'show'])->name('books.show');
+    Route::get('/books/{subject}/materials/{material}/swadhyay', [\App\Http\Controllers\MaterialSwadhyayController::class, 'teacher'])->name('books.materials.swadhyay');
     Route::get('/books/{subject}/materials/{material}', [TeacherBookController::class, 'material'])->name('books.materials.show');
     Route::get('/books/{subject}/topics/{materialTopic}', [TeacherBookController::class, 'topic'])->name('books.topics.show');
     Route::get('/books/{subject}/topics/{materialTopic}/questions/{questionKey}/edit', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'edit'])->name('books.questions.edit');
@@ -265,6 +268,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/materials/{medium}/subjects/{subject}/topics/{materialTopic}', [MaterialBrowserController::class, 'topic'])
             ->where('medium', 'english|gujarati|hindi')
             ->name('materials.topics.show');
+        Route::get('/materials/{medium}/subjects/{subject}/materials/{material}/swadhyay', [\App\Http\Controllers\MaterialSwadhyayController::class, 'admin'])
+            ->where('medium', 'english|gujarati|hindi')
+            ->name('materials.swadhyay');
         Route::get('/materials/{medium}/subjects/{subject}/materials/{material}', [MaterialBrowserController::class, 'material'])
             ->where('medium', 'english|gujarati|hindi')
             ->name('materials.materials.show');
