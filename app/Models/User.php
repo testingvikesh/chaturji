@@ -83,6 +83,11 @@ class User extends Authenticatable
         return $query->where('role', 'admin');
     }
 
+    public function scopePrincipals(Builder $query): Builder
+    {
+        return $query->where('role', 'principal');
+    }
+
     public function loginLogs(): HasMany
     {
         return $this->hasMany(LoginLog::class);
@@ -123,6 +128,12 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Subject::class, 'teacher_subjects', 'teacher_id', 'subject_id')
             ->withPivot(['standard_id', 'medium'])
+            ->withTimestamps();
+    }
+
+    public function allottedStandards(): BelongsToMany
+    {
+        return $this->belongsToMany(Standard::class, 'principal_standards', 'principal_id', 'standard_id')
             ->withTimestamps();
     }
 

@@ -37,6 +37,15 @@ class MaterialSwadhyayController extends Controller
         return $this->page($subject, $material, 'teacher', route('teacher.books.show', $subject));
     }
 
+    public function principal(Subject $subject, Material $material): View
+    {
+        $user = auth()->user();
+        abort_unless($user?->role === 'principal', 403);
+        abort_unless($user->allottedStandards()->where('standards.id', $subject->standard_id)->exists(), 404);
+
+        return $this->page($subject, $material, 'principal', route('principal.books.show', $subject));
+    }
+
     private function page(Subject $subject, Material $material, string $panel, string $backUrl): View
     {
         $pack = MaterialSwadhyay::forMaterial($material);

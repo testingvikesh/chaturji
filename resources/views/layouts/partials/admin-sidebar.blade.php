@@ -35,6 +35,10 @@
             <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             Teachers
         </a>
+        <a href="{{ route('admin.principals.index') }}" class="{{ request()->routeIs('admin.principals.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive' }}">
+            <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Principals
+        </a>
         <a href="{{ route('admin.timetable.index') }}" class="{{ request()->routeIs('admin.timetable.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive' }}">
             <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             Teacher Timetable
@@ -103,6 +107,7 @@
             <a href="{{ route('admin.dashboard.syllabus') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Syllabus</a>
             <a href="{{ route('admin.students.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Students</a>
             <a href="{{ route('admin.teachers.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Teachers</a>
+            <a href="{{ route('admin.principals.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Principals</a>
             <a href="{{ route('admin.timetable.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Timetable</a>
             <a href="{{ route('admin.reports.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Reports</a>
             <a href="{{ route('admin.standards.index') }}" class="px-2 py-1 rounded-lg bg-white/10 whitespace-nowrap">Standards</a>

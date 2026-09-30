@@ -14,8 +14,12 @@ use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\MaterialBrowserController;
 use App\Http\Controllers\Admin\SchoolPeriodController;
+use App\Http\Controllers\Admin\PrincipalController;
 use App\Http\Controllers\Admin\TeacherController;
 use App\Http\Controllers\Admin\TeacherTimetableController;
+use App\Http\Controllers\Principal\AuthController as PrincipalAuthController;
+use App\Http\Controllers\Principal\BookController as PrincipalBookController;
+use App\Http\Controllers\Principal\DashboardController as PrincipalDashboardController;
 use App\Http\Controllers\Admin\TopicController;
 use App\Http\Controllers\ChapterOriginalPdfController;
 use App\Http\Controllers\MaterialPdfController;
@@ -95,6 +99,29 @@ Route::get('/install', [PwaController::class, 'install'])->name('pwa.install');
 Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::prefix('principal')->name('principal.')->group(function () {
+    Route::get('/', function () {
+        return auth()->check() && auth()->user()->role === 'principal'
+            ? redirect()->route('principal.dashboard')
+            : redirect()->route('principal.login');
+    })->name('index');
+
+    Route::middleware('guest')->group(function () {
+        Route::get('/login', [PrincipalAuthController::class, 'create'])->name('login');
+        Route::post('/login', [PrincipalAuthController::class, 'store']);
+    });
+
+    Route::middleware(['auth', 'principal'])->group(function () {
+        Route::get('/dashboard', [PrincipalDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/books', [PrincipalBookController::class, 'index'])->name('books.index');
+        Route::get('/books/{subject}', [PrincipalBookController::class, 'show'])->name('books.show');
+        Route::get('/books/{subject}/materials/{material}/swadhyay', [\App\Http\Controllers\MaterialSwadhyayController::class, 'principal'])->name('books.materials.swadhyay');
+        Route::get('/books/{subject}/materials/{material}', [PrincipalBookController::class, 'material'])->name('books.materials.show');
+        Route::get('/books/{subject}/topics/{materialTopic}', [PrincipalBookController::class, 'topic'])->name('books.topics.show');
+        Route::post('/logout', [PrincipalAuthController::class, 'destroy'])->name('logout');
+    });
+});
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/chapter-content/{chapterContent}/original-pdf', [ChapterOriginalPdfController::class, 'show'])
@@ -299,6 +326,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/teachers/{teacher}/approve', [TeacherController::class, 'approve'])->name('teachers.approve');
         Route::post('/teachers/{teacher}/pending', [TeacherController::class, 'pending'])->name('teachers.pending');
         Route::resource('teachers', TeacherController::class)->except(['create', 'store']);
+
+        Route::post('/principals/{principal}/approve', [PrincipalController::class, 'approve'])->name('principals.approve');
+        Route::post('/principals/{principal}/pending', [PrincipalController::class, 'pending'])->name('principals.pending');
+        Route::resource('principals', PrincipalController::class)->except(['create']);
 
         Route::get('/timetable', [TeacherTimetableController::class, 'index'])->name('timetable.index');
         Route::get('/timetable/periods', [SchoolPeriodController::class, 'index'])->name('timetable.periods');

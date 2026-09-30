@@ -27,6 +27,10 @@ class RedirectIfAuthenticated
                     return redirect(RouteServiceProvider::HOME);
                 }
 
+                if ($user->role === 'principal' && $user->isApproved()) {
+                    return redirect()->route('principal.dashboard');
+                }
+
                 if ($user->role === 'student' && $user->isApproved()) {
                     return redirect()->route('student.dashboard');
                 }

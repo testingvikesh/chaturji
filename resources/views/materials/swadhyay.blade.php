@@ -2,6 +2,7 @@
     $component = match ($panel) {
         'student' => 'student-layout',
         'teacher' => 'teacher-layout',
+        'principal' => 'principal-layout',
         default => 'app-layout',
     };
 @endphp

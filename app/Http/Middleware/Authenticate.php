@@ -20,6 +20,14 @@ class Authenticate extends Middleware
             return route('admin.login');
         }
 
+        if ($request->is('principal*')) {
+            return route('principal.login');
+        }
+
+        if ($request->is('teacher*')) {
+            return route('teacher.login');
+        }
+
         if ($request->is(['student/dashboard*', 'student/profile*', 'student/change-password', 'student/subjects*'])) {
             return route('student.login');
         }

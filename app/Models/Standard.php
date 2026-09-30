@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Standard extends Model
@@ -42,5 +43,11 @@ class Standard extends Model
     public function scopeOrderedByNumber($query)
     {
         return $query->orderByRaw("CAST(SUBSTRING_INDEX(COALESCE(slug, name), '-', -1) AS UNSIGNED)");
+    }
+
+    public function principals(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'principal_standards', 'standard_id', 'principal_id')
+            ->withTimestamps();
     }
 }
