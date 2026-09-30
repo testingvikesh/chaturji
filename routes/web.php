@@ -348,6 +348,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/teachers/{teacher}/pending', [TeacherController::class, 'pending'])->name('teachers.pending');
         Route::resource('teachers', TeacherController::class)->except(['create', 'store']);
 
+        Route::post('/principals/send-credentials', [PrincipalController::class, 'sendCredentials'])->name('principals.send-credentials');
         Route::post('/principals/{principal}/approve', [PrincipalController::class, 'approve'])->name('principals.approve');
         Route::post('/principals/{principal}/pending', [PrincipalController::class, 'pending'])->name('principals.pending');
         Route::resource('principals', PrincipalController::class)->except(['create']);

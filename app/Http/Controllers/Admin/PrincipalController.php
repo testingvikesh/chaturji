@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PrincipalLoginCredentialsMail;
 use App\Models\LoginLog;
 use App\Models\Standard;
 use App\Models\User;
 use App\Models\UserSession;
 use App\Support\ActivityLogger;
+use App\Support\MailConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class PrincipalController extends Controller
 {
@@ -52,9 +56,12 @@ class PrincipalController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'max:64'],
             'approve' => ['nullable', 'boolean'],
+            'send_mail' => ['nullable', 'boolean'],
             'standard_ids' => ['nullable', 'array'],
             'standard_ids.*' => ['integer', Rule::exists('standards', 'id')->where('is_active', true)],
         ]);
+
+        $sendMail = $request->boolean('send_mail');
 
         $principal = User::query()->create([
             'name' => $validated['name'],
@@ -72,12 +79,83 @@ class PrincipalController extends Controller
             'admin.principals.create',
             'Created principal '.$principal->name,
             $principal,
-            ['target_role' => 'principal', 'standard_ids' => $validated['standard_ids'] ?? []]
+            ['target_role' => 'principal', 'standard_ids' => $validated['standard_ids'] ?? [], 'send_mail' => $sendMail]
         );
+
+        $mailNote = '';
+        if ($sendMail) {
+            $mailNote = $this->sendLoginCredentialsMail($principal, $validated['password'])
+                ? ' Login mail sent.'
+                : ' Login mail failed — check mail settings.';
+        }
 
         return redirect()
             ->route('admin.principals.index')
-            ->with('success', $principal->name.' created. Login at /principal/login with email and password.');
+            ->with('success', $principal->name.' created. Login at /principal/login with email and password.'.$mailNote);
+    }
+
+    public function sendCredentials(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'principal_ids' => ['required', 'array', 'min:1'],
+            'principal_ids.*' => ['integer', 'exists:users,id'],
+            'password' => ['required', 'string', 'min:8', 'max:64'],
+            'reset_password' => ['nullable', 'boolean'],
+        ]);
+
+        $reset = $request->boolean('reset_password', true);
+        $password = $validated['password'];
+        $sent = 0;
+        $failed = 0;
+        $skipped = 0;
+
+        $principals = User::principals()
+            ->whereIn('id', $validated['principal_ids'])
+            ->get();
+
+        foreach ($principals as $principal) {
+            if (! filled($principal->email) || ! filter_var($principal->email, FILTER_VALIDATE_EMAIL)) {
+                $skipped++;
+                continue;
+            }
+
+            if ($reset) {
+                $principal->password = $password;
+                $principal->save();
+            }
+
+            if ($this->sendLoginCredentialsMail($principal, $password)) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+        }
+
+        ActivityLogger::log(
+            'admin.principals.send_credentials',
+            "Sent principal login mail: {$sent} sent, {$failed} failed, {$skipped} skipped",
+            null,
+            [
+                'sent' => $sent,
+                'failed' => $failed,
+                'skipped' => $skipped,
+                'reset_password' => $reset,
+                'count' => count($validated['principal_ids']),
+            ]
+        );
+
+        $msg = "Login mail: {$sent} sent";
+        if ($failed > 0) {
+            $msg .= ", {$failed} failed";
+        }
+        if ($skipped > 0) {
+            $msg .= ", {$skipped} skipped (no email)";
+        }
+        if ($reset) {
+            $msg .= '. Password was reset to the password you entered for mailed principals.';
+        }
+
+        return back()->with($sent > 0 ? 'success' : 'error', $msg);
     }
 
     public function show(User $principal): View
@@ -87,6 +165,7 @@ class PrincipalController extends Controller
 
         return view('admin.principals.show', [
             'principal' => $principal,
+            'defaultPassword' => 'Principal@123',
             'loginLogs' => LoginLog::where('user_id', $principal->id)->latest('logged_at')->limit(20)->get(),
             'sessions' => UserSession::where('user_id', $principal->id)->latest('logged_in_at')->limit(20)->get(),
         ]);
@@ -113,9 +192,17 @@ class PrincipalController extends Controller
             'mobile' => ['required', 'string', 'max:20', Rule::unique('users', 'mobile')->ignore($principal->id)],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users', 'email')->ignore($principal->id)],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'send_mail' => ['nullable', 'boolean'],
             'standard_ids' => ['nullable', 'array'],
             'standard_ids.*' => ['integer', Rule::exists('standards', 'id')->where('is_active', true)],
         ]);
+
+        $sendMail = $request->boolean('send_mail');
+        $plainPassword = $validated['password'] ?? null;
+
+        if ($sendMail && empty($plainPassword)) {
+            return back()->withInput()->with('error', 'Enter a new password when Send login mail is checked.');
+        }
 
         $principal->fill([
             'name' => $validated['name'],
@@ -123,14 +210,21 @@ class PrincipalController extends Controller
             'email' => $validated['email'],
         ]);
 
-        if (! empty($validated['password'])) {
-            $principal->password = $validated['password'];
+        if (! empty($plainPassword)) {
+            $principal->password = $plainPassword;
         }
 
         $principal->save();
         $principal->allottedStandards()->sync($validated['standard_ids'] ?? []);
 
-        return redirect()->route('admin.principals.index')->with('success', 'Principal updated successfully.');
+        $mailNote = '';
+        if ($sendMail && $plainPassword) {
+            $mailNote = $this->sendLoginCredentialsMail($principal, $plainPassword)
+                ? ' Login mail sent.'
+                : ' Login mail failed — check mail settings.';
+        }
+
+        return redirect()->route('admin.principals.index')->with('success', 'Principal updated successfully.'.$mailNote);
     }
 
     public function destroy(User $principal): RedirectResponse
@@ -169,6 +263,30 @@ class PrincipalController extends Controller
         );
 
         return back()->with('success', $principal->name.' set to pending.');
+    }
+
+    private function sendLoginCredentialsMail(User $principal, string $plainPassword): bool
+    {
+        $email = trim((string) $principal->email);
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        try {
+            MailConfig::apply();
+            Mail::to($email)->send(new PrincipalLoginCredentialsMail(
+                $principal,
+                $plainPassword,
+                route('principal.login'),
+                url('/')
+            ));
+
+            return true;
+        } catch (Throwable $e) {
+            report($e);
+
+            return false;
+        }
     }
 
     private function ensurePrincipal(User $user): void

@@ -3,7 +3,12 @@
         <x-admin.partials.page-header title="Principals" subtitle="Add principals and manage principal login accounts" />
     </x-slot>
 
-    <div class="admin-page">
+    <div class="admin-page" x-data="{ selected: [], all: false,
+        toggleAll() {
+            this.all = !this.all;
+            this.selected = this.all ? @js($principals->pluck('id')->map(fn ($id) => (string) $id)->values()) : [];
+        }
+    }">
         @include('admin.partials.alert')
 
         <div class="admin-card">
@@ -37,11 +42,16 @@
                         'standards' => $standards,
                         'selected' => old('standard_ids', []),
                     ])
-                    <div class="sm:col-span-2">
+                    <div class="sm:col-span-2 flex flex-wrap gap-6">
                         <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
                             <input type="hidden" name="approve" value="0">
                             <input type="checkbox" name="approve" value="1" class="rounded border-slate-300 text-brand-green" @checked(old('approve', true))>
                             Approve now (can login immediately)
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                            <input type="hidden" name="send_mail" value="0">
+                            <input type="checkbox" name="send_mail" value="1" class="rounded border-slate-300 text-brand-green" @checked(old('send_mail', true))>
+                            Send login email
                         </label>
                     </div>
                     <div class="sm:col-span-2">
@@ -77,6 +87,30 @@
             </div>
         </div>
 
+        <form method="POST" action="{{ route('admin.principals.send-credentials') }}" class="admin-card mb-4"
+              onsubmit="return confirm('Send login mail to selected principals? Password will be reset to the value you enter.');">
+            @csrf
+            <div class="admin-card-body flex flex-wrap items-end gap-3">
+                <div class="min-w-[180px]">
+                    <label class="admin-label">Password for mail *</label>
+                    <input type="text" name="password" value="{{ $defaultPassword }}" required minlength="8" class="admin-input">
+                </div>
+                <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 pb-2">
+                    <input type="hidden" name="reset_password" value="0">
+                    <input type="checkbox" name="reset_password" value="1" class="rounded border-slate-300 text-brand-green" checked>
+                    Reset password to this value
+                </label>
+                <template x-for="id in selected" :key="id">
+                    <input type="hidden" name="principal_ids[]" :value="id">
+                </template>
+                <button type="submit" class="admin-btn-primary" :disabled="selected.length === 0"
+                        :class="selected.length === 0 ? 'opacity-50 cursor-not-allowed' : ''">
+                    Send login mail (<span x-text="selected.length"></span>)
+                </button>
+                <p class="text-xs text-slate-500 w-full">Select principals below. Mail includes /principal/login link, email and password.</p>
+            </div>
+        </form>
+
         <div class="admin-card">
             <div class="admin-card-header">
                 <div>
@@ -88,6 +122,9 @@
                 <table class="admin-table">
                     <thead>
                         <tr>
+                            <th class="w-10">
+                                <input type="checkbox" class="rounded border-slate-300 text-brand-green" @click="toggleAll()" :checked="all">
+                            </th>
                             <th>Principal</th>
                             <th>Mobile</th>
                             <th>Email</th>
@@ -100,6 +137,13 @@
                     <tbody>
                         @forelse ($principals as $principal)
                             <tr>
+                                <td>
+                                    <input type="checkbox"
+                                           class="rounded border-slate-300 text-brand-green"
+                                           value="{{ $principal->id }}"
+                                           x-model="selected"
+                                           title="Select to send mail">
+                                </td>
                                 <td>
                                     <div class="admin-user-cell">
                                         <span class="admin-avatar">{{ strtoupper(substr($principal->name, 0, 2)) }}</span>
@@ -136,7 +180,7 @@
                                 </td>
                             </tr>
                         @empty
-                            @include('admin.partials.empty-row', ['colspan' => 7, 'message' => 'No principals yet. Add one above.'])
+                            @include('admin.partials.empty-row', ['colspan' => 8, 'message' => 'No principals yet. Add one above.'])
                         @endforelse
                     </tbody>
                 </table>

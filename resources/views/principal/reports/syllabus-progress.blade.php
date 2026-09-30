@@ -7,7 +7,78 @@
         </div>
     </x-slot>
 
-    <div class="admin-page space-y-5 syllabus-progress-page">
+    @php
+        $flatTopics = collect($rows ?? [])->flatMap(function ($row) {
+            return collect($row['topic_details'] ?? [])->map(fn ($t) => [
+                'teacher' => $row['teacher'],
+                'subject' => $row['subject'],
+                'standard' => $row['standard'],
+                'medium' => $row['medium'],
+                'chapter' => $t['chapter'] ?? '—',
+                'title' => $t['title'] ?? '—',
+                'status' => $t['status'] ?? 'remain',
+            ]);
+        })->values();
+
+        $modalLists = [
+            'teachers' => collect($teachers ?? [])->map(fn ($t) => [
+                'title' => $t['teacher'],
+                'meta' => ($t['mobile'] ?: '—').' · '.$t['subjects'].' subjects · '.$t['topics_complete'].'/'.$t['topics_total'].' topics · '.$t['percent_complete'].'%',
+                'status' => $t['status'],
+            ])->values(),
+            'subjects' => collect($rows ?? [])->map(fn ($r) => [
+                'title' => $r['subject'].' · '.$r['standard'],
+                'meta' => $r['teacher'].' · '.$r['medium'].' · '.$r['topics_complete'].'/'.$r['topics_total'].' · '.$r['percent_complete'].'%',
+                'status' => $r['status'],
+            ])->values(),
+            'topics_total' => $flatTopics->map(fn ($t) => [
+                'title' => $t['title'],
+                'meta' => $t['teacher'].' · '.$t['subject'].' · '.$t['standard'].' · '.$t['chapter'],
+                'status' => $t['status'],
+            ])->values(),
+            'topics_complete' => $flatTopics->where('status', 'complete')->values()->map(fn ($t) => [
+                'title' => $t['title'],
+                'meta' => $t['teacher'].' · '.$t['subject'].' · '.$t['standard'].' · '.$t['chapter'],
+                'status' => 'complete',
+            ])->values(),
+            'topics_remain' => $flatTopics->where('status', 'remain')->values()->map(fn ($t) => [
+                'title' => $t['title'],
+                'meta' => $t['teacher'].' · '.$t['subject'].' · '.$t['standard'].' · '.$t['chapter'],
+                'status' => 'remain',
+            ])->values(),
+        ];
+        $modalLists['percent_complete'] = $modalLists['topics_complete'];
+        $modalLists['percent_remain'] = $modalLists['topics_remain'];
+    @endphp
+
+    <div class="admin-page space-y-5 syllabus-progress-page"
+         x-data="{
+            open: false,
+            title: '',
+            subtitle: '',
+            items: [],
+            showList(key, title, subtitle) {
+                const lists = @js($modalLists);
+                this.title = title;
+                this.subtitle = subtitle || '';
+                this.items = lists[key] || [];
+                this.open = true;
+            },
+            showTopics(details, filter, title, subtitle) {
+                let items = Array.isArray(details) ? details : [];
+                if (filter === 'complete') items = items.filter(t => t.status === 'complete');
+                if (filter === 'remain') items = items.filter(t => t.status === 'remain');
+                this.title = title;
+                this.subtitle = subtitle || '';
+                this.items = items.map(t => ({
+                    title: t.title || '—',
+                    meta: (t.chapter || '—') + (t.status ? ' · ' + t.status : ''),
+                    status: t.status || '',
+                }));
+                this.open = true;
+            },
+            close() { this.open = false; }
+         }">
         @include('principal.partials.reports-nav')
 
         @if (! ($hasAllotments ?? false))
@@ -15,14 +86,49 @@
                 No standard allotted yet. Ask admin to allot standards first.
             </div>
         @else
-            <div class="grid sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
-                @include('admin.partials.stat-card', ['label' => 'Teachers', 'value' => $summary['teachers']])
-                @include('admin.partials.stat-card', ['label' => 'Subjects', 'value' => $summary['subjects']])
-                @include('admin.partials.stat-card', ['label' => 'Topics total', 'value' => $summary['topics_total']])
-                @include('admin.partials.stat-card', ['label' => 'Complete', 'value' => $summary['topics_complete']])
-                @include('admin.partials.stat-card', ['label' => 'Remain', 'value' => $summary['topics_remain']])
-                @include('admin.partials.stat-card', ['label' => '% Complete', 'value' => $summary['percent_complete'].'%'])
-                @include('admin.partials.stat-card', ['label' => '% Remain', 'value' => $summary['percent_remain'].'%'])
+            <div class="grid sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7 gap-4 report-print-hide">
+                <button type="button" class="admin-stat-card text-left w-full hover:ring-2 hover:ring-brand-green/30 cursor-pointer"
+                        @click="showList('teachers', 'Teachers', '{{ $summary['teachers'] }} teachers in this report')">
+                    <p class="admin-stat-label">Teachers</p>
+                    <p class="admin-stat-value">{{ $summary['teachers'] }}</p>
+                    <p class="text-xs text-slate-400 mt-1.5">Click for list</p>
+                </button>
+                <button type="button" class="admin-stat-card text-left w-full hover:ring-2 hover:ring-brand-green/30 cursor-pointer"
+                        @click="showList('subjects', 'Subjects', '{{ $summary['subjects'] }} subject allotments')">
+                    <p class="admin-stat-label">Subjects</p>
+                    <p class="admin-stat-value">{{ $summary['subjects'] }}</p>
+                    <p class="text-xs text-slate-400 mt-1.5">Click for list</p>
+                </button>
+                <button type="button" class="admin-stat-card text-left w-full hover:ring-2 hover:ring-brand-green/30 cursor-pointer"
+                        @click="showList('topics_total', 'All topics', '{{ $summary['topics_total'] }} topics')">
+                    <p class="admin-stat-label">Topics total</p>
+                    <p class="admin-stat-value">{{ $summary['topics_total'] }}</p>
+                    <p class="text-xs text-slate-400 mt-1.5">Click for list</p>
+                </button>
+                <button type="button" class="admin-stat-card text-left w-full hover:ring-2 hover:ring-brand-green/30 cursor-pointer"
+                        @click="showList('topics_complete', 'Complete topics', '{{ $summary['topics_complete'] }} complete')">
+                    <p class="admin-stat-label">Complete</p>
+                    <p class="admin-stat-value">{{ $summary['topics_complete'] }}</p>
+                    <p class="text-xs text-slate-400 mt-1.5">Click for list</p>
+                </button>
+                <button type="button" class="admin-stat-card text-left w-full hover:ring-2 hover:ring-brand-green/30 cursor-pointer"
+                        @click="showList('topics_remain', 'Remain topics', '{{ $summary['topics_remain'] }} remain')">
+                    <p class="admin-stat-label">Remain</p>
+                    <p class="admin-stat-value">{{ $summary['topics_remain'] }}</p>
+                    <p class="text-xs text-slate-400 mt-1.5">Click for list</p>
+                </button>
+                <button type="button" class="admin-stat-card text-left w-full hover:ring-2 hover:ring-brand-green/30 cursor-pointer"
+                        @click="showList('percent_complete', '% Complete topics', '{{ $summary['percent_complete'] }}% complete')">
+                    <p class="admin-stat-label">% Complete</p>
+                    <p class="admin-stat-value">{{ $summary['percent_complete'] }}%</p>
+                    <p class="text-xs text-slate-400 mt-1.5">Click for list</p>
+                </button>
+                <button type="button" class="admin-stat-card text-left w-full hover:ring-2 hover:ring-brand-green/30 cursor-pointer"
+                        @click="showList('percent_remain', '% Remain topics', '{{ $summary['percent_remain'] }}% remain')">
+                    <p class="admin-stat-label">% Remain</p>
+                    <p class="admin-stat-value">{{ $summary['percent_remain'] }}%</p>
+                    <p class="text-xs text-slate-400 mt-1.5">Click for list</p>
+                </button>
             </div>
 
             <div class="admin-card">
@@ -102,7 +208,10 @@
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="syllabus-chip">{{ $teacherGroup['subjects'] }} subject{{ $teacherGroup['subjects'] === 1 ? '' : 's' }}</span>
-                                <span class="syllabus-chip">{{ $teacherGroup['topics_complete'] }}/{{ $teacherGroup['topics_total'] }} topics</span>
+                                <button type="button" class="syllabus-chip hover:ring-2 hover:ring-brand-green/30"
+                                        @click="showTopics(@js(collect($teacherGroup['rows'])->flatMap(fn ($r) => $r['topic_details'] ?? [])->values()), 'all', @js($teacherGroup['teacher'].' — topics'), @js($teacherGroup['topics_complete'].'/'.$teacherGroup['topics_total'].' topics'))">
+                                    {{ $teacherGroup['topics_complete'] }}/{{ $teacherGroup['topics_total'] }} topics
+                                </button>
                                 <span class="syllabus-chip syllabus-chip--{{ $pctClass }}">{{ $pct }}% done</span>
                             </div>
                             <div class="syllabus-head-bar" aria-hidden="true">
@@ -125,16 +234,25 @@
                                         </span>
                                     </div>
                                     <div class="syllabus-col syllabus-col-num">
-                                        <span class="syllabus-metric">{{ $row['topics_total'] }}</span>
-                                        <span class="syllabus-metric-label">Topics</span>
+                                        <button type="button" class="syllabus-count-btn"
+                                                @click="showTopics(@js($row['topic_details'] ?? []), 'all', @js($row['subject'].' — all topics'), @js($row['teacher'].' · '.$row['standard'].' · '.$row['medium']))">
+                                            <span class="syllabus-metric">{{ $row['topics_total'] }}</span>
+                                            <span class="syllabus-metric-label">Topics</span>
+                                        </button>
                                     </div>
                                     <div class="syllabus-col syllabus-col-num">
-                                        <span class="syllabus-metric syllabus-metric--ok">{{ $row['topics_complete'] }}</span>
-                                        <span class="syllabus-metric-label">Complete</span>
+                                        <button type="button" class="syllabus-count-btn"
+                                                @click="showTopics(@js($row['topic_details'] ?? []), 'complete', @js($row['subject'].' — complete'), @js($row['teacher'].' · '.$row['topics_complete'].' topics'))">
+                                            <span class="syllabus-metric syllabus-metric--ok">{{ $row['topics_complete'] }}</span>
+                                            <span class="syllabus-metric-label">Complete</span>
+                                        </button>
                                     </div>
                                     <div class="syllabus-col syllabus-col-num">
-                                        <span class="syllabus-metric syllabus-metric--warn">{{ $row['topics_remain'] }}</span>
-                                        <span class="syllabus-metric-label">Remain</span>
+                                        <button type="button" class="syllabus-count-btn"
+                                                @click="showTopics(@js($row['topic_details'] ?? []), 'remain', @js($row['subject'].' — remain'), @js($row['teacher'].' · '.$row['topics_remain'].' topics'))">
+                                            <span class="syllabus-metric syllabus-metric--warn">{{ $row['topics_remain'] }}</span>
+                                            <span class="syllabus-metric-label">Remain</span>
+                                        </button>
                                     </div>
                                     <div class="syllabus-col syllabus-col-pct">
                                         <div class="syllabus-pct">
@@ -168,11 +286,116 @@
                     </div>
                 @endforelse
             </div>
+
+            {{-- Detail list modal --}}
+            <div x-show="open" x-cloak
+                 class="syllabus-modal report-print-hide"
+                 @keydown.escape.window="close()"
+                 role="dialog" aria-modal="true">
+                <div class="syllabus-modal-backdrop" @click="close()"></div>
+                <div class="syllabus-modal-panel" @click.stop>
+                    <div class="syllabus-modal-head">
+                        <div class="min-w-0">
+                            <h3 class="text-lg font-bold text-slate-900 truncate" x-text="title"></h3>
+                            <p class="text-xs text-slate-500 mt-0.5" x-text="subtitle"></p>
+                        </div>
+                        <button type="button" class="admin-btn-ghost text-sm" @click="close()">Close</button>
+                    </div>
+                    <div class="syllabus-modal-body">
+                        <template x-if="items.length === 0">
+                            <p class="p-6 text-center text-sm text-slate-500">No details found.</p>
+                        </template>
+                        <ul class="divide-y divide-slate-100" x-show="items.length > 0">
+                            <template x-for="(item, idx) in items" :key="idx">
+                                <li class="px-4 py-3 flex items-start gap-3">
+                                    <span class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-600"
+                                          x-text="idx + 1"></span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-semibold text-slate-900" x-text="item.title"></p>
+                                        <p class="text-xs text-slate-500 mt-0.5" x-text="item.meta"></p>
+                                    </div>
+                                    <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                                          :class="{
+                                              'bg-emerald-50 text-emerald-700 border border-emerald-200': item.status === 'complete' || item.status === 'good',
+                                              'bg-amber-50 text-amber-800 border border-amber-200': item.status === 'remain' || item.status === 'warn',
+                                              'bg-rose-50 text-rose-700 border border-rose-200': item.status === 'low',
+                                              'bg-slate-50 text-slate-600 border border-slate-200': !item.status || item.status === 'empty'
+                                          }"
+                                          x-text="item.status || '—'"
+                                          x-show="item.status"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                    <div class="syllabus-modal-foot">
+                        <span class="text-xs text-slate-500" x-text="items.length + ' item' + (items.length === 1 ? '' : 's')"></span>
+                    </div>
+                </div>
+            </div>
         @endif
     </div>
 
     @once
         <style>
+            .syllabus-count-btn {
+                display: inline-flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: transparent;
+                border: 0;
+                padding: 0.15rem 0.35rem;
+                border-radius: 0.5rem;
+                cursor: pointer;
+            }
+            .syllabus-count-btn:hover {
+                background: rgba(26, 54, 124, 0.08);
+            }
+            .syllabus-modal {
+                position: fixed;
+                inset: 0;
+                z-index: 80;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+            }
+            .syllabus-modal-backdrop {
+                position: absolute;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.55);
+            }
+            .syllabus-modal-panel {
+                position: relative;
+                z-index: 1;
+                width: min(720px, 100%);
+                max-height: min(86dvh, 900px);
+                display: flex;
+                flex-direction: column;
+                background: #fff;
+                border-radius: 1rem;
+                box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+                overflow: hidden;
+            }
+            .syllabus-modal-head {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 1rem;
+                padding: 1rem 1.1rem;
+                border-bottom: 1px solid #e2e8f0;
+                background: linear-gradient(180deg, #f8fafc, #fff);
+            }
+            .syllabus-modal-body {
+                overflow-y: auto;
+                flex: 1;
+                min-height: 0;
+            }
+            .syllabus-modal-foot {
+                padding: 0.65rem 1.1rem;
+                border-top: 1px solid #e2e8f0;
+                background: #f8fafc;
+            }
             .syllabus-sticky-legend {
                 position: sticky;
                 top: 3.5rem; /* mobile top bar */
@@ -290,12 +513,19 @@
                 box-shadow: 0 4px 12px rgba(26, 54, 124, 0.08);
             }
 
-            .syllabus-col { min-width: 0; }
-            .syllabus-col-num, .syllabus-col-pct, .syllabus-col-status { text-align: right; }
-            .syllabus-sticky-legend-inner .syllabus-col { flex: 1; text-align: left; }
-            .syllabus-sticky-legend-inner .syllabus-col-num,
-            .syllabus-sticky-legend-inner .syllabus-col-pct,
-            .syllabus-sticky-legend-inner .syllabus-col-status { text-align: right; }
+            .syllabus-col {
+                min-width: 0;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+            .syllabus-sticky-legend-inner .syllabus-col {
+                flex: 1;
+                text-align: center;
+                justify-content: center;
+            }
 
             .syllabus-pill {
                 display: inline-flex;
@@ -313,7 +543,7 @@
             .syllabus-metric {
                 display: inline-flex;
                 min-width: 1.75rem;
-                justify-content: flex-end;
+                justify-content: center;
                 font-size: 0.95rem;
                 font-weight: 800;
                 color: #0f172a;
@@ -326,16 +556,19 @@
                 color: #94a3b8;
                 font-weight: 600;
                 text-transform: uppercase;
+                text-align: center;
             }
 
-            .syllabus-pct { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+            .syllabus-pct { display: inline-flex; flex-direction: column; align-items: center; gap: 0.25rem; width: 100%; }
             .syllabus-pct-track {
                 display: block;
                 width: 5rem;
+                max-width: 100%;
                 height: 0.45rem;
                 border-radius: 999px;
                 background: #e2e8f0;
                 overflow: hidden;
+                margin: 0 auto;
             }
             .syllabus-pct-track > i {
                 display: block;
@@ -353,9 +586,7 @@
                     gap: 0.55rem 0.75rem;
                 }
                 .syllabus-col-subject { grid-column: 1 / -1; }
-                .syllabus-col-num, .syllabus-col-pct, .syllabus-col-status { text-align: left; }
                 .syllabus-metric-label { display: block; }
-                .syllabus-pct { align-items: flex-start; }
             }
 
             @media print {

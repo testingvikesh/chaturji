@@ -25,11 +25,20 @@ class BookController extends Controller
         $principal = auth()->user();
         $allotted = $this->allottedStandards($principal);
         $medium = $this->resolveMedium($request, $allotted);
+        $search = $request->string('search')->trim()->toString();
+        $standardId = $request->integer('standard_id') ?: null;
+        $allottedIds = $allotted->pluck('id')->map(fn ($id) => (int) $id)->all();
+        if ($standardId && ! in_array($standardId, $allottedIds, true)) {
+            $standardId = null;
+        }
 
-        // Show every allotted standard. Prefer the selected medium; if empty, try the other medium
-        // so primary/secondary books still list subjects (same as higher standards).
-        $standards = $allotted
-            ->map(function (Standard $standard) use ($medium) {
+        $source = $standardId
+            ? $allotted->where('id', $standardId)->values()
+            : $allotted;
+
+        // Show allotted standards (filtered). Prefer selected medium; fallback so books still list.
+        $standards = $source
+            ->map(function (Standard $standard) use ($medium, $search) {
                 $subjects = Material::subjectsForStudent($standard, $medium);
                 $usedMedium = $medium;
                 if ($subjects->isEmpty()) {
@@ -43,6 +52,12 @@ class BookController extends Controller
                             break;
                         }
                     }
+                }
+                if ($search !== '') {
+                    $needle = mb_strtolower($search);
+                    $subjects = $subjects
+                        ->filter(fn ($subject) => str_contains(mb_strtolower((string) $subject->name), $needle))
+                        ->values();
                 }
                 if ($subjects->isEmpty()) {
                     return null;
@@ -77,8 +92,14 @@ class BookController extends Controller
             'principal' => $principal,
             'medium' => $medium,
             'mediums' => $mediums,
+            'allottedStandards' => $allotted,
             'standards' => $standards,
             'hasAllotments' => $allotted->isNotEmpty(),
+            'filters' => [
+                'search' => $search,
+                'medium' => $medium,
+                'standard_id' => $standardId ? (string) $standardId : '',
+            ],
         ]);
     }
 

@@ -32,6 +32,27 @@
             </div>
         </div>
 
+        <div class="admin-card">
+            <div class="admin-card-header"><h3 class="font-bold text-slate-900">Send login email</h3></div>
+            <div class="admin-card-body">
+                <form method="POST" action="{{ route('admin.principals.send-credentials') }}" class="flex flex-wrap items-end gap-3"
+                      onsubmit="return confirm('Send login mail to {{ $principal->name }}? Password will be reset to the value you enter.');">
+                    @csrf
+                    <input type="hidden" name="principal_ids[]" value="{{ $principal->id }}">
+                    <div class="min-w-[180px]">
+                        <label class="admin-label">Password for mail *</label>
+                        <input type="text" name="password" value="{{ $defaultPassword }}" required minlength="8" class="admin-input">
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 pb-2">
+                        <input type="hidden" name="reset_password" value="0">
+                        <input type="checkbox" name="reset_password" value="1" class="rounded border-slate-300 text-brand-green" checked>
+                        Reset password
+                    </label>
+                    <button type="submit" class="admin-btn-primary">Send login mail</button>
+                </form>
+            </div>
+        </div>
+
         <div class="grid lg:grid-cols-2 gap-6">
             <div class="admin-card">
                 <div class="admin-card-header"><h3 class="font-bold text-slate-900">Recent logins</h3></div>

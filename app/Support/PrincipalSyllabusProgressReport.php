@@ -112,7 +112,7 @@ class PrincipalSyllabusProgressReport
         $teacherIds = $assignments->pluck('teacher_id')->unique()->map(fn ($id) => (int) $id)->values()->all();
 
         // Book material topics per subject + medium (logout uses material_topics).
-        $materialTopicTotals = $this->materialTopicTotalsBySubjectMedium($subjectIds);
+        $materialTopics = $this->materialTopicsBySubjectMedium($subjectIds);
 
         // Logout reports: selected topics marked complete / remain.
         $logoutReports = TeacherLogoutReport::query()
@@ -127,6 +127,7 @@ class PrincipalSyllabusProgressReport
 
         // Latest status per teacher|subject|medium|topic_id from logout selections.
         $topicStatus = [];
+        $allLogoutTopicIds = [];
         foreach ($logoutReports as $report) {
             $reportMedium = Material::normalizeMedium($report->medium) ?: strtolower(trim((string) $report->medium));
             $ids = collect($report->topic_ids ?? [])
@@ -151,12 +152,16 @@ class PrincipalSyllabusProgressReport
                     continue; // already have newer status (reports ordered desc)
                 }
                 $topicStatus[$key] = $status;
+                $allLogoutTopicIds[$topicId] = true;
             }
         }
 
+        $topicMetaById = $this->topicMetaByIds(array_keys($allLogoutTopicIds));
+
         $rows = $assignments->map(function (TeacherSubject $row) use (
-            $materialTopicTotals,
+            $materialTopics,
             $topicStatus,
+            $topicMetaById,
             $slugById,
             $nameById
         ) {
@@ -164,11 +169,11 @@ class PrincipalSyllabusProgressReport
             $stdName = (string) ($nameById[$row->standard_id] ?? $row->standard?->name ?? '');
             $stdSlug = (string) ($slugById[$row->standard_id] ?? $row->standard?->slug ?? '');
 
-            $total = (int) ($materialTopicTotals[$row->subject_id.'|'.$rowMedium] ?? 0);
-            // Fallback: any medium total for subject if medium-specific empty.
-            if ($total === 0) {
-                $total = (int) ($materialTopicTotals[$row->subject_id.'|*'] ?? 0);
+            $bookTopics = $materialTopics[$row->subject_id.'|'.$rowMedium] ?? [];
+            if ($bookTopics === []) {
+                $bookTopics = $materialTopics[$row->subject_id.'|*'] ?? [];
             }
+            $total = count($bookTopics);
 
             $prefix = $row->teacher_id.'|'.$row->subject_id.'|'.$rowMedium.'|';
             $completeIds = [];
@@ -209,9 +214,11 @@ class PrincipalSyllabusProgressReport
                     $complete = $total;
                 }
                 $remain = max(0, $total - $complete);
+                $topicDetails = $this->buildTopicDetailsFromBook($bookTopics, $completeIds);
             } else {
                 $total = $complete + $remainFromLogout;
                 $remain = $remainFromLogout;
+                $topicDetails = $this->buildTopicDetailsFromLogout($completeIds, $remainIds, $topicMetaById);
             }
 
             $pctComplete = $total > 0 ? (int) round(($complete / $total) * 100) : 0;
@@ -233,6 +240,7 @@ class PrincipalSyllabusProgressReport
                 'percent_complete' => $pctComplete,
                 'percent_remain' => $pctRemain,
                 'status' => $this->statusTone($pctComplete, $total),
+                'topic_details' => $topicDetails,
             ];
         })->values();
 
@@ -307,19 +315,19 @@ class PrincipalSyllabusProgressReport
     }
 
     /**
-     * Count material topics available in the book for each subject|medium.
+     * Material topics available in the book for each subject|medium.
      *
      * @param  array<int, int>  $subjectIds
-     * @return array<string, int>
+     * @return array<string, list<array{id:int,title:string,chapter:string,order:int}>>
      */
-    private function materialTopicTotalsBySubjectMedium(array $subjectIds): array
+    private function materialTopicsBySubjectMedium(array $subjectIds): array
     {
         $subjects = Subject::query()
             ->with('standard:id,name,slug,medium')
             ->whereIn('id', $subjectIds)
             ->get(['id', 'name', 'standard_id']);
 
-        $totals = [];
+        $byKey = [];
         $anyMedium = [];
 
         foreach ($subjects as $subject) {
@@ -328,19 +336,115 @@ class PrincipalSyllabusProgressReport
                 if ($materials->isEmpty()) {
                     continue;
                 }
-                $materialIds = $materials->pluck('id')->all();
-                $count = MaterialTopic::query()->whereIn('material_id', $materialIds)->count();
-                if ($count > 0) {
-                    $totals[$subject->id.'|'.$med] = $count;
-                    $anyMedium[$subject->id] = ($anyMedium[$subject->id] ?? 0) + $count;
+
+                $topics = [];
+                foreach ($materials as $material) {
+                    $chapter = $material->displayChapterName();
+                    $materialTopics = MaterialTopic::query()
+                        ->where('material_id', $material->id)
+                        ->orderBy('topic_order')
+                        ->get(['id', 'title', 'title_gu', 'topic_order']);
+
+                    foreach ($materialTopics as $topic) {
+                        $topics[] = [
+                            'id' => (int) $topic->id,
+                            'title' => $topic->displayName(),
+                            'chapter' => $chapter,
+                            'order' => (int) $topic->topic_order,
+                        ];
+                    }
+                }
+
+                if ($topics !== []) {
+                    $byKey[$subject->id.'|'.$med] = $topics;
+                    $anyMedium[$subject->id] = array_merge($anyMedium[$subject->id] ?? [], $topics);
                 }
             }
             if (isset($anyMedium[$subject->id])) {
-                $totals[$subject->id.'|*'] = $anyMedium[$subject->id];
+                $byKey[$subject->id.'|*'] = $anyMedium[$subject->id];
             }
         }
 
-        return $totals;
+        return $byKey;
+    }
+
+    /**
+     * @param  array<int, true>  $ids
+     * @return array<int, array{id:int,title:string,chapter:string}>
+     */
+    private function topicMetaByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $topics = MaterialTopic::query()
+            ->with('material:id,chapter_no,chapter_name,title')
+            ->whereIn('id', $ids)
+            ->get(['id', 'material_id', 'title', 'title_gu', 'topic_order']);
+
+        $meta = [];
+        foreach ($topics as $topic) {
+            $meta[(int) $topic->id] = [
+                'id' => (int) $topic->id,
+                'title' => $topic->displayName(),
+                'chapter' => $topic->material?->displayChapterName() ?: '—',
+            ];
+        }
+
+        return $meta;
+    }
+
+    /**
+     * @param  list<array{id:int,title:string,chapter:string,order:int}>  $bookTopics
+     * @param  array<int, true>  $completeIds
+     * @return list<array{id:int,title:string,chapter:string,status:string}>
+     */
+    private function buildTopicDetailsFromBook(array $bookTopics, array $completeIds): array
+    {
+        $details = [];
+        foreach ($bookTopics as $topic) {
+            $id = (int) $topic['id'];
+            $details[] = [
+                'id' => $id,
+                'title' => $topic['title'],
+                'chapter' => $topic['chapter'],
+                'status' => isset($completeIds[$id]) ? 'complete' : 'remain',
+            ];
+        }
+
+        return $details;
+    }
+
+    /**
+     * @param  array<int, true>  $completeIds
+     * @param  array<int, true>  $remainIds
+     * @param  array<int, array{id:int,title:string,chapter:string}>  $topicMetaById
+     * @return list<array{id:int,title:string,chapter:string,status:string}>
+     */
+    private function buildTopicDetailsFromLogout(array $completeIds, array $remainIds, array $topicMetaById): array
+    {
+        $details = [];
+        foreach (array_keys($completeIds) as $id) {
+            $meta = $topicMetaById[$id] ?? ['id' => $id, 'title' => 'Topic #'.$id, 'chapter' => '—'];
+            $details[] = [
+                'id' => $id,
+                'title' => $meta['title'],
+                'chapter' => $meta['chapter'],
+                'status' => 'complete',
+            ];
+        }
+        foreach (array_keys(array_diff_key($remainIds, $completeIds)) as $id) {
+            $meta = $topicMetaById[$id] ?? ['id' => $id, 'title' => 'Topic #'.$id, 'chapter' => '—'];
+            $details[] = [
+                'id' => $id,
+                'title' => $meta['title'],
+                'chapter' => $meta['chapter'],
+                'status' => 'remain',
+            ];
+        }
+
+        return $details;
     }
 
     private function statusTone(int $percent, int $total): string

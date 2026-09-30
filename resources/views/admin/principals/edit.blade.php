@@ -45,6 +45,13 @@
                         'selected' => old('standard_ids', $selectedStandardIds),
                     ])
                     <div class="sm:col-span-2">
+                        <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                            <input type="hidden" name="send_mail" value="0">
+                            <input type="checkbox" name="send_mail" value="1" class="rounded border-slate-300 text-brand-green" @checked(old('send_mail'))>
+                            Send login email (requires new password above)
+                        </label>
+                    </div>
+                    <div class="sm:col-span-2">
                         <button type="submit" class="admin-btn-primary">Save changes</button>
                     </div>
                 </form>

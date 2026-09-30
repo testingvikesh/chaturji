@@ -8,14 +8,40 @@
     </x-slot>
 
     <div class="admin-page space-y-6">
-        @if (count($mediums) > 1)
-            <div class="flex flex-wrap items-center gap-2">
-                @foreach ($mediums as $key => $label)
-                    <a href="{{ route('principal.books.index', ['medium' => $key]) }}"
-                       class="rounded-xl px-4 py-2 text-sm font-semibold {{ $medium === $key ? 'bg-brand-green text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
-                        {{ $label }}
-                    </a>
-                @endforeach
+        @if ($hasAllotments)
+            <div class="admin-card">
+                <div class="admin-card-top"></div>
+                <div class="admin-card-body">
+                    <form method="GET" action="{{ route('principal.books.index') }}" class="admin-filter-grid">
+                        <div class="lg:col-span-4">
+                            <label class="admin-label">Search subject</label>
+                            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Subject name..." class="admin-input">
+                        </div>
+                        <div class="lg:col-span-3">
+                            <label class="admin-label">Medium</label>
+                            <select name="medium" class="admin-select">
+                                @foreach (($mediums ?: \App\Models\Standard::MEDIUMS) as $key => $label)
+                                    <option value="{{ $key }}" @selected(($filters['medium'] ?? $medium) === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="lg:col-span-3">
+                            <label class="admin-label">Standard</label>
+                            <select name="standard_id" class="admin-select">
+                                <option value="">All allotted standards</option>
+                                @foreach ($allottedStandards as $standard)
+                                    <option value="{{ $standard->id }}" @selected((string) ($filters['standard_id'] ?? '') === (string) $standard->id)>{{ $standard->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="lg:col-span-2 flex gap-2 items-end">
+                            <button type="submit" class="admin-btn-filter flex-1">Filter</button>
+                            @if (($filters['search'] ?? '') !== '' || ($filters['standard_id'] ?? '') !== '' || request()->filled('medium'))
+                                <a href="{{ route('principal.books.index') }}" class="admin-btn-ghost">Clear</a>
+                            @endif
+                        </div>
+                    </form>
+                </div>
             </div>
         @endif
 
@@ -26,7 +52,7 @@
                         @if (! $hasAllotments)
                             No standard allotted yet. Ask admin to allot standards to your principal account.
                         @else
-                            No books for {{ ucfirst($medium) }} medium in your allotted standards.
+                            No books match this filter.
                         @endif
                     </p>
                 </div>
