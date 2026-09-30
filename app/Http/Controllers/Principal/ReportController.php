@@ -17,6 +17,7 @@ use App\Models\UserSession;
 use App\Support\ActivityLogger;
 use App\Support\MailConfig;
 use App\Support\PrincipalReportCatalog;
+use App\Support\PrincipalSyllabusProgressReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -652,6 +653,18 @@ class ReportController extends Controller
             'workAttemptsEnabled' => $workAttemptsTable,
             'hasAllotments' => $allottedSlugs !== [],
         ]);
+    }
+
+    public function syllabusProgress(Request $request): View
+    {
+        $payload = (new PrincipalSyllabusProgressReport)->build(auth()->user(), [
+            'medium' => $request->string('medium')->trim()->toString(),
+            'standard_id' => $request->integer('standard_id') ?: null,
+            'teacher_id' => $request->integer('teacher_id') ?: null,
+            'search' => $request->string('search')->trim()->toString(),
+        ]);
+
+        return view('principal.reports.syllabus-progress', $payload);
     }
 
     private function roleLoginReport(Request $request, string $role): View

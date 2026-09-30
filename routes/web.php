@@ -132,6 +132,7 @@ Route::prefix('principal')->name('principal.')->group(function () {
         Route::get('/reports/logout-reports', [PrincipalReportController::class, 'logoutReports'])->name('reports.logout-reports');
         Route::get('/reports/logout-reports/{teacherLogoutReport}', [PrincipalReportController::class, 'logoutReportShow'])->name('reports.logout-reports.show');
         Route::get('/reports/student-work', [PrincipalReportController::class, 'studentWork'])->name('reports.student-work');
+        Route::get('/reports/syllabus-progress', [PrincipalReportController::class, 'syllabusProgress'])->name('reports.syllabus-progress');
         Route::get('/students/create', [PrincipalStudentController::class, 'create'])->name('students.create');
         Route::post('/students', [PrincipalStudentController::class, 'store'])->name('students.store');
         Route::get('/students/{student}/edit', [PrincipalStudentController::class, 'edit'])->name('students.edit');

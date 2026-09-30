@@ -65,6 +65,13 @@ class PrincipalReportCatalog
                 'description' => 'Logout work reports and student work activity',
                 'reports' => [
                     [
+                        'title' => 'Syllabus Progress',
+                        'description' => 'Teacher subjects · topics complete / remain · % syllabus',
+                        'route' => 'principal.reports.syllabus-progress',
+                        'match' => ['principal.reports.syllabus-progress'],
+                        'badge' => 'Print',
+                    ],
+                    [
                         'title' => 'Logout Work Reports',
                         'description' => 'Teacher period / chapter / topic reports before logout',
                         'route' => 'principal.reports.logout-reports',
