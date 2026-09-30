@@ -86,7 +86,7 @@ class StudentController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'mobile' => ['required', 'string', 'max:20', 'unique:users,mobile,'.$student->id],
-            'email' => ['nullable', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,'.$student->id],
+            'email' => ['nullable', 'string', 'lowercase', 'max:255', Rule::unique('users', 'email')->ignore($student->id)],
             'medium' => ['required', 'in:english,gujarati'],
             'standard' => ['required', 'string', 'max:20'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
@@ -95,7 +95,7 @@ class StudentController extends Controller
         $student->fill([
             'name' => $validated['name'],
             'mobile' => $validated['mobile'],
-            'email' => $validated['email'] ?? null,
+            'email' => filled($validated['email'] ?? null) ? strtolower(trim((string) $validated['email'])) : null,
             'medium' => $validated['medium'],
             'standard' => $validated['standard'],
         ]);
@@ -362,7 +362,7 @@ class StudentController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'mobile' => ['required', 'string', 'max:20', 'unique:users,mobile'],
-            'email' => ['nullable', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['nullable', 'string', 'lowercase', 'max:255', 'unique:users,email'],
             'medium' => ['required', Rule::in(array_keys(Standard::MEDIUMS))],
             'standard' => ['required', 'string', Rule::exists('standards', 'slug')->where(fn ($q) => $q->where('is_active', true))],
             'password' => ['required', 'string', 'min:8', 'max:64'],
@@ -371,14 +371,15 @@ class StudentController extends Controller
         ]);
 
         $sendMail = $request->boolean('send_mail');
-        if ($sendMail && empty($validated['email'])) {
-            return back()->withInput()->with('error', 'Email is required to send login mail.');
+        $email = filled($validated['email'] ?? null) ? strtolower(trim((string) $validated['email'])) : null;
+        if ($sendMail && ($email === null || ! filter_var($email, FILTER_VALIDATE_EMAIL))) {
+            return back()->withInput()->with('error', 'A real email is needed only when Send mail is checked. Students log in with mobile.');
         }
 
         $student = User::query()->create([
             'name' => $validated['name'],
             'mobile' => preg_replace('/\s+/', '', $validated['mobile']),
-            'email' => $validated['email'] ?? null,
+            'email' => $email,
             'medium' => $validated['medium'],
             'standard' => $validated['standard'],
             'password' => $validated['password'],
@@ -538,6 +539,7 @@ class StudentController extends Controller
 
     /**
      * Prefer father email; if blank or already used, use mother email.
+     * Email is optional — students log in with mobile, not email.
      *
      * @param  list<string>  $candidates
      */
@@ -545,7 +547,7 @@ class StudentController extends Controller
     {
         foreach ($candidates as $raw) {
             $email = strtolower(trim((string) $raw));
-            if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if ($email === '' || ! str_contains($email, '@')) {
                 continue;
             }
             if (! User::query()->where('email', $email)->exists()) {

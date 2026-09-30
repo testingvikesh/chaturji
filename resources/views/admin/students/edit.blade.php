@@ -25,7 +25,7 @@
                     </div>
                     <div>
                         <label class="admin-label">Email (Optional)</label>
-                        <input type="email" name="email" value="{{ old('email', $student->email) }}" class="admin-input">
+                        <input type="text" name="email" value="{{ old('email', $student->email) }}" class="admin-input" placeholder="Optional — login uses mobile">
                         @error('email')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>

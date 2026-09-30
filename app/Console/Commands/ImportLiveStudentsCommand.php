@@ -52,8 +52,8 @@ class ImportLiveStudentsCommand extends Command
                 continue;
             }
 
-            if ($email !== '' && User::query()->where('email', $email)->exists()) {
-                $this->line("{$name}: email already used, saved without email");
+            // Email is optional. Students log in with mobile; skip email only if already taken.
+            if ($email === '' || ! str_contains($email, '@') || User::query()->where('email', $email)->exists()) {
                 $email = '';
             }
 

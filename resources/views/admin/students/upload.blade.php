@@ -53,9 +53,9 @@
             <p class="font-semibold text-slate-800">How it works</p>
             <ol class="mt-2 list-decimal pl-5 space-y-1">
                 <li>Select <strong>Medium</strong> and <strong>Standard</strong> (applied to every student in the file).</li>
-                <li>Upload CSV with columns: <code class="text-xs bg-white px-1 rounded border">name, mobile, email, password</code></li>
+                <li>Upload CSV with columns: <code class="text-xs bg-white px-1 rounded border">name, mobile, email, password</code> (email optional)</li>
                 <li>Empty password → uses default password below.</li>
-                <li>Approved students can login immediately with <strong>mobile + password</strong> and use exams, homework, books, etc.</li>
+                <li>Students log in with <strong>mobile + password</strong> (email is not required).</li>
             </ol>
         </div>
 
@@ -103,7 +103,7 @@
                             <input type="checkbox" name="send_mail" value="1" class="rounded border-slate-300 text-brand-green" @checked(old('send_mail', true))>
                             Send mail — app login link + username (mobile) + password
                         </label>
-                        <p class="text-xs text-slate-500">When Send mail is on, each CSV row must include an email address.</p>
+                        <p class="text-xs text-slate-500">Email is optional. Needed only if Send mail is on. Login is always mobile + password.</p>
                     </div>
                     <div class="sm:col-span-2">
                         <button type="submit" class="admin-btn-primary">Upload student list</button>
@@ -129,8 +129,8 @@
                         @error('mobile')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
-                        <label class="admin-label">Email</label>
-                        <input type="email" name="email" value="{{ old('email') }}" class="admin-input">
+                        <label class="admin-label">Email (optional)</label>
+                        <input type="text" name="email" value="{{ old('email') }}" class="admin-input" placeholder="Not required — login uses mobile">
                         @error('email')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
