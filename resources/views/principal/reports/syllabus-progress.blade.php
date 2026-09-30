@@ -396,6 +396,15 @@
                 border-top: 1px solid #e2e8f0;
                 background: #f8fafc;
             }
+            .syllabus-progress-page {
+                --syllabus-cols: minmax(0, 1.35fr) minmax(0, 0.85fr) minmax(0, 0.8fr) minmax(0, 0.55fr) minmax(0, 0.55fr) minmax(0, 0.55fr) minmax(0, 0.95fr) minmax(0, 0.55fr) minmax(0, 0.85fr);
+                --syllabus-gap: 0.4rem;
+                --syllabus-body-pad-x: 0.5rem;
+                --syllabus-row-margin-x: 0.25rem;
+                --syllabus-row-pad-x: 0.7rem;
+                --syllabus-accent: 5px;
+            }
+
             .syllabus-sticky-legend {
                 position: sticky;
                 top: 3.5rem; /* mobile top bar */
@@ -407,9 +416,14 @@
             }
             .syllabus-sticky-legend-inner {
                 display: none;
+                grid-template-columns: var(--syllabus-cols);
+                gap: var(--syllabus-gap);
                 align-items: center;
-                gap: 0.5rem;
-                padding: 0.7rem 1rem;
+                /* Match card accent + body pad + row margin + row pad so headers sit over values */
+                padding-top: 0.7rem;
+                padding-bottom: 0.7rem;
+                padding-left: calc(var(--syllabus-accent) + var(--syllabus-body-pad-x) + var(--syllabus-row-margin-x) + var(--syllabus-row-pad-x));
+                padding-right: calc(1px + var(--syllabus-body-pad-x) + var(--syllabus-row-margin-x) + var(--syllabus-row-pad-x));
                 border-radius: 0.9rem;
                 background: linear-gradient(90deg, rgb(26, 54, 124), rgb(20, 42, 98));
                 color: rgba(255,255,255,0.95);
@@ -420,22 +434,23 @@
                 box-shadow: 0 8px 20px rgba(13, 31, 74, 0.25);
             }
             @media (min-width: 1024px) {
-                .syllabus-sticky-legend-inner { display: flex; }
+                .syllabus-sticky-legend-inner { display: grid; }
             }
 
             .syllabus-card {
                 border-radius: 1rem;
                 border: 1px solid rgba(148, 163, 184, 0.35);
+                border-left-width: var(--syllabus-accent);
                 overflow: hidden;
                 box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
             }
             .syllabus-card--a {
                 background: #fff;
-                border-left: 5px solid rgb(148, 163, 184);
+                border-left-color: rgb(148, 163, 184);
             }
             .syllabus-card--b {
                 background: rgb(240, 243, 250);
-                border-left: 5px solid rgb(26, 54, 124);
+                border-left-color: rgb(26, 54, 124);
             }
 
             .syllabus-card-head {
@@ -493,14 +508,16 @@
                 background: linear-gradient(90deg, rgb(26, 54, 124), rgb(42, 74, 154));
             }
 
-            .syllabus-card-body { padding: 0.35rem 0.5rem 0.65rem; }
+            .syllabus-card-body {
+                padding: 0.35rem var(--syllabus-body-pad-x) 0.65rem;
+            }
             .syllabus-row {
                 display: grid;
-                grid-template-columns: 1.3fr 0.8fr 0.75fr 0.55fr 0.55fr 0.55fr 0.9fr 0.55fr 0.85fr;
-                gap: 0.4rem;
+                grid-template-columns: var(--syllabus-cols);
+                gap: var(--syllabus-gap);
                 align-items: center;
-                padding: 0.65rem 0.7rem;
-                margin: 0.3rem 0.25rem;
+                padding: 0.65rem var(--syllabus-row-pad-x);
+                margin: 0.3rem var(--syllabus-row-margin-x);
                 border-radius: 0.75rem;
                 background: rgba(255,255,255,0.9);
                 border: 1px solid rgba(148, 163, 184, 0.2);
@@ -515,6 +532,7 @@
 
             .syllabus-col {
                 min-width: 0;
+                width: 100%;
                 text-align: center;
                 display: flex;
                 flex-direction: column;
@@ -522,9 +540,15 @@
                 justify-content: center;
             }
             .syllabus-sticky-legend-inner .syllabus-col {
-                flex: 1;
+                display: flex;
+                width: 100%;
                 text-align: center;
                 justify-content: center;
+                white-space: nowrap;
+            }
+            .syllabus-col-subject span {
+                text-align: center;
+                width: 100%;
             }
 
             .syllabus-pill {
