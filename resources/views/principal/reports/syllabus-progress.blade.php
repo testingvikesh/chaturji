@@ -75,7 +75,7 @@
                     <div>
                         <h3 class="font-bold text-slate-900">Teacher syllabus completion</h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Complete = topics marked completed in daily syllabus · Remain = syllabus topics not yet completed
+                            Complete / Remain = topics selected at teacher <strong>logout report</strong> (latest status per topic) · Total = book material topics
                         </p>
                     </div>
                 </div>

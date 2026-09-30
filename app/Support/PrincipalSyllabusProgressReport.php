@@ -3,16 +3,17 @@
 namespace App\Support;
 
 use App\Models\Material;
+use App\Models\MaterialTopic;
+use App\Models\Subject;
+use App\Models\TeacherLogoutReport;
 use App\Models\TeacherSubject;
-use App\Models\TeachingLog;
-use App\Models\Topic;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
 class PrincipalSyllabusProgressReport
 {
     /**
-     * Teacher → subjects → topics complete / remain with percentages (allotted standards).
+     * Teacher → subjects → topics complete / remain from logout report selections.
      *
      * @param  array{medium?: string, standard_id?: int|null, teacher_id?: int|null, search?: string}  $filters
      * @return array{rows: Collection, teachers: Collection, summary: array<string, int|float>, filters: array<string, mixed>}
@@ -27,6 +28,7 @@ class PrincipalSyllabusProgressReport
         $allottedIds = $allotted->pluck('id')->map(fn ($id) => (int) $id)->all();
         $slugById = $allotted->pluck('slug', 'id');
         $nameById = $allotted->pluck('name', 'id');
+        $standardKeys = $allotted->flatMap(fn ($s) => array_filter([(string) $s->name, (string) $s->slug]))->unique()->values()->all();
 
         $medium = Material::normalizeMedium($filters['medium'] ?? '') ?: '';
         $standardId = ! empty($filters['standard_id']) ? (int) $filters['standard_id'] : null;
@@ -109,53 +111,111 @@ class PrincipalSyllabusProgressReport
         $subjectIds = $assignments->pluck('subject_id')->unique()->map(fn ($id) => (int) $id)->values()->all();
         $teacherIds = $assignments->pluck('teacher_id')->unique()->map(fn ($id) => (int) $id)->values()->all();
 
-        $topicTotals = Topic::query()
-            ->where('topics.is_active', true)
-            ->join('chapters', 'chapters.id', '=', 'topics.chapter_id')
-            ->where('chapters.is_active', true)
-            ->whereIn('chapters.subject_id', $subjectIds)
-            ->groupBy('chapters.subject_id')
-            ->selectRaw('chapters.subject_id, COUNT(topics.id) as total')
-            ->pluck('total', 'subject_id');
+        // Book material topics per subject + medium (logout uses material_topics).
+        $materialTopicTotals = $this->materialTopicTotalsBySubjectMedium($subjectIds);
 
-        $completedByTeacherSubject = TeachingLog::query()
-            ->where('status', TeachingLog::STATUS_COMPLETED)
+        // Logout reports: selected topics marked complete / remain.
+        $logoutReports = TeacherLogoutReport::query()
             ->whereIn('teacher_id', $teacherIds)
             ->whereIn('subject_id', $subjectIds)
-            ->whereNotNull('topic_id')
-            ->groupBy('teacher_id', 'subject_id')
-            ->selectRaw('teacher_id, subject_id, COUNT(DISTINCT topic_id) as completed')
-            ->get()
-            ->keyBy(fn ($row) => $row->teacher_id.'|'.$row->subject_id);
+            ->when($standardKeys !== [], fn ($q) => $q->where(function ($inner) use ($standardKeys) {
+                $inner->whereIn('standard', $standardKeys)->orWhereNull('standard');
+            }))
+            ->orderByDesc('submitted_at')
+            ->orderByDesc('id')
+            ->get(['id', 'teacher_id', 'subject_id', 'medium', 'standard', 'topic_ids', 'chk_complete', 'chk_remain', 'submitted_at']);
 
-        // Also count remain/partial marked topics for display (optional insight).
-        $remainLoggedByTeacherSubject = TeachingLog::query()
-            ->whereIn('status', [TeachingLog::STATUS_REMAINING, TeachingLog::STATUS_PARTIAL])
-            ->whereIn('teacher_id', $teacherIds)
-            ->whereIn('subject_id', $subjectIds)
-            ->whereNotNull('topic_id')
-            ->groupBy('teacher_id', 'subject_id')
-            ->selectRaw('teacher_id, subject_id, COUNT(DISTINCT topic_id) as remain_logged')
-            ->get()
-            ->keyBy(fn ($row) => $row->teacher_id.'|'.$row->subject_id);
+        // Latest status per teacher|subject|medium|topic_id from logout selections.
+        $topicStatus = [];
+        foreach ($logoutReports as $report) {
+            $reportMedium = Material::normalizeMedium($report->medium) ?: strtolower(trim((string) $report->medium));
+            $ids = collect($report->topic_ids ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->unique()
+                ->all();
+
+            // If no topic selected but complete/remain checked, count as 1 chapter-level mark.
+            if ($ids === []) {
+                continue;
+            }
+
+            $status = $report->chk_complete ? 'complete' : ($report->chk_remain ? 'remain' : null);
+            if ($status === null) {
+                continue;
+            }
+
+            foreach ($ids as $topicId) {
+                $key = $report->teacher_id.'|'.$report->subject_id.'|'.$reportMedium.'|'.$topicId;
+                if (isset($topicStatus[$key])) {
+                    continue; // already have newer status (reports ordered desc)
+                }
+                $topicStatus[$key] = $status;
+            }
+        }
 
         $rows = $assignments->map(function (TeacherSubject $row) use (
-            $topicTotals,
-            $completedByTeacherSubject,
-            $remainLoggedByTeacherSubject,
+            $materialTopicTotals,
+            $topicStatus,
             $slugById,
             $nameById
         ) {
-            $key = $row->teacher_id.'|'.$row->subject_id;
-            $total = (int) ($topicTotals[$row->subject_id] ?? 0);
-            $complete = (int) ($completedByTeacherSubject[$key]->completed ?? 0);
-            if ($complete > $total && $total > 0) {
-                $complete = $total;
+            $rowMedium = Material::normalizeMedium($row->medium) ?: strtolower(trim((string) $row->medium));
+            $stdName = (string) ($nameById[$row->standard_id] ?? $row->standard?->name ?? '');
+            $stdSlug = (string) ($slugById[$row->standard_id] ?? $row->standard?->slug ?? '');
+
+            $total = (int) ($materialTopicTotals[$row->subject_id.'|'.$rowMedium] ?? 0);
+            // Fallback: any medium total for subject if medium-specific empty.
+            if ($total === 0) {
+                $total = (int) ($materialTopicTotals[$row->subject_id.'|*'] ?? 0);
             }
-            $remain = max(0, $total - $complete);
+
+            $prefix = $row->teacher_id.'|'.$row->subject_id.'|'.$rowMedium.'|';
+            $completeIds = [];
+            $remainIds = [];
+            foreach ($topicStatus as $key => $status) {
+                if (! str_starts_with($key, $prefix)) {
+                    continue;
+                }
+                $topicId = (int) substr($key, strlen($prefix));
+                if ($status === 'complete') {
+                    $completeIds[$topicId] = true;
+                } else {
+                    $remainIds[$topicId] = true;
+                }
+            }
+
+            // Also match keys without medium normalization edge cases (empty medium).
+            if ($rowMedium === '') {
+                foreach ($topicStatus as $key => $status) {
+                    if (! preg_match('/^'.preg_quote((string) $row->teacher_id, '/').'\|'.preg_quote((string) $row->subject_id, '/').'\|[^|]*\|(\d+)$/', $key, $m)) {
+                        continue;
+                    }
+                    $topicId = (int) $m[1];
+                    if ($status === 'complete') {
+                        $completeIds[$topicId] = true;
+                    } else {
+                        $remainIds[$topicId] = true;
+                    }
+                }
+            }
+
+            $complete = count($completeIds);
+            $remainFromLogout = count(array_diff_key($remainIds, $completeIds));
+
+            // If book has topic list: remain = not yet completed. Else use logout remain marks.
+            if ($total > 0) {
+                if ($complete > $total) {
+                    $complete = $total;
+                }
+                $remain = max(0, $total - $complete);
+            } else {
+                $total = $complete + $remainFromLogout;
+                $remain = $remainFromLogout;
+            }
+
             $pctComplete = $total > 0 ? (int) round(($complete / $total) * 100) : 0;
             $pctRemain = $total > 0 ? max(0, 100 - $pctComplete) : 0;
-            $remainLogged = (int) ($remainLoggedByTeacherSubject[$key]->remain_logged ?? 0);
 
             return [
                 'teacher_id' => (int) $row->teacher_id,
@@ -164,13 +224,12 @@ class PrincipalSyllabusProgressReport
                 'subject_id' => (int) $row->subject_id,
                 'subject' => $row->subject?->name ?? '—',
                 'standard_id' => (int) $row->standard_id,
-                'standard' => $nameById[$row->standard_id] ?? ($row->standard?->name ?? '—'),
-                'standard_slug' => $slugById[$row->standard_id] ?? ($row->standard?->slug ?? ''),
-                'medium' => Material::normalizeMedium($row->medium) ?: ($row->medium ?: '—'),
+                'standard' => $stdName !== '' ? $stdName : '—',
+                'standard_slug' => $stdSlug,
+                'medium' => $rowMedium !== '' ? $rowMedium : '—',
                 'topics_total' => $total,
                 'topics_complete' => $complete,
                 'topics_remain' => $remain,
-                'remain_logged' => $remainLogged,
                 'percent_complete' => $pctComplete,
                 'percent_remain' => $pctRemain,
                 'status' => $this->statusTone($pctComplete, $total),
@@ -226,6 +285,43 @@ class PrincipalSyllabusProgressReport
             'teacherOptions' => $teacherOptions,
             'hasAllotments' => true,
         ];
+    }
+
+    /**
+     * Count material topics available in the book for each subject|medium.
+     *
+     * @param  array<int, int>  $subjectIds
+     * @return array<string, int>
+     */
+    private function materialTopicTotalsBySubjectMedium(array $subjectIds): array
+    {
+        $subjects = Subject::query()
+            ->with('standard:id,name,slug,medium')
+            ->whereIn('id', $subjectIds)
+            ->get(['id', 'name', 'standard_id']);
+
+        $totals = [];
+        $anyMedium = [];
+
+        foreach ($subjects as $subject) {
+            foreach (array_keys(\App\Models\Standard::MEDIUMS) as $med) {
+                $materials = Material::forStudentSubject($subject, $med);
+                if ($materials->isEmpty()) {
+                    continue;
+                }
+                $materialIds = $materials->pluck('id')->all();
+                $count = MaterialTopic::query()->whereIn('material_id', $materialIds)->count();
+                if ($count > 0) {
+                    $totals[$subject->id.'|'.$med] = $count;
+                    $anyMedium[$subject->id] = ($anyMedium[$subject->id] ?? 0) + $count;
+                }
+            }
+            if (isset($anyMedium[$subject->id])) {
+                $totals[$subject->id.'|*'] = $anyMedium[$subject->id];
+            }
+        }
+
+        return $totals;
     }
 
     private function statusTone(int $percent, int $total): string
