@@ -1,0 +1,590 @@
+[
+    {
+        "name": "DHARA Girirajbhai",
+        "mobile": "9724314222",
+        "email": "nilgiri2012@gmail.com",
+        "medium": "english",
+        "standard": "std-6"
+    },
+    {
+        "name": "DHARMI Kiranbhai",
+        "mobile": "8141996868",
+        "email": "thakar79@gmail.com",
+        "medium": "english",
+        "standard": "std-6"
+    },
+    {
+        "name": "HENCY NITINBHAI",
+        "mobile": "9624324607",
+        "email": "ntanbhanderi@gmail.com",
+        "medium": "english",
+        "standard": "std-6"
+    },
+    {
+        "name": "KRUPANSHU Hardikbhai",
+        "mobile": "8849194960",
+        "email": "krupanshu@gmail.com",
+        "medium": "english",
+        "standard": "std-6"
+    },
+    {
+        "name": "RITIKA Shaileshbhai",
+        "mobile": "9537868206",
+        "email": "geetapatel8076@gmail.com",
+        "medium": "english",
+        "standard": "std-6"
+    },
+    {
+        "name": "SHREEYA Sanjaybhai",
+        "mobile": "8141039521",
+        "email": "sanjayandani55@gmail.com",
+        "medium": "english",
+        "standard": "std-6"
+    },
+    {
+        "name": "MANTHAN Darshatbhai",
+        "mobile": "8760674933",
+        "email": "",
+        "medium": "english",
+        "standard": "std-6"
+    },
+    {
+        "name": "AARAV Ramdas",
+        "mobile": "8347447979",
+        "email": "nadarshelke@gmail.com",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "AYUSH Ghanshyambhai",
+        "mobile": "8866973510",
+        "email": "",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "JENSHI Sanjaybhai",
+        "mobile": "9979549651",
+        "email": "sanjaypatel7178@gmail.com",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "NIRMIT Kanjibhai",
+        "mobile": "7046032915",
+        "email": "",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "NITI Kalpeshbhai",
+        "mobile": "9979029464",
+        "email": "kalpeshranpariyakk11@gmail.com",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "RISHABH Manojbhai",
+        "mobile": "8849219101",
+        "email": "",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "SOHAM Arunbhai",
+        "mobile": "7016539046",
+        "email": "arunshirke8884@gmail.com",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "KARAN Hardikbhai",
+        "mobile": "7600093497",
+        "email": "hardiksiddhapura86@gmail.com",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "SAKSHI Rajendrabhai",
+        "mobile": "9824595195",
+        "email": "riteshghadge10@gmail.com",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "SHLOKRAJ Dipeshbhai",
+        "mobile": "9104080491",
+        "email": "devarthsakariya@gmail.com",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "ANUJ Manojbhai",
+        "mobile": "9723755754",
+        "email": "jaybalajornaments@gmail.com",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "KHUSHI Hiteshbhai",
+        "mobile": "9824445290",
+        "email": "manishasoni2729@gmail.com",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "MAITRI Rajeshbhai",
+        "mobile": "8153800078",
+        "email": "",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "MAITRI Shaileshbhai",
+        "mobile": "9879019501",
+        "email": "shalieshlimbasiya460@gmail.com",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "SHREEYA Ashvinbhai",
+        "mobile": "7874688174",
+        "email": "",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "RUDRA Ketanbhai",
+        "mobile": "9016965633",
+        "email": "rudradhrangdhriya55@gmail.com",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "HET Chetanbhai",
+        "mobile": "9328590484",
+        "email": "chandaranahet656@gmail.com",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "KALKEE Karanbhai",
+        "mobile": "6352365214",
+        "email": "kalkeeraiyani7@gmail.com",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "JANVI Ghanshyambhai",
+        "mobile": "9537410103",
+        "email": "g.ramani477@gmail.com",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "NAVYA Sureshbhai",
+        "mobile": "8238457531",
+        "email": "",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "OM Ajaybhai",
+        "mobile": "6353928603",
+        "email": "omsudani123@gmail.com",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "PURV Pethabhai",
+        "mobile": "9723483361",
+        "email": "",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "SHYAM Girishbhai",
+        "mobile": "8160267910",
+        "email": "shyampatel0869@gmail.com",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "DHAIRYA Amitbhai",
+        "mobile": "9703096433",
+        "email": "dhairyamalani@gmail.com",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "DARSHTI Rajeshbhai",
+        "mobile": "9104634071",
+        "email": "drashtimavani1@gmail.com",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "DEVANGI RAMJIBHAI",
+        "mobile": "9979021801",
+        "email": "",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "RUDRA Prakashbhai",
+        "mobile": "9978563553",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-6"
+    },
+    {
+        "name": "RUHI Naimitbhai",
+        "mobile": "9909332111",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-6"
+    },
+    {
+        "name": "RAJENDRA Amitbhai",
+        "mobile": "9983430320",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-6"
+    },
+    {
+        "name": "VETAM VIPULBHAI",
+        "mobile": "9099463251",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-6"
+    },
+    {
+        "name": "AARAV Chandreshbhai",
+        "mobile": "7016032508",
+        "email": "dipticbala@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-7"
+    },
+    {
+        "name": "MAHESHKUMAR Bhupatbhai",
+        "mobile": "9737709067",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-7"
+    },
+    {
+        "name": "YANA Navneetbhai",
+        "mobile": "8320788869",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-7"
+    },
+    {
+        "name": "JINAL Sunilbhai",
+        "mobile": "9409006993",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-7"
+    },
+    {
+        "name": "VRINDA Ashwinbhai",
+        "mobile": "9687633477",
+        "email": "anjanagadhiyahapaliya@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-8"
+    },
+    {
+        "name": "RUDRA PANKAJBHAI",
+        "mobile": "9276552474",
+        "email": "sonalbeladiyasp@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-8"
+    },
+    {
+        "name": "HARITA ASHISHBHAI",
+        "mobile": "9033334155",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-8"
+    },
+    {
+        "name": "RISHI Bhaveshbhai",
+        "mobile": "9723242135",
+        "email": "bhaveshsolankiii234@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "DIVYAN Jitendrabhai",
+        "mobile": "9426603142",
+        "email": "jitendrabhad596@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "KRISHA Bharatbhai",
+        "mobile": "7567570210",
+        "email": "bharathadiyal6159@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "HENSI Rashikbhai",
+        "mobile": "6353248345",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "CHARVI Pravinbhai",
+        "mobile": "8155049289",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "HASIT Ashishbhai",
+        "mobile": "9723708052",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "DARSHIL Dixitbhai",
+        "mobile": "9998789606",
+        "email": "dixitvirani1234@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "RAVI Alpeshbhai",
+        "mobile": "9712089008",
+        "email": "alpeshkiyada7@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "VATSAL Chhaganbhai",
+        "mobile": "9714210415",
+        "email": "chhagankotadiya6@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "AARVI Jaydeepbhai",
+        "mobile": "9909604877",
+        "email": "jaydeeplimbasiya2429@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "SOHAN ALTAFBHAI",
+        "mobile": "6354548312",
+        "email": "hamidahala92@gmail.com",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "HARSHIL Pareshbhai",
+        "mobile": "7567933166",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "MOHITRAJ Rakeshbhai",
+        "mobile": "9931535043",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "PARTH Ashokbhai",
+        "mobile": "7383558633",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "ARUSHI Dhirajlal",
+        "mobile": "7777985250",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "KHUSHI Kishorbhai",
+        "mobile": "9316953240",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "AANADI Hashubhai",
+        "mobile": "8160820110",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "RAJ Ramajibhai",
+        "mobile": "9140142312",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "OM Maheshbhai",
+        "mobile": "8488814715",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "KRISHNA Rasikbhai",
+        "mobile": "8849672256",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "AAYUSH Bharatbhai",
+        "mobile": "8160611451",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "MITESH Ghanshyambhai",
+        "mobile": "9510825638",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "HASTI Dineshbhai",
+        "mobile": "6355117766",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "DARSHAN Jiteshbhai",
+        "mobile": "7285837859",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "URMI Vipulbhai",
+        "mobile": "9327446202",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    },
+    {
+        "name": "VRAJ Dharmeshbhai",
+        "mobile": "70",
+        "email": "vrajhapaliya283@gmail.com",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "SAMART Ajaybhai",
+        "mobile": "110",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-6"
+    },
+    {
+        "name": "OM PRATIKBHAI",
+        "mobile": "124",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-7"
+    },
+    {
+        "name": "AMRUT Pravinbhai",
+        "mobile": "145",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "KEVAL GABHARUBHAI",
+        "mobile": "64",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-9"
+    },
+    {
+        "name": "AARVI Atulbhai",
+        "mobile": "9924590901",
+        "email": "atulakabari8564@gmil.com",
+        "medium": "english",
+        "standard": "std-6"
+    },
+    {
+        "name": "DARSH Rajeshbhai",
+        "mobile": "9726602990",
+        "email": "rajeshhpatel3491@gmail.com",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "PRATIK Dharmendrabhai",
+        "mobile": "7600651260",
+        "email": "",
+        "medium": "english",
+        "standard": "std-7"
+    },
+    {
+        "name": "BHAVYA Darshrathbhai",
+        "mobile": "9173737891",
+        "email": "jiyarathod304@gmail.com",
+        "medium": "english",
+        "standard": "std-8"
+    },
+    {
+        "name": "JIYAN Nayanbhai",
+        "mobile": "9824590517",
+        "email": "nayanpadiya83@gmail.com",
+        "medium": "english",
+        "standard": "std-9"
+    },
+    {
+        "name": "PRITI Parthbhai",
+        "mobile": "9814819227",
+        "email": "",
+        "medium": "english",
+        "standard": "std-10"
+    },
+    {
+        "name": "BABU Lalabhai",
+        "mobile": "8320915005",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-6"
+    },
+    {
+        "name": "SOVANKUMARI Amitbhai",
+        "mobile": "9449348365",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-7"
+    },
+    {
+        "name": "KRUNAL SANJAYBHAI",
+        "mobile": "9227985322",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-8"
+    },
+    {
+        "name": "HEMALI Kalpeshbhai",
+        "mobile": "9723100202",
+        "email": "",
+        "medium": "gujarati",
+        "standard": "std-10"
+    }
+]

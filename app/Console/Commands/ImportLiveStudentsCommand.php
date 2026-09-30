@@ -7,15 +7,16 @@ use Illuminate\Console\Command;
 
 class ImportLiveStudentsCommand extends Command
 {
-    protected $signature = 'students:import-sheet';
+    protected $signature = 'students:import-sheet {file? : JSON file name inside database/data}';
 
     protected $description = 'Create approved students from the uploaded school sheets';
 
     public function handle(): int
     {
-        $path = database_path('data/live-students-2026-09-25.json');
+        $file = (string) ($this->argument('file') ?: 'live-students-2026-09-30.json');
+        $path = database_path('data/'.$file);
         if (! is_file($path)) {
-            $this->error('Student list file is missing.');
+            $this->error('Student list file is missing: '.$file);
 
             return self::FAILURE;
         }
@@ -37,7 +38,7 @@ class ImportLiveStudentsCommand extends Command
             $medium = (string) ($row['medium'] ?? '');
             $standard = (string) ($row['standard'] ?? '');
 
-            if ($name === '' || strlen($mobile) < 10 || ! in_array($medium, ['english', 'gujarati'], true) || $standard === '') {
+            if ($name === '' || $mobile === '' || ! in_array($medium, ['english', 'gujarati'], true) || $standard === '') {
                 $skipped++;
                 $this->line("Skip {$name}: incomplete row");
 
