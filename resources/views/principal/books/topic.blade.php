@@ -7,6 +7,14 @@
         </div>
     </x-slot>
 
+    @if (collect($sections ?? [])->isEmpty() && collect($questionGroups ?? [])->flatten()->isEmpty())
+        <div class="admin-page mb-4">
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Topic opened, but material content is not ready for this chapter yet.
+            </div>
+        </div>
+    @endif
+
     @include('partials.chapter-material-reader', [
         'subject' => $subject,
         'chapter' => $chapter,

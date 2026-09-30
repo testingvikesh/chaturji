@@ -37,11 +37,19 @@ class MaterialSwadhyayController extends Controller
         return $this->page($subject, $material, 'teacher', route('teacher.books.show', $subject));
     }
 
-    public function principal(Subject $subject, Material $material): View
+    public function principal(Subject $subject, Material $material): View|\Illuminate\Http\RedirectResponse
     {
         $user = auth()->user();
         abort_unless($user?->role === 'principal', 403);
         abort_unless($user->allottedStandards()->where('standards.id', $subject->standard_id)->exists(), 404);
+
+        $subject->loadMissing('standard');
+        $number = (int) \App\Models\Material::standardNumber($subject->standard);
+        if ($number > 0 && $number < 5) {
+            return redirect()
+                ->route('principal.books.show', $subject)
+                ->with('error', 'Full material opens from Standard 5. For Standard 1–4 only subject, chapter and topic list is shown.');
+        }
 
         return $this->page($subject, $material, 'principal', route('principal.books.show', $subject));
     }

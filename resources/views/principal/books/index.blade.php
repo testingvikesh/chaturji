@@ -42,14 +42,17 @@
                     <div class="admin-card-header">
                         <div>
                             <h3 class="font-bold text-slate-900">{{ $standard->name }} — Subjects</h3>
-                            <p class="text-xs text-slate-500 mt-0.5">{{ $standard->bookSubjects->count() }} subject(s) · {{ ucfirst($medium) }} medium</p>
+                            <p class="text-xs text-slate-500 mt-0.5">
+                                {{ $standard->bookSubjects->count() }} subject(s) · {{ ucfirst($standard->books_medium ?? $medium) }} medium
+                                · {{ ($standard->allows_full_material ?? false) ? 'Full material' : 'Index only (Std 1–4)' }}
+                            </p>
                         </div>
                     </div>
 
                     <div class="student-subjects-grid">
                         @foreach ($standard->bookSubjects as $subject)
                             @php $variant = $variants[$loop->index % count($variants)]; @endphp
-                            <a href="{{ route('principal.books.show', ['subject' => $subject, 'medium' => $medium]) }}"
+                            <a href="{{ route('principal.books.show', ['subject' => $subject, 'medium' => ($standard->books_medium ?? $medium)]) }}"
                                class="group student-subject-card {{ $variant }}">
                                 <span class="student-subject-card-index">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
                                 <div class="student-subject-card-icon">

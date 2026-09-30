@@ -27,12 +27,6 @@ class MaterialTopicReader
      */
     public static function forTopic(MaterialTopic $materialTopic): array
     {
-        $section = $materialTopic->sectionData();
-
-        if ($section === null) {
-            throw new \InvalidArgumentException('This material topic has no content yet.');
-        }
-
         $material = $materialTopic->relationLoaded('material')
             ? $materialTopic->material
             : $materialTopic->material()->first();
@@ -40,6 +34,19 @@ class MaterialTopicReader
         $language = strtolower((string) ($material?->medium ?: 'english'));
         if (! in_array($language, ['english', 'hindi', 'gujarati'], true)) {
             $language = 'english';
+        }
+
+        $section = $materialTopic->sectionData();
+        if ($section === null) {
+            // Topic listed as generated but JSON missing — show reader shell, not a crash.
+            return self::hydrate($materialTopic, $material, [
+                'language' => $language,
+                'title' => $materialTopic->displayName(),
+                'total_questions' => 0,
+                'sections' => [],
+                'questions' => [],
+                'workedExamples' => [],
+            ]);
         }
 
         try {

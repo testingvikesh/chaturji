@@ -5,12 +5,14 @@
     'materialChapterRoute' => 'student.materials.show',
     'topicRouteExtra' => [],
     'emptyText' => 'No material chapters available for this subject yet.',
+    'topicsClickable' => true,
 ])
 
 @php
     use App\Support\MaterialWorkedExamples;
 
     $isExampleSubject = MaterialWorkedExamples::isExampleSubject($subject);
+    $topicsClickable = (bool) $topicsClickable;
     $topicRouteExtraQuery = $topicRouteExtra === [] ? '' : ('?'.http_build_query($topicRouteExtra));
 
     // Build topic URLs without calling route() hundreds of times.
@@ -54,7 +56,7 @@
                     $examplesCount = max($topics->count(), (int) ($material->topics_done ?? 0));
                     $openExamplesDirect = $examplesCount > 0;
                 }
-                $chapterUrl = $openExamplesDirect
+                $chapterUrl = ($topicsClickable && $openExamplesDirect)
                     ? route($materialChapterRoute, array_merge([
                         'subject' => $subject,
                         'material' => $material,
@@ -126,44 +128,58 @@
                                     @php
                                         $topicNo = $chapterNo.'.'.($topic->topic_order ?: $loop->iteration);
                                         $topicName = $topic->displayName();
-                                        if ($studentTopicBase) {
-                                            $topicUrl = $studentTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
-                                        } elseif ($teacherTopicBase) {
-                                            $topicUrl = $teacherTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
-                                        } elseif ($principalTopicBase) {
-                                            $topicUrl = $principalTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
-                                        } elseif ($adminTopicBase) {
-                                            $topicUrl = $adminTopicBase.'/'.$topic->id;
-                                        } else {
-                                            $topicUrl = route($materialTopicRoute, array_merge([
-                                                'subject' => $subject,
-                                                'materialTopic' => $topic,
-                                            ], $topicRouteExtra));
+                                        $topicUrl = null;
+                                        if ($topicsClickable) {
+                                            if ($studentTopicBase) {
+                                                $topicUrl = $studentTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
+                                            } elseif ($teacherTopicBase) {
+                                                $topicUrl = $teacherTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
+                                            } elseif ($principalTopicBase) {
+                                                $topicUrl = $principalTopicBase.'/'.$topic->id.$topicRouteExtraQuery;
+                                            } elseif ($adminTopicBase) {
+                                                $topicUrl = $adminTopicBase.'/'.$topic->id;
+                                            } else {
+                                                $topicUrl = route($materialTopicRoute, array_merge([
+                                                    'subject' => $subject,
+                                                    'materialTopic' => $topic,
+                                                ], $topicRouteExtra));
+                                            }
                                         }
                                     @endphp
 
-                                    <a href="{{ $topicUrl }}" class="book-index-topic book-index-topic--link group">
-                                        <span class="book-index-topic-no">{{ $topicNo }}</span>
-                                        <span class="book-index-topic-name group-hover:text-brand-green">{{ $topicName }}</span>
-                                        <span class="book-index-topic-dots" aria-hidden="true"></span>
-                                        <span class="book-index-topic-page">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
-                                        <span class="book-index-topic-arrow" aria-hidden="true">
-                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                                        </span>
-                                    </a>
+                                    @if ($topicUrl)
+                                        <a href="{{ $topicUrl }}" class="book-index-topic book-index-topic--link group">
+                                            <span class="book-index-topic-no">{{ $topicNo }}</span>
+                                            <span class="book-index-topic-name group-hover:text-brand-green">{{ $topicName }}</span>
+                                            <span class="book-index-topic-dots" aria-hidden="true"></span>
+                                            <span class="book-index-topic-page">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
+                                            <span class="book-index-topic-arrow" aria-hidden="true">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                            </span>
+                                        </a>
+                                    @else
+                                        <div class="book-index-topic">
+                                            <span class="book-index-topic-no">{{ $topicNo }}</span>
+                                            <span class="book-index-topic-name">{{ $topicName }}</span>
+                                            <span class="book-index-topic-dots" aria-hidden="true"></span>
+                                            <span class="book-index-topic-page">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
+                                        </div>
+                                    @endif
                                 @endforeach
                                 @php
                                     $swadhyayUrl = null;
-                                    if ($adminTopicBase) {
-                                        $swadhyayUrl = url('/admin/materials/'.($topicRouteExtra['medium'] ?? 'english').'/subjects/'.$subject->id.'/materials/'.$material->id.'/swadhyay');
-                                    } elseif ($studentTopicBase) {
-                                        $swadhyayUrl = url('/student/subjects/'.$subject->id.'/materials/'.$material->id.'/swadhyay');
-                                    } elseif ($teacherTopicBase) {
-                                        $swadhyayUrl = url('/teacher/books/'.$subject->id.'/materials/'.$material->id.'/swadhyay').$topicRouteExtraQuery;
-                                    } elseif ($principalTopicBase) {
-                                        $swadhyayUrl = url('/principal/books/'.$subject->id.'/materials/'.$material->id.'/swadhyay').$topicRouteExtraQuery;
-                                    } elseif ($materialTopicRoute === 'student.self-practice.material-topics.show') {
-                                        $swadhyayUrl = url('/student/self-practice/subjects/'.$subject->id.'/materials/'.$material->id.'/swadhyay');
+                                    if ($topicsClickable) {
+                                        if ($adminTopicBase) {
+                                            $swadhyayUrl = url('/admin/materials/'.($topicRouteExtra['medium'] ?? 'english').'/subjects/'.$subject->id.'/materials/'.$material->id.'/swadhyay');
+                                        } elseif ($studentTopicBase) {
+                                            $swadhyayUrl = url('/student/subjects/'.$subject->id.'/materials/'.$material->id.'/swadhyay');
+                                        } elseif ($teacherTopicBase) {
+                                            $swadhyayUrl = url('/teacher/books/'.$subject->id.'/materials/'.$material->id.'/swadhyay').$topicRouteExtraQuery;
+                                        } elseif ($principalTopicBase) {
+                                            $swadhyayUrl = url('/principal/books/'.$subject->id.'/materials/'.$material->id.'/swadhyay').$topicRouteExtraQuery;
+                                        } elseif ($materialTopicRoute === 'student.self-practice.material-topics.show') {
+                                            $swadhyayUrl = url('/student/self-practice/subjects/'.$subject->id.'/materials/'.$material->id.'/swadhyay');
+                                        }
                                     }
                                 @endphp
                                 @if ($swadhyayUrl)

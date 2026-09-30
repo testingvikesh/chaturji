@@ -17,20 +17,39 @@ use Illuminate\View\View;
 
 class BookController extends Controller
 {
+    /** Full topic/material content opens only from this standard number upward. */
+    private const FULL_MATERIAL_FROM_STANDARD = 5;
+
     public function index(Request $request): View
     {
         $principal = auth()->user();
         $allotted = $this->allottedStandards($principal);
         $medium = $this->resolveMedium($request, $allotted);
 
+        // Show every allotted standard. Prefer the selected medium; if empty, try the other medium
+        // so primary/secondary books still list subjects (same as higher standards).
         $standards = $allotted
-            ->filter(fn (Standard $standard) => $this->standardMatchesMedium($standard, $medium))
             ->map(function (Standard $standard) use ($medium) {
                 $subjects = Material::subjectsForStudent($standard, $medium);
+                $usedMedium = $medium;
+                if ($subjects->isEmpty()) {
+                    foreach (array_keys(Standard::MEDIUMS) as $fallbackMedium) {
+                        if ($fallbackMedium === $medium) {
+                            continue;
+                        }
+                        $subjects = Material::subjectsForStudent($standard, $fallbackMedium);
+                        if ($subjects->isNotEmpty()) {
+                            $usedMedium = $fallbackMedium;
+                            break;
+                        }
+                    }
+                }
                 if ($subjects->isEmpty()) {
                     return null;
                 }
                 $standard->setRelation('bookSubjects', $subjects);
+                $standard->setAttribute('books_medium', $usedMedium);
+                $standard->setAttribute('allows_full_material', $this->allowsFullMaterial($standard));
 
                 return $standard;
             })
@@ -67,14 +86,29 @@ class BookController extends Controller
         abort_unless($subject->is_active, 404);
 
         $principal = auth()->user();
-        $medium = $this->resolveMedium($request, $this->allottedStandards($principal));
         $this->assertAllotted($principal, $subject);
 
         $subject->loadMissing('standard');
         $standard = $subject->standard;
         abort_unless($standard && $standard->is_active, 404);
 
+        $medium = $this->resolveMediumForSubject($request, $subject, $this->allottedStandards($principal));
         $materials = Material::forStudentSubject($subject, $medium);
+        // If the selected medium has no chapters, fall back so primary/secondary books still open.
+        if ($materials->isEmpty()) {
+            foreach (array_keys(Standard::MEDIUMS) as $fallbackMedium) {
+                if ($fallbackMedium === $medium) {
+                    continue;
+                }
+                $materials = Material::forStudentSubject($subject, $fallbackMedium);
+                if ($materials->isNotEmpty()) {
+                    $medium = $fallbackMedium;
+                    break;
+                }
+            }
+        }
+
+        $allowsFullMaterial = $this->allowsFullMaterial($standard);
 
         return view('principal.books.show', [
             'principal' => $principal,
@@ -82,37 +116,38 @@ class BookController extends Controller
             'subject' => $subject,
             'materials' => $materials,
             'medium' => $medium,
+            'allowsFullMaterial' => $allowsFullMaterial,
         ]);
     }
 
-    public function topic(Request $request, Subject $subject, MaterialTopic $materialTopic): View
+    public function topic(Request $request, Subject $subject, MaterialTopic $materialTopic): View|\Illuminate\Http\RedirectResponse
     {
         $principal = auth()->user();
-        $medium = $this->resolveMedium($request, $this->allottedStandards($principal));
         $this->assertAllotted($principal, $subject);
+        abort_unless($subject->is_active, 404);
+
+        $subject->loadMissing('standard');
+        $standard = $subject->standard;
+        $medium = $this->resolveMediumForSubject($request, $subject, $this->allottedStandards($principal));
+
+        // Std 1–4: index only (subject / chapter / topic). Full material from Std 5.
+        if (! $this->allowsFullMaterial($standard)) {
+            return redirect()
+                ->route('principal.books.show', ['subject' => $subject, 'medium' => $medium])
+                ->with('error', 'Full material opens from Standard 5. For Standard 1–4 only subject, chapter and topic list is shown.');
+        }
 
         $materialTopic->load(['material.chapter.subject.standard']);
         $material = $materialTopic->material;
         $chapter = $material?->chapter;
+        abort_unless($material && $material->matchesStudentSubject($subject), 404);
 
-        abort_unless(
-            $subject->is_active
-            && $material
-            && $materialTopic->hasContent()
-            && (
-                ($chapter && (int) $chapter->subject_id === (int) $subject->id && $chapter->is_active
-                    && in_array(trim((string) $material->subject), ['', $subject->name], true))
-                || strcasecmp(trim((string) $material->subject), trim($subject->name)) === 0
-            )
-            && (
-                Material::normalizeMedium($medium) === null
-                || Material::normalizeMedium($material->medium) === Material::normalizeMedium($medium)
-            ),
-            404
+        $medium = $this->resolveMediumForSubject(
+            $request,
+            $subject,
+            $this->allottedStandards($principal),
+            $material
         );
-
-        $subject->loadMissing('standard');
-        $standard = $subject->standard;
 
         $payload = MaterialTopicReader::forTopic($materialTopic);
 
@@ -142,22 +177,26 @@ class BookController extends Controller
         ]);
     }
 
-    public function material(Request $request, Subject $subject, Material $material): View
+    public function material(Request $request, Subject $subject, Material $material): View|\Illuminate\Http\RedirectResponse
     {
         abort_unless($subject->is_active, 404);
 
         $principal = auth()->user();
-        $medium = $this->resolveMedium($request, $this->allottedStandards($principal));
         $this->assertAllotted($principal, $subject);
+
+        $subject->loadMissing('standard');
+        $medium = $this->resolveMediumForSubject($request, $subject, $this->allottedStandards($principal), $material);
+
+        if (! $this->allowsFullMaterial($subject->standard)) {
+            return redirect()
+                ->route('principal.books.show', ['subject' => $subject, 'medium' => $medium])
+                ->with('error', 'Full material opens from Standard 5. For Standard 1–4 only subject, chapter and topic list is shown.');
+        }
 
         $material->load(['chapter.subject.standard', 'topics' => fn ($q) => $q->orderBy('topic_order')]);
 
         abort_unless(
             $material->matchesStudentSubject($subject)
-            && (
-                Material::normalizeMedium($medium) === null
-                || Material::normalizeMedium($material->medium) === Material::normalizeMedium($medium)
-            )
             && MaterialWorkedExamples::isExampleSubject($subject),
             404
         );
@@ -205,6 +244,13 @@ class BookController extends Controller
         );
     }
 
+    private function allowsFullMaterial(?Standard $standard): bool
+    {
+        $number = (int) Material::standardNumber($standard);
+
+        return $number >= self::FULL_MATERIAL_FROM_STANDARD;
+    }
+
     private function resolveMedium(Request $request, Collection $allotted): string
     {
         $requested = Material::normalizeMedium($request->query('medium'));
@@ -225,14 +271,32 @@ class BookController extends Controller
         return 'english';
     }
 
-    private function standardMatchesMedium(Standard $standard, string $medium): bool
-    {
-        $standardMedium = Material::normalizeMedium($standard->medium) ?: $standard->medium;
-        if ($standardMedium === '' || $standardMedium === null) {
-            return true;
+    /**
+     * Prefer URL medium, then the material's medium, then the standard's medium.
+     */
+    private function resolveMediumForSubject(
+        Request $request,
+        Subject $subject,
+        Collection $allotted,
+        ?Material $material = null
+    ): string {
+        $requested = Material::normalizeMedium($request->query('medium'));
+        if ($requested && array_key_exists($requested, Standard::MEDIUMS)) {
+            return $requested;
         }
 
-        return $standardMedium === $medium;
+        $fromMaterial = Material::normalizeMedium($material?->medium);
+        if ($fromMaterial && array_key_exists($fromMaterial, Standard::MEDIUMS)) {
+            return $fromMaterial;
+        }
+
+        $subject->loadMissing('standard');
+        $fromStandard = Material::normalizeMedium($subject->standard?->medium);
+        if ($fromStandard && array_key_exists($fromStandard, Standard::MEDIUMS)) {
+            return $fromStandard;
+        }
+
+        return $this->resolveMedium($request, $allotted);
     }
 
     private function readerNav(User $principal, ?Standard $standard, string $medium): array
