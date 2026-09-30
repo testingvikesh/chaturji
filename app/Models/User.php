@@ -137,6 +137,32 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    /** Students mentored by this teacher (1 teacher → many students). */
+    public function mentoredStudents(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'mentor_students', 'teacher_id', 'student_id')
+            ->withPivot(['principal_id', 'medium', 'standard'])
+            ->withTimestamps();
+    }
+
+    public function mentorAssignments(): HasMany
+    {
+        return $this->hasMany(MentorStudent::class, 'teacher_id');
+    }
+
+    /** Mentor assignment row when this user is a student. */
+    public function menteeAssignment(): HasOne
+    {
+        return $this->hasOne(MentorStudent::class, 'student_id');
+    }
+
+    public function mentor(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'mentor_students', 'student_id', 'teacher_id')
+            ->withPivot(['principal_id', 'medium', 'standard'])
+            ->withTimestamps();
+    }
+
     public function standardLabel(): string
     {
         if (! $this->standard) {
