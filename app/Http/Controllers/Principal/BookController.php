@@ -54,6 +54,7 @@ class BookController extends Controller
                 return $standard;
             })
             ->filter()
+            ->sortBy(fn (Standard $standard) => (int) Material::standardNumber($standard))
             ->values();
 
         $mediums = collect(Standard::MEDIUMS)
@@ -232,7 +233,7 @@ class BookController extends Controller
 
         return $principal->allottedStandards()
             ->where('is_active', true)
-            ->orderBy('sort_order')
+            ->orderedByNumber()
             ->get();
     }
 

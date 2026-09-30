@@ -73,8 +73,7 @@ class ReportController extends Controller
         }
 
         $query = User::students()
-            ->whereIn('standard', $allottedSlugs)
-            ->orderBy('name');
+            ->whereIn('standard', $allottedSlugs);
 
         if ($standardSlug !== '') {
             $query->where('standard', $standardSlug);
@@ -94,6 +93,13 @@ class ReportController extends Controller
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
+
+        // Standard-wise ascending (allotted order 1→N), then name.
+        if ($allottedSlugs !== []) {
+            $placeholders = implode(',', array_fill(0, count($allottedSlugs), '?'));
+            $query->orderByRaw('FIELD(standard, '.$placeholders.')', $allottedSlugs);
+        }
+        $query->orderBy('name');
 
         $students = $query->paginate(200)->withQueryString();
 
@@ -261,6 +267,22 @@ class ReportController extends Controller
         }
 
         $teachers = $query->paginate(200)->withQueryString();
+
+        // Subject chips: standard ascending (1, 2, 3…).
+        $standardOrder = $standards->pluck('id')->values()->flip();
+        $teachers->getCollection()->transform(function (User $teacher) use ($standardOrder) {
+            $teacher->setRelation(
+                'teacherSubjects',
+                $teacher->teacherSubjects
+                    ->sortBy([
+                        fn ($row) => $standardOrder[(int) $row->standard_id] ?? 999,
+                        fn ($row) => mb_strtolower((string) ($row->subject?->name ?? '')),
+                    ])
+                    ->values()
+            );
+
+            return $teacher;
+        });
 
         $assignmentQuery = TeacherSubject::query()->whereIn('standard_id', $allottedIds);
         if ($medium !== '') {

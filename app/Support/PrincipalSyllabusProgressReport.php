@@ -236,12 +236,28 @@ class PrincipalSyllabusProgressReport
             ];
         })->values();
 
-        $teachers = $rows->groupBy('teacher_id')->map(function (Collection $group) {
+        // Standard-wise ascending (1, 2, 3…), then teacher, then subject.
+        $standardOrder = $allotted->pluck('id')->values()->flip();
+        $rows = $rows
+            ->sortBy([
+                fn (array $r) => $standardOrder[$r['standard_id']] ?? 999,
+                fn (array $r) => mb_strtolower((string) $r['teacher']),
+                fn (array $r) => mb_strtolower((string) $r['subject']),
+            ])
+            ->values();
+
+        $teachers = $rows->groupBy('teacher_id')->map(function (Collection $group) use ($standardOrder) {
             $first = $group->first();
             $topicsTotal = (int) $group->sum('topics_total');
             $topicsComplete = (int) $group->sum('topics_complete');
             $topicsRemain = (int) $group->sum('topics_remain');
             $pctComplete = $topicsTotal > 0 ? (int) round(($topicsComplete / $topicsTotal) * 100) : 0;
+            $sortedRows = $group
+                ->sortBy([
+                    fn (array $r) => $standardOrder[$r['standard_id']] ?? 999,
+                    fn (array $r) => mb_strtolower((string) $r['subject']),
+                ])
+                ->values();
 
             return [
                 'teacher_id' => $first['teacher_id'],
@@ -254,9 +270,12 @@ class PrincipalSyllabusProgressReport
                 'percent_complete' => $pctComplete,
                 'percent_remain' => $topicsTotal > 0 ? max(0, 100 - $pctComplete) : 0,
                 'status' => $this->statusTone($pctComplete, $topicsTotal),
-                'rows' => $group->values(),
+                'rows' => $sortedRows,
             ];
-        })->sortBy('teacher')->values();
+        })->sortBy([
+            fn (array $t) => $standardOrder[$t['rows']->first()['standard_id'] ?? 0] ?? 999,
+            fn (array $t) => mb_strtolower((string) $t['teacher']),
+        ])->values();
 
         $topicsTotal = (int) $rows->sum('topics_total');
         $topicsComplete = (int) $rows->sum('topics_complete');

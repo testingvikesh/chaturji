@@ -46,7 +46,8 @@
             main { padding: 0 !important; }
             .admin-card { box-shadow: none !important; border-color: #cbd5e1 !important; break-inside: avoid; }
             .admin-table-wrap,
-            .overflow-x-auto { overflow: visible !important; }
+            .admin-table-wrap--sticky,
+            .overflow-x-auto { overflow: visible !important; max-height: none !important; }
 
             .admin-table,
             table.min-w-full {

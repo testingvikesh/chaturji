@@ -18,6 +18,7 @@ class DashboardController extends Controller
         $principal = auth()->user();
         $allotted = $principal->allottedStandards()
             ->where('is_active', true)
+            ->orderedByNumber()
             ->get(['standards.id', 'standards.slug']);
 
         $allottedIds = $allotted->pluck('id')->map(fn ($id) => (int) $id)->all();

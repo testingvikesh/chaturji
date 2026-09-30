@@ -90,7 +90,7 @@
                     </p>
                 </div>
             </div>
-            <div class="admin-table-wrap">
+            <div class="admin-table-wrap admin-table-wrap--sticky">
                 <table class="admin-table">
                     <thead>
                         <tr>

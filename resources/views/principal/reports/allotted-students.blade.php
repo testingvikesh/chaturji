@@ -114,7 +114,7 @@
                     </div>
                     <a href="{{ route('principal.students.create') }}" class="admin-btn-primary">Add Student</a>
                 </div>
-                <div class="admin-table-wrap">
+                <div class="admin-table-wrap admin-table-wrap--sticky">
                     <table class="admin-table">
                         <thead>
                             <tr>

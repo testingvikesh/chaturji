@@ -1766,6 +1766,28 @@
         @apply overflow-x-auto;
     }
 
+    /* Sticky report table headers while scrolling the table body */
+    .admin-table-wrap--sticky {
+        @apply max-h-[min(70vh,42rem)] overflow-auto;
+    }
+
+    .admin-table-wrap--sticky .admin-table thead th {
+        @apply sticky top-0 z-20 shadow-sm;
+        background-color: rgb(20, 42, 98);
+        background-image: linear-gradient(to right, rgb(26, 54, 124), rgb(20, 42, 98));
+    }
+
+    @media print {
+        .admin-table-wrap--sticky {
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        .admin-table-wrap--sticky .admin-table thead th {
+            position: static !important;
+            box-shadow: none !important;
+        }
+    }
+
     .admin-table {
         @apply min-w-full text-sm;
     }

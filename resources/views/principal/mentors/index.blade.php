@@ -68,7 +68,7 @@
                         <p class="text-xs text-slate-500 mt-0.5">1 teacher can mentor many students</p>
                     </div>
                 </div>
-                <div class="admin-table-wrap">
+                <div class="admin-table-wrap admin-table-wrap--sticky">
                     <table class="admin-table">
                         <thead>
                             <tr>

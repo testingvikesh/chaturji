@@ -69,18 +69,22 @@
                 </div>
             </div>
 
-            <div class="admin-card">
+            <div class="admin-card overflow-hidden">
                 <div class="admin-card-top"></div>
                 <div class="admin-card-header">
                     <div>
                         <h3 class="font-bold text-slate-900">Teacher syllabus completion</h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Complete / Remain = topics selected at teacher <strong>logout report</strong> (latest status per topic) · Total = book material topics
+                            Complete / Remain from teacher <strong>logout report</strong> topics · Total = book material topics
                         </p>
                     </div>
+                    <div class="hidden sm:flex items-center gap-2 text-[11px] text-slate-500 report-print-hide">
+                        <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm bg-slate-50 border border-slate-200"></span> Teacher A</span>
+                        <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm bg-brand-green-50 border border-brand-green-100"></span> Teacher B</span>
+                    </div>
                 </div>
-                <div class="admin-table-wrap">
-                    <table class="admin-table">
+                <div class="admin-table-wrap admin-table-wrap--sticky">
+                    <table class="admin-table syllabus-progress-table">
                         <thead>
                             <tr>
                                 <th>Teacher</th>
@@ -98,36 +102,73 @@
                         </thead>
                         <tbody>
                             @forelse ($teachers as $teacherGroup)
+                                @php
+                                    $band = $loop->even ? 'syllabus-teacher-band--a' : 'syllabus-teacher-band--b';
+                                    $rowCount = $teacherGroup['rows']->count();
+                                @endphp
                                 @foreach ($teacherGroup['rows'] as $row)
-                                    <tr>
+                                    <tr class="{{ $band }}">
                                         @if ($loop->first)
-                                            <td rowspan="{{ $teacherGroup['rows']->count() }}" class="align-top">
-                                                <p class="font-semibold text-slate-900">{{ $teacherGroup['teacher'] }}</p>
-                                                <p class="text-xs text-slate-400">{{ $teacherGroup['mobile'] ?: '' }}</p>
-                                                <p class="text-xs text-brand-green font-semibold mt-1">
-                                                    {{ $teacherGroup['subjects'] }} subject(s) · {{ $teacherGroup['percent_complete'] }}% done
-                                                </p>
+                                            <td rowspan="{{ $rowCount }}" class="align-top syllabus-teacher-cell">
+                                                <div class="flex items-start gap-3">
+                                                    <span class="admin-avatar shrink-0">{{ strtoupper(substr($teacherGroup['teacher'], 0, 2)) }}</span>
+                                                    <div class="min-w-0">
+                                                        <p class="font-semibold text-slate-900 leading-snug">{{ $teacherGroup['teacher'] }}</p>
+                                                        <p class="text-xs text-slate-400 mt-0.5">{{ $teacherGroup['mobile'] ?: '—' }}</p>
+                                                        <div class="mt-2 flex flex-wrap gap-1.5">
+                                                            <span class="inline-flex items-center rounded-full bg-white/80 border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                                                                {{ $teacherGroup['subjects'] }} subject{{ $teacherGroup['subjects'] === 1 ? '' : 's' }}
+                                                            </span>
+                                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold
+                                                                {{ $teacherGroup['percent_complete'] >= 80 ? 'bg-emerald-100 text-emerald-800' : ($teacherGroup['percent_complete'] >= 40 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800') }}">
+                                                                {{ $teacherGroup['percent_complete'] }}% done
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td rowspan="{{ $teacherGroup['rows']->count() }}" class="align-top text-center font-semibold">
-                                                {{ $teacherGroup['subjects'] }}
+                                            <td rowspan="{{ $rowCount }}" class="align-middle text-center">
+                                                <span class="inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl bg-white border border-slate-200 text-sm font-bold text-brand-green shadow-sm">
+                                                    {{ $teacherGroup['subjects'] }}
+                                                </span>
                                             </td>
                                         @endif
-                                        <td class="font-medium text-slate-800">{{ $row['subject'] }}</td>
-                                        <td class="text-sm">{{ $row['standard'] }}</td>
-                                        <td class="text-sm capitalize">{{ $row['medium'] }}</td>
-                                        <td class="text-right font-semibold">{{ $row['topics_total'] }}</td>
-                                        <td class="text-right text-emerald-700 font-semibold">{{ $row['topics_complete'] }}</td>
-                                        <td class="text-right text-amber-700 font-semibold">{{ $row['topics_remain'] }}</td>
+                                        <td>
+                                            <span class="font-semibold text-slate-800">{{ $row['subject'] }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="inline-flex rounded-full bg-white/70 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                                                {{ $row['standard'] }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize
+                                                {{ strtolower($row['medium']) === 'gujarati' ? 'bg-amber-50 text-amber-800 border border-amber-100' : 'bg-sky-50 text-sky-800 border border-sky-100' }}">
+                                                {{ $row['medium'] }}
+                                            </span>
+                                        </td>
                                         <td class="text-right">
-                                            <div class="inline-flex flex-col items-end gap-1 min-w-[4.5rem]">
-                                                <span class="font-bold text-slate-900">{{ $row['percent_complete'] }}%</span>
-                                                <span class="block h-1.5 w-16 rounded-full bg-slate-100 overflow-hidden">
-                                                    <span class="block h-full rounded-full {{ $row['status'] === 'good' ? 'bg-emerald-500' : ($row['status'] === 'warn' ? 'bg-amber-400' : ($row['status'] === 'empty' ? 'bg-slate-300' : 'bg-rose-400')) }}"
+                                            <span class="inline-flex min-w-[2rem] justify-end rounded-lg bg-slate-900/5 px-2 py-1 text-sm font-bold text-slate-800">{{ $row['topics_total'] }}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <span class="inline-flex min-w-[2rem] justify-end rounded-lg bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-700">{{ $row['topics_complete'] }}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <span class="inline-flex min-w-[2rem] justify-end rounded-lg bg-amber-50 px-2 py-1 text-sm font-bold text-amber-700">{{ $row['topics_remain'] }}</span>
+                                        </td>
+                                        <td class="text-right">
+                                            <div class="inline-flex flex-col items-end gap-1.5 min-w-[5rem]">
+                                                <span class="text-sm font-bold text-slate-900">{{ $row['percent_complete'] }}%</span>
+                                                <span class="block h-2 w-20 rounded-full bg-white/80 border border-slate-200/80 overflow-hidden shadow-inner">
+                                                    <span class="block h-full rounded-full transition-all
+                                                        {{ $row['status'] === 'good' ? 'bg-emerald-500' : ($row['status'] === 'warn' ? 'bg-amber-400' : ($row['status'] === 'empty' ? 'bg-slate-300' : 'bg-rose-500')) }}"
                                                           style="width: {{ min(100, $row['percent_complete']) }}%"></span>
                                                 </span>
                                             </div>
                                         </td>
-                                        <td class="text-right font-semibold text-slate-600">{{ $row['percent_remain'] }}%</td>
+                                        <td class="text-right">
+                                            <span class="text-sm font-semibold text-slate-600">{{ $row['percent_remain'] }}%</span>
+                                        </td>
                                         <td>
                                             @if ($row['status'] === 'good')
                                                 <span class="admin-badge-green">On track</span>
@@ -145,7 +186,7 @@
                                 @include('admin.partials.empty-row', [
                                     'colspan' => 11,
                                     'message' => 'No teacher subject allotments found',
-                                    'hint' => 'Teachers need subjects allotted; progress comes from daily syllabus complete marks.',
+                                    'hint' => 'Teachers need subjects allotted; progress comes from logout topic complete/remain.',
                                 ])
                             @endforelse
                         </tbody>
@@ -154,4 +195,35 @@
             </div>
         @endif
     </div>
+
+    @once
+        <style>
+            .syllabus-progress-table tbody tr.syllabus-teacher-band--a > td {
+                background-color: rgb(248, 250, 252); /* slate-50 */
+            }
+            .syllabus-progress-table tbody tr.syllabus-teacher-band--b > td {
+                background-color: rgb(240, 243, 250); /* brand-green-50 */
+            }
+            .syllabus-progress-table tbody tr.syllabus-teacher-band--a:hover > td,
+            .syllabus-progress-table tbody tr.syllabus-teacher-band--b:hover > td {
+                background-color: rgb(214, 222, 240); /* brand-green-100 */
+            }
+            .syllabus-progress-table tbody tr.syllabus-teacher-band--a .syllabus-teacher-cell {
+                border-left: 4px solid rgb(148, 163, 184); /* slate-400 */
+            }
+            .syllabus-progress-table tbody tr.syllabus-teacher-band--b .syllabus-teacher-cell {
+                border-left: 4px solid rgb(26, 54, 124); /* brand-green */
+            }
+            .syllabus-progress-table tbody tr > td {
+                border-bottom-color: rgba(148, 163, 184, 0.25);
+            }
+            @media print {
+                .syllabus-progress-table tbody tr.syllabus-teacher-band--a > td,
+                .syllabus-progress-table tbody tr.syllabus-teacher-band--b > td {
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+            }
+        </style>
+    @endonce
 </x-principal-layout>

@@ -116,8 +116,7 @@ class MentorController extends Controller
 
         $studentsQuery = User::students()
             ->approved()
-            ->whereIn('standard', $allottedSlugs ?: ['__none__'])
-            ->orderBy('name');
+            ->whereIn('standard', $allottedSlugs ?: ['__none__']);
 
         if ($standardSlug !== '') {
             $studentsQuery->where('standard', $standardSlug);
@@ -151,6 +150,15 @@ class MentorController extends Controller
         if ($onlyMine) {
             $students = $students->filter(fn (User $s) => in_array((int) $s->id, $assignedIds, true))->values();
         }
+
+        // Standard-wise ascending (1, 2, 3…), then name.
+        $standardOrder = $allotted->pluck('slug')->values()->flip();
+        $students = $students
+            ->sortBy([
+                fn (User $s) => $standardOrder[$s->standard] ?? 999,
+                fn (User $s) => mb_strtolower((string) $s->name),
+            ])
+            ->values();
 
         $standardNames = $allotted->pluck('name', 'slug');
 

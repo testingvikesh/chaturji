@@ -99,7 +99,7 @@
                         <p class="text-xs text-slate-500 mt-0.5">{{ $students->count() }} shown · your allotted standards</p>
                     </div>
                 </div>
-                <div class="admin-table-wrap">
+                <div class="admin-table-wrap admin-table-wrap--sticky">
                     <table class="admin-table">
                         <thead>
                             <tr>
