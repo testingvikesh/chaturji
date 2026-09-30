@@ -191,9 +191,9 @@ class StudentController extends Controller
         return response()->streamDownload(function () {
             $out = fopen('php://output', 'w');
             fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM for Excel
-            fputcsv($out, ['name', 'mobile', 'email', 'password']);
-            fputcsv($out, ['Rahul Patel', '9876543210', 'rahul@example.com', '']);
-            fputcsv($out, ['Priya Shah', '9876543211', '', 'MyPass@123']);
+            fputcsv($out, ['name', 'mobile', 'email', 'password', 'father_mobile', 'mother_mobile', 'father_email', 'mother_email']);
+            fputcsv($out, ['Rahul Patel', '9876543210', 'rahul@example.com', '', '', '', '', '']);
+            fputcsv($out, ['Priya Shah', '', '', 'MyPass@123', '9876543211', '9876543212', '', 'mother@example.com']);
             fclose($out);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -242,7 +242,10 @@ class StudentController extends Controller
             if ($header === null) {
                 $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) ($row[0] ?? ''));
                 $normalized = array_map(fn ($h) => strtolower(trim((string) $h)), $row);
-                if (in_array('name', $normalized, true) && in_array('mobile', $normalized, true)) {
+                $hasMobileCol = in_array('mobile', $normalized, true)
+                    || in_array('father_mobile', $normalized, true)
+                    || in_array('mother_mobile', $normalized, true);
+                if (in_array('name', $normalized, true) && $hasMobileCol) {
                     $header = $normalized;
                     continue;
                 }
@@ -256,17 +259,22 @@ class StudentController extends Controller
             }
 
             $name = $data['name'] ?? '';
-            $mobile = preg_replace('/\s+/', '', $data['mobile'] ?? '') ?: '';
-            $email = ($data['email'] ?? '') !== '' ? strtolower($data['email']) : null;
             $password = ($data['password'] ?? '') !== '' ? $data['password'] : $defaultPassword;
+            $fatherMobile = $this->normalizeMobile($data['father_mobile'] ?? $data['mobile'] ?? '');
+            $motherMobile = $this->normalizeMobile($data['mother_mobile'] ?? '');
+            $mobile = $this->firstFreeMobile([$fatherMobile, $motherMobile], $seenMobiles);
+            $email = $this->firstFreeEmail([
+                $data['father_email'] ?? $data['email'] ?? '',
+                $data['mother_email'] ?? '',
+            ]);
 
-            if ($name === '' && $mobile === '') {
+            if ($name === '' && $fatherMobile === '' && $motherMobile === '') {
                 continue;
             }
 
             if ($name === '' || $mobile === '') {
                 $skipped++;
-                $errors[] = "Row {$rowNum}: name and mobile are required.";
+                $errors[] = "Row {$rowNum}: name and a free father/mother mobile are required.";
                 continue;
             }
 
@@ -276,24 +284,7 @@ class StudentController extends Controller
                 continue;
             }
 
-            if (isset($seenMobiles[$mobile])) {
-                $skipped++;
-                $errors[] = "Row {$rowNum}: duplicate mobile {$mobile} in file.";
-                continue;
-            }
             $seenMobiles[$mobile] = true;
-
-            if (User::query()->where('mobile', $mobile)->exists()) {
-                $skipped++;
-                $errors[] = "Row {$rowNum}: mobile {$mobile} already registered.";
-                continue;
-            }
-
-            if ($email && User::query()->where('email', $email)->exists()) {
-                $skipped++;
-                $errors[] = "Row {$rowNum}: email {$email} already registered.";
-                continue;
-            }
 
             if ($sendMail && ! $email) {
                 $skipped++;
@@ -507,5 +498,61 @@ class StudentController extends Controller
         if ($user->role !== 'student') {
             abort(404);
         }
+    }
+
+    private function normalizeMobile(string $raw): string
+    {
+        $raw = trim($raw);
+        if ($raw !== '' && preg_match('/e/i', $raw) && is_numeric($raw)) {
+            $raw = sprintf('%.0f', (float) $raw);
+        }
+        preg_match_all('/\d+/', $raw, $matches);
+        foreach ($matches[0] as $digits) {
+            if (strlen($digits) >= 8) {
+                return strlen($digits) > 20 ? substr($digits, 0, 20) : $digits;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Prefer father mobile; if blank or already used, use mother mobile.
+     *
+     * @param  list<string>  $candidates
+     * @param  array<string, bool>  $seenInFile
+     */
+    private function firstFreeMobile(array $candidates, array $seenInFile): string
+    {
+        foreach ($candidates as $mobile) {
+            if ($mobile === '' || isset($seenInFile[$mobile])) {
+                continue;
+            }
+            if (! User::query()->where('mobile', $mobile)->exists()) {
+                return $mobile;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Prefer father email; if blank or already used, use mother email.
+     *
+     * @param  list<string>  $candidates
+     */
+    private function firstFreeEmail(array $candidates): ?string
+    {
+        foreach ($candidates as $raw) {
+            $email = strtolower(trim((string) $raw));
+            if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+            if (! User::query()->where('email', $email)->exists()) {
+                return $email;
+            }
+        }
+
+        return null;
     }
 }
