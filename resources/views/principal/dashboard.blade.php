@@ -11,13 +11,19 @@
             <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
         @endif
 
+        @if (! ($hasAllotments ?? false))
+            <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                No standard allotted yet. Ask admin to allot standards — reports show only your standards.
+            </div>
+        @endif
+
         <div class="grid sm:grid-cols-2 xl:grid-cols-6 gap-4">
-            @include('admin.partials.stat-card', ['label' => 'Students', 'value' => $totalStudents])
-            @include('admin.partials.stat-card', ['label' => 'Teachers', 'value' => $totalTeachers])
-            @include('admin.partials.stat-card', ['label' => 'Pending Students', 'value' => $pendingStudents, 'hint' => 'Awaiting approval'])
-            @include('admin.partials.stat-card', ['label' => 'Pending Teachers', 'value' => $pendingTeachers, 'hint' => 'Awaiting approval'])
-            @include('admin.partials.stat-card', ['label' => 'Today Logins', 'value' => $todayLogins])
-            @include('admin.partials.stat-card', ['label' => 'Active Sessions', 'value' => $activeSessions, 'hint' => '1-day session window'])
+            @include('admin.partials.stat-card', ['label' => 'Students', 'value' => $totalStudents, 'hint' => 'Your allotted standards'])
+            @include('admin.partials.stat-card', ['label' => 'Teachers', 'value' => $totalTeachers, 'hint' => 'On your allotted standards'])
+            @include('admin.partials.stat-card', ['label' => 'Pending Students', 'value' => $pendingStudents, 'hint' => 'Your standards'])
+            @include('admin.partials.stat-card', ['label' => 'Pending Teachers', 'value' => $pendingTeachers, 'hint' => 'Your standards'])
+            @include('admin.partials.stat-card', ['label' => 'Today Logins', 'value' => $todayLogins, 'hint' => 'Your standards only'])
+            @include('admin.partials.stat-card', ['label' => 'Active Sessions', 'value' => $activeSessions, 'hint' => 'Your standards only'])
         </div>
 
         <div class="admin-card mt-6">
@@ -44,7 +50,7 @@
         <div class="admin-card mt-6">
             <div class="admin-card-top"></div>
             <div class="admin-card-header">
-                <h3 class="font-bold text-slate-900">Recent School Logins</h3>
+                <h3 class="font-bold text-slate-900">Recent Logins (your standards)</h3>
             </div>
             <div class="admin-table-wrap">
                 <table class="admin-table">

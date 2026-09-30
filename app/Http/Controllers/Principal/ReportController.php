@@ -225,22 +225,24 @@ class ReportController extends Controller
             ]);
         }
 
+        // Only teachers who have subject allotments on this principal's standards.
+        // Eager-load also limited so other-standard subjects never appear in the report.
         $query = User::teachers()
             ->whereHas('teacherSubjects', function ($q) use ($allottedIds, $medium, $standardId) {
-                $q->whereIn('standard_id', $allottedIds);
+                $q->whereIn('teacher_subjects.standard_id', $allottedIds);
                 if ($medium !== '') {
-                    $q->whereRaw('LOWER(TRIM(medium)) = ?', [$medium]);
+                    $q->whereRaw('LOWER(TRIM(teacher_subjects.medium)) = ?', [$medium]);
                 }
                 if ($standardId) {
-                    $q->where('standard_id', $standardId);
+                    $q->where('teacher_subjects.standard_id', $standardId);
                 }
             })
             ->with([
                 'teacherSubjects' => function ($q) use ($allottedIds, $medium, $standardId) {
                     $q->with(['subject:id,name,standard_id', 'standard:id,name'])
-                        ->whereIn('standard_id', $allottedIds)
-                        ->when($medium !== '', fn ($inner) => $inner->whereRaw('LOWER(TRIM(medium)) = ?', [$medium]))
-                        ->when($standardId, fn ($inner) => $inner->where('standard_id', $standardId))
+                        ->whereIn('teacher_subjects.standard_id', $allottedIds)
+                        ->when($medium !== '', fn ($inner) => $inner->whereRaw('LOWER(TRIM(teacher_subjects.medium)) = ?', [$medium]))
+                        ->when($standardId, fn ($inner) => $inner->where('teacher_subjects.standard_id', $standardId))
                         ->orderBy('medium')
                         ->orderBy('standard_id')
                         ->orderBy('subject_id');
