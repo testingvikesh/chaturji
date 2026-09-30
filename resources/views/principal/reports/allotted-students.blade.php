@@ -3,7 +3,7 @@
         <div>
             <span class="admin-section-label">Principal</span>
             <h2 class="admin-page-title">Allotted Students</h2>
-            <p class="admin-page-subtitle">Students in the standards allotted to you — select and send login mail</p>
+            <p class="admin-page-subtitle">Add or edit students in your standards — select and send login mail</p>
         </div>
     </x-slot>
 
@@ -13,11 +13,13 @@
             this.selected = this.all ? @js($students->filter(fn ($s) => filled($s->email) && filter_var($s->email, FILTER_VALIDATE_EMAIL))->pluck('id')->map(fn ($id) => (string) $id)->values()) : [];
         }
     }">
+        @include('principal.partials.reports-nav')
+
         @if (session('success'))
-            <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
+            <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 report-print-hide">{{ session('success') }}</div>
         @endif
         @if (session('error'))
-            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
+            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 report-print-hide">{{ session('error') }}</div>
         @endif
 
         @if (! $hasAllotments)
@@ -110,6 +112,7 @@
                         <h3 class="font-bold text-slate-900">Students on your standards</h3>
                         <p class="text-xs text-slate-500 mt-0.5">{{ $students->total() }} student(s)</p>
                     </div>
+                    <a href="{{ route('principal.students.create') }}" class="admin-btn-primary">Add Student</a>
                 </div>
                 <div class="admin-table-wrap">
                     <table class="admin-table">
@@ -124,6 +127,7 @@
                                 <th>Standard</th>
                                 <th>Medium</th>
                                 <th>Status</th>
+                                <th class="text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -151,7 +155,7 @@
                                     </td>
                                     <td>{{ $student->mobile ?: '—' }}</td>
                                     <td>{{ $student->email ?: '—' }}</td>
-                                    <td>{{ $standardNames[$student->standard] ?? $student->standardLabel() }}</td>
+                                    <td>{{ ($standardNames[$student->standard] ?? null) ?: $student->standardLabel() }}</td>
                                     <td class="capitalize">{{ $student->medium ?: '—' }}</td>
                                     <td>
                                         @if ($student->is_approved)
@@ -160,12 +164,15 @@
                                             <span class="admin-badge-gold">Pending</span>
                                         @endif
                                     </td>
+                                    <td class="text-right">
+                                        <a href="{{ route('principal.students.edit', $student) }}" class="admin-btn-ghost text-sm">Edit</a>
+                                    </td>
                                 </tr>
                             @empty
                                 @include('admin.partials.empty-row', [
-                                    'colspan' => 7,
+                                    'colspan' => 8,
                                     'message' => 'No students found',
-                                    'hint' => 'Students appear here when their standard matches your allotted standards.',
+                                    'hint' => 'Use Add Student, or students appear when their standard matches your allotment.',
                                 ])
                             @endforelse
                         </tbody>

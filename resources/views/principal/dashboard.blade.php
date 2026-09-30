@@ -36,13 +36,17 @@
                     <p class="font-semibold text-slate-900 group-hover:text-brand-green">Books</p>
                     <p class="text-xs text-slate-500 mt-1">Open books for your allotted standards</p>
                 </a>
+                <a href="{{ route('principal.reports.index') }}" class="rounded-xl border border-slate-200 p-4 hover:border-brand-green-200 hover:bg-brand-green-50/50 transition group">
+                    <p class="font-semibold text-slate-900 group-hover:text-brand-green">Reports</p>
+                    <p class="text-xs text-slate-500 mt-1">All related reports with print</p>
+                </a>
                 <a href="{{ route('principal.reports.allotted-teachers') }}" class="rounded-xl border border-slate-200 p-4 hover:border-brand-green-200 hover:bg-brand-green-50/50 transition group">
                     <p class="font-semibold text-slate-900 group-hover:text-brand-green">Allotted Teachers</p>
                     <p class="text-xs text-slate-500 mt-1">Teachers on your allotted standards</p>
                 </a>
                 <a href="{{ route('principal.reports.allotted-students') }}" class="rounded-xl border border-slate-200 p-4 hover:border-brand-green-200 hover:bg-brand-green-50/50 transition group">
                     <p class="font-semibold text-slate-900 group-hover:text-brand-green">Allotted Students</p>
-                    <p class="text-xs text-slate-500 mt-1">Students in your allotted standards</p>
+                    <p class="text-xs text-slate-500 mt-1">Add, edit, and mail students in your standards</p>
                 </a>
             </div>
         </div>

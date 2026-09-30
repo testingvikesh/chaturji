@@ -8,6 +8,8 @@
     </x-slot>
 
     <div class="admin-page">
+        @include('principal.partials.reports-nav')
+
         @if (! $hasAllotments)
             <div class="admin-card">
                 <div class="p-8 text-center text-sm text-slate-500">
