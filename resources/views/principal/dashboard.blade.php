@@ -23,6 +23,27 @@
         <div class="admin-card mt-6">
             <div class="admin-card-top"></div>
             <div class="admin-card-header">
+                <h3 class="font-bold text-slate-900">Quick Actions</h3>
+            </div>
+            <div class="p-5 grid sm:grid-cols-2 gap-3">
+                <a href="{{ route('principal.books.index') }}" class="rounded-xl border border-slate-200 p-4 hover:border-brand-green-200 hover:bg-brand-green-50/50 transition group">
+                    <p class="font-semibold text-slate-900 group-hover:text-brand-green">Books</p>
+                    <p class="text-xs text-slate-500 mt-1">Open books for your allotted standards</p>
+                </a>
+                <a href="{{ route('principal.reports.allotted-teachers') }}" class="rounded-xl border border-slate-200 p-4 hover:border-brand-green-200 hover:bg-brand-green-50/50 transition group">
+                    <p class="font-semibold text-slate-900 group-hover:text-brand-green">Allotted Teachers</p>
+                    <p class="text-xs text-slate-500 mt-1">Teachers on your allotted standards</p>
+                </a>
+                <a href="{{ route('principal.reports.allotted-students') }}" class="rounded-xl border border-slate-200 p-4 hover:border-brand-green-200 hover:bg-brand-green-50/50 transition group">
+                    <p class="font-semibold text-slate-900 group-hover:text-brand-green">Allotted Students</p>
+                    <p class="text-xs text-slate-500 mt-1">Students in your allotted standards</p>
+                </a>
+            </div>
+        </div>
+
+        <div class="admin-card mt-6">
+            <div class="admin-card-top"></div>
+            <div class="admin-card-header">
                 <h3 class="font-bold text-slate-900">Recent School Logins</h3>
             </div>
             <div class="admin-table-wrap">

@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\TeacherTimetableController;
 use App\Http\Controllers\Principal\AuthController as PrincipalAuthController;
 use App\Http\Controllers\Principal\BookController as PrincipalBookController;
 use App\Http\Controllers\Principal\DashboardController as PrincipalDashboardController;
+use App\Http\Controllers\Principal\ReportController as PrincipalReportController;
 use App\Http\Controllers\Admin\TopicController;
 use App\Http\Controllers\ChapterOriginalPdfController;
 use App\Http\Controllers\MaterialPdfController;
@@ -119,6 +120,9 @@ Route::prefix('principal')->name('principal.')->group(function () {
         Route::get('/books/{subject}/materials/{material}/swadhyay', [\App\Http\Controllers\MaterialSwadhyayController::class, 'principal'])->name('books.materials.swadhyay');
         Route::get('/books/{subject}/materials/{material}', [PrincipalBookController::class, 'material'])->name('books.materials.show');
         Route::get('/books/{subject}/topics/{materialTopic}', [PrincipalBookController::class, 'topic'])->name('books.topics.show');
+        Route::get('/reports/allotted-teachers', [PrincipalReportController::class, 'allottedTeachers'])->name('reports.allotted-teachers');
+        Route::get('/reports/allotted-students', [PrincipalReportController::class, 'allottedStudents'])->name('reports.allotted-students');
+        Route::post('/reports/allotted-students/send-credentials', [PrincipalReportController::class, 'sendStudentCredentials'])->name('reports.send-student-credentials');
         Route::post('/logout', [PrincipalAuthController::class, 'destroy'])->name('logout');
     });
 });
