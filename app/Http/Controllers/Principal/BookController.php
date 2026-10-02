@@ -24,7 +24,10 @@ class BookController extends Controller
     {
         $principal = auth()->user();
         $allotted = $this->allottedStandards($principal);
-        $medium = $this->resolveMedium($request, $allotted);
+        $requestedMedium = Material::normalizeMedium($request->query('medium'));
+        $mediumFilter = ($requestedMedium && array_key_exists($requestedMedium, Standard::MEDIUMS))
+            ? $requestedMedium
+            : '';
         $search = $request->string('search')->trim()->toString();
         $standardId = $request->integer('standard_id') ?: null;
         $allottedIds = $allotted->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -36,68 +39,58 @@ class BookController extends Controller
             ? $allotted->where('id', $standardId)->values()
             : $allotted;
 
-        // Show allotted standards (filtered). Prefer selected medium; fallback so books still list.
+        $mediumsToShow = $mediumFilter !== ''
+            ? [$mediumFilter]
+            : array_keys(Standard::MEDIUMS);
+
+        // Standard-wise: show both English and Gujarati (or the selected medium filter).
         $standards = $source
-            ->map(function (Standard $standard) use ($medium, $search) {
-                $subjects = Material::subjectsForStudent($standard, $medium);
-                $usedMedium = $medium;
-                if ($subjects->isEmpty()) {
-                    foreach (array_keys(Standard::MEDIUMS) as $fallbackMedium) {
-                        if ($fallbackMedium === $medium) {
-                            continue;
+            ->sortBy(fn (Standard $standard) => (int) Material::standardNumber($standard))
+            ->map(function (Standard $standard) use ($mediumsToShow, $search) {
+                $mediumBlocks = collect($mediumsToShow)
+                    ->map(function (string $medium) use ($standard, $search) {
+                        $subjects = Material::subjectsForStudent($standard, $medium);
+                        if ($search !== '') {
+                            $needle = mb_strtolower($search);
+                            $subjects = $subjects
+                                ->filter(fn ($subject) => str_contains(mb_strtolower((string) $subject->name), $needle))
+                                ->values();
                         }
-                        $subjects = Material::subjectsForStudent($standard, $fallbackMedium);
-                        if ($subjects->isNotEmpty()) {
-                            $usedMedium = $fallbackMedium;
-                            break;
+                        if ($subjects->isEmpty()) {
+                            return null;
                         }
-                    }
-                }
-                if ($search !== '') {
-                    $needle = mb_strtolower($search);
-                    $subjects = $subjects
-                        ->filter(fn ($subject) => str_contains(mb_strtolower((string) $subject->name), $needle))
-                        ->values();
-                }
-                if ($subjects->isEmpty()) {
+
+                        return [
+                            'medium' => $medium,
+                            'label' => Standard::MEDIUMS[$medium] ?? ucfirst($medium),
+                            'subjects' => $subjects,
+                        ];
+                    })
+                    ->filter()
+                    ->values();
+
+                if ($mediumBlocks->isEmpty()) {
                     return null;
                 }
-                $standard->setRelation('bookSubjects', $subjects);
-                $standard->setAttribute('books_medium', $usedMedium);
+
+                $standard->setAttribute('medium_blocks', $mediumBlocks);
                 $standard->setAttribute('allows_full_material', $this->allowsFullMaterial($standard));
 
                 return $standard;
             })
             ->filter()
-            ->sortBy(fn (Standard $standard) => (int) Material::standardNumber($standard))
             ->values();
-
-        $mediums = collect(Standard::MEDIUMS)
-            ->only(
-                $allotted
-                    ->map(fn (Standard $s) => Material::normalizeMedium($s->medium) ?: $s->medium)
-                    ->filter(fn ($key) => array_key_exists((string) $key, Standard::MEDIUMS))
-                    ->unique()
-                    ->values()
-                    ->all()
-            )
-            ->all();
-
-        // Standards table medium may be empty; still allow english/gujarati tabs from materials.
-        if ($mediums === [] && $allotted->isNotEmpty()) {
-            $mediums = Standard::MEDIUMS;
-        }
 
         return view('principal.books.index', [
             'principal' => $principal,
-            'medium' => $medium,
-            'mediums' => $mediums,
+            'medium' => $mediumFilter,
+            'mediums' => Standard::MEDIUMS,
             'allottedStandards' => $allotted,
             'standards' => $standards,
             'hasAllotments' => $allotted->isNotEmpty(),
             'filters' => [
                 'search' => $search,
-                'medium' => $medium,
+                'medium' => $mediumFilter,
                 'standard_id' => $standardId ? (string) $standardId : '',
             ],
         ]);
