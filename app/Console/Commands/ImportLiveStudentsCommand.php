@@ -33,7 +33,7 @@ class ImportLiveStudentsCommand extends Command
         $skipped = 0;
 
         foreach ($rows as $row) {
-            $name = trim((string) ($row['name'] ?? ''));
+            $name = trim(preg_replace('/\s+/', ' ', (string) ($row['name'] ?? '')));
             $mobile = preg_replace('/\D+/', '', (string) ($row['mobile'] ?? '')) ?: '';
             $email = strtolower(trim((string) ($row['email'] ?? '')));
             $medium = (string) ($row['medium'] ?? '');
@@ -46,7 +46,8 @@ class ImportLiveStudentsCommand extends Command
                 continue;
             }
 
-            if ($email === '' || ! str_contains($email, '@')) {
+            // Only real parent emails from the sheet (father first, then mother). Never invent emails.
+            if ($email === '' || ! str_contains($email, '@') || str_ends_with($email, '@gseschaturji.com')) {
                 $email = null;
             }
 
@@ -77,17 +78,19 @@ class ImportLiveStudentsCommand extends Command
                     $dirty = true;
                 }
 
+                $current = strtolower(trim((string) $existing->email));
                 if ($email) {
                     $taken = User::query()
                         ->where('email', $email)
                         ->where('id', '!=', $existing->id)
                         ->exists();
-                    if (! $taken && (string) $existing->email !== $email) {
+                    if (! $taken && $current !== $email) {
                         $existing->email = $email;
                         $dirty = true;
                     }
-                } elseif (! filled($existing->email)) {
-                    $existing->email = User::makeUniqueStudentEmail($name, $mobile, $existing->id);
+                } elseif ($current !== '' && str_ends_with($current, '@gseschaturji.com')) {
+                    // Remove auto-generated placeholders; keep blank when Excel has no parent email.
+                    $existing->email = null;
                     $dirty = true;
                 }
 
@@ -104,9 +107,6 @@ class ImportLiveStudentsCommand extends Command
             if ($email && User::query()->where('email', $email)->exists()) {
                 $email = null;
             }
-            if (! $email) {
-                $email = User::makeUniqueStudentEmail($name, $mobile);
-            }
 
             User::query()->create([
                 'name' => $name,
@@ -121,20 +121,17 @@ class ImportLiveStudentsCommand extends Command
             $created++;
         }
 
-        // Fill any remaining blank student emails (other standards / old rows).
-        $filled = 0;
+        // Clear any leftover generated placeholder emails.
+        $cleared = 0;
         User::students()
-            ->where(function ($q) {
-                $q->whereNull('email')->orWhere('email', '');
-            })
-            ->orderBy('id')
-            ->each(function (User $student) use (&$filled) {
-                $student->email = User::makeUniqueStudentEmail((string) $student->name, (string) $student->mobile, $student->id);
+            ->where('email', 'like', '%@gseschaturji.com')
+            ->each(function (User $student) use (&$cleared) {
+                $student->email = null;
                 $student->save();
-                $filled++;
+                $cleared++;
             });
 
-        $this->info("Students imported: {$created} created, {$updated} updated, {$skipped} skipped, {$filled} blank emails filled.");
+        $this->info("Students imported: {$created} created, {$updated} updated, {$skipped} skipped, {$cleared} generated emails cleared.");
 
         return self::SUCCESS;
     }

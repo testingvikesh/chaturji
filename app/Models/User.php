@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -72,35 +71,6 @@ class User extends Authenticatable
     public function scopeStudents(Builder $query): Builder
     {
         return $query->where('role', 'student');
-    }
-
-    /**
-     * Build a unique student email when parent emails are blank/taken.
-     * Example: rajveer.jitendrabhai.6000000001@gseschaturji.com
-     */
-    public static function makeUniqueStudentEmail(string $name, string $mobile, ?int $ignoreUserId = null): string
-    {
-        $slug = Str::slug($name, '.');
-        $slug = $slug !== '' ? $slug : 'student';
-        $mobile = preg_replace('/\D+/', '', $mobile) ?: '0000000000';
-        $base = strtolower($slug.'.'.$mobile.'@gseschaturji.com');
-        $email = $base;
-        $n = 1;
-
-        while (true) {
-            $q = static::query()->where('email', $email);
-            if ($ignoreUserId) {
-                $q->where('id', '!=', $ignoreUserId);
-            }
-            if (! $q->exists()) {
-                return $email;
-            }
-            $email = str_replace('@gseschaturji.com', '.'.$n.'@gseschaturji.com', $base);
-            $n++;
-            if ($n > 100) {
-                return strtolower($slug.'.'.$mobile.'.'.uniqid().'@gseschaturji.com');
-            }
-        }
     }
 
     public function scopeTeachers(Builder $query): Builder

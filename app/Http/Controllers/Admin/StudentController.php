@@ -286,11 +286,6 @@ class StudentController extends Controller
 
             $seenMobiles[$mobile] = true;
 
-            // If father/mother email missing or taken, create a unique student email.
-            if (! $email) {
-                $email = User::makeUniqueStudentEmail($name, $mobile);
-            }
-
             if ($sendMail && ! $email) {
                 $skipped++;
                 $errors[] = "Row {$rowNum} ({$mobile}): email required when Send mail is checked.";
