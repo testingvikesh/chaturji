@@ -46,7 +46,6 @@ class ImportLiveStudentsCommand extends Command
                 continue;
             }
 
-            // Email is optional. Prefer the JSON email only when free (or already on this student).
             if ($email === '' || ! str_contains($email, '@')) {
                 $email = null;
             }
@@ -77,6 +76,7 @@ class ImportLiveStudentsCommand extends Command
                     $existing->is_approved = true;
                     $dirty = true;
                 }
+
                 if ($email) {
                     $taken = User::query()
                         ->where('email', $email)
@@ -86,6 +86,9 @@ class ImportLiveStudentsCommand extends Command
                         $existing->email = $email;
                         $dirty = true;
                     }
+                } elseif (! filled($existing->email)) {
+                    $existing->email = User::makeUniqueStudentEmail($name, $mobile, $existing->id);
+                    $dirty = true;
                 }
 
                 if ($dirty) {
@@ -101,6 +104,9 @@ class ImportLiveStudentsCommand extends Command
             if ($email && User::query()->where('email', $email)->exists()) {
                 $email = null;
             }
+            if (! $email) {
+                $email = User::makeUniqueStudentEmail($name, $mobile);
+            }
 
             User::query()->create([
                 'name' => $name,
@@ -115,7 +121,20 @@ class ImportLiveStudentsCommand extends Command
             $created++;
         }
 
-        $this->info("Students imported: {$created} created, {$updated} updated, {$skipped} skipped.");
+        // Fill any remaining blank student emails (other standards / old rows).
+        $filled = 0;
+        User::students()
+            ->where(function ($q) {
+                $q->whereNull('email')->orWhere('email', '');
+            })
+            ->orderBy('id')
+            ->each(function (User $student) use (&$filled) {
+                $student->email = User::makeUniqueStudentEmail((string) $student->name, (string) $student->mobile, $student->id);
+                $student->save();
+                $filled++;
+            });
+
+        $this->info("Students imported: {$created} created, {$updated} updated, {$skipped} skipped, {$filled} blank emails filled.");
 
         return self::SUCCESS;
     }
