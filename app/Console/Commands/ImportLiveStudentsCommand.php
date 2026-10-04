@@ -9,11 +9,11 @@ class ImportLiveStudentsCommand extends Command
 {
     protected $signature = 'students:import-sheet {file? : JSON file name inside database/data}';
 
-    protected $description = 'Create approved students from the uploaded school sheets';
+    protected $description = 'Create/update approved students from the uploaded school sheets';
 
     public function handle(): int
     {
-        $file = (string) ($this->argument('file') ?: 'live-students-2026-09-30.json');
+        $file = (string) ($this->argument('file') ?: 'live-students-class-6-10-2026-10-04.json');
         $path = database_path('data/'.$file);
         if (! is_file($path)) {
             $this->error('Student list file is missing: '.$file);
@@ -29,6 +29,7 @@ class ImportLiveStudentsCommand extends Command
         }
 
         $created = 0;
+        $updated = 0;
         $skipped = 0;
 
         foreach ($rows as $row) {
@@ -45,22 +46,66 @@ class ImportLiveStudentsCommand extends Command
                 continue;
             }
 
-            if (User::query()->where('mobile', $mobile)->exists()) {
-                $skipped++;
-                $this->line("Skip {$name}: mobile {$mobile} already registered");
+            // Email is optional. Prefer the JSON email only when free (or already on this student).
+            if ($email === '' || ! str_contains($email, '@')) {
+                $email = null;
+            }
+
+            $existing = User::query()->where('mobile', $mobile)->first();
+            if ($existing) {
+                if ($existing->role !== 'student') {
+                    $skipped++;
+                    $this->line("Skip {$name}: mobile {$mobile} belongs to a non-student");
+
+                    continue;
+                }
+
+                $dirty = false;
+                if ($existing->name !== $name) {
+                    $existing->name = $name;
+                    $dirty = true;
+                }
+                if ($existing->medium !== $medium) {
+                    $existing->medium = $medium;
+                    $dirty = true;
+                }
+                if ($existing->standard !== $standard) {
+                    $existing->standard = $standard;
+                    $dirty = true;
+                }
+                if (! $existing->is_approved) {
+                    $existing->is_approved = true;
+                    $dirty = true;
+                }
+                if ($email) {
+                    $taken = User::query()
+                        ->where('email', $email)
+                        ->where('id', '!=', $existing->id)
+                        ->exists();
+                    if (! $taken && (string) $existing->email !== $email) {
+                        $existing->email = $email;
+                        $dirty = true;
+                    }
+                }
+
+                if ($dirty) {
+                    $existing->save();
+                    $updated++;
+                } else {
+                    $skipped++;
+                }
 
                 continue;
             }
 
-            // Email is optional. Students log in with mobile; skip email only if already taken.
-            if ($email === '' || ! str_contains($email, '@') || User::query()->where('email', $email)->exists()) {
-                $email = '';
+            if ($email && User::query()->where('email', $email)->exists()) {
+                $email = null;
             }
 
             User::query()->create([
                 'name' => $name,
                 'mobile' => $mobile,
-                'email' => $email !== '' ? $email : null,
+                'email' => $email,
                 'medium' => $medium,
                 'standard' => $standard,
                 'password' => 'Student@123',
@@ -70,7 +115,7 @@ class ImportLiveStudentsCommand extends Command
             $created++;
         }
 
-        $this->info("Students imported: {$created} created, {$skipped} skipped.");
+        $this->info("Students imported: {$created} created, {$updated} updated, {$skipped} skipped.");
 
         return self::SUCCESS;
     }
