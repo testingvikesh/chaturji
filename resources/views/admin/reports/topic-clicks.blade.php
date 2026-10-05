@@ -7,7 +7,6 @@
     </x-slot>
 
     <div class="admin-page space-y-5">
-        @include('admin.partials.reports-nav')
         @include('partials.teacher-click-report', [
             'formAction' => route('admin.reports.topic-clicks'),
             'resetUrl' => route('admin.reports.topic-clicks'),

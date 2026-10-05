@@ -172,16 +172,17 @@
     };
 @endphp
 
-<div class="admin-page material-reader" x-data="{
+<div class="admin-page material-reader" @if ($clickTrackUrl) data-click-url="{{ $clickTrackUrl }}" @endif x-data="{
     pdfOpen: false,
     textbookOpen: false,
     textbookLoading: false,
     textbookTimer: null,
     summaryOpen: false,
     sectionWise: {{ $hideDetailsUntilEye ? 'true' : 'false' }},
-    clickUrl: @js($clickTrackUrl ?? ''),
+    clickUrl: '',
     openSections: {},
     init() {
+        this.clickUrl = this.$el.dataset.clickUrl || '';
         if (!this.sectionWise) {
             return;
         }
