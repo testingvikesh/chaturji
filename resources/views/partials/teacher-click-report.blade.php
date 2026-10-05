@@ -4,7 +4,11 @@
 
 <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
     @include('admin.partials.stat-card', ['label' => 'Total clicks', 'value' => $summary['clicks']])
-    @include('admin.partials.stat-card', ['label' => 'Total points', 'value' => $summary['points']])
+    @include('admin.partials.stat-card', [
+        'label' => 'Total points',
+        'value' => $summary['points'],
+        'hint' => 'Study lines and questions in opened sections. Each section counts once. Another open adds a click only.',
+    ])
     @include('admin.partials.stat-card', ['label' => 'Teachers', 'value' => $summary['teachers']])
     @include('admin.partials.stat-card', ['label' => 'Topics opened', 'value' => $summary['topics']])
 </div>
@@ -123,8 +127,9 @@
                     <th>Subject</th>
                     <th>Chapter</th>
                     <th>Topic</th>
-                    <th>Total points</th>
-                    <th>Total clicks</th>
+                    <th>Section</th>
+                    <th>Points</th>
+                    <th>Clicks</th>
                 </tr>
             </thead>
             <tbody>
@@ -132,7 +137,7 @@
                 @forelse ($rows as $row)
                     @if ($showTeacher && $lastTeacher !== $row->teacher_name)
                         <tr class="bg-slate-50">
-                            <td colspan="{{ $showTeacher ? 7 : 6 }}" class="font-bold text-slate-900">{{ $row->teacher_name }}</td>
+                            <td colspan="{{ $showTeacher ? 8 : 7 }}" class="font-bold text-slate-900">{{ $row->teacher_name }}</td>
                         </tr>
                         @php $lastTeacher = $row->teacher_name; @endphp
                     @endif
@@ -144,12 +149,13 @@
                         <td>{{ $row->subject_name }}</td>
                         <td>{{ $row->chapter_name ?: '—' }}</td>
                         <td>{{ $row->topic_name }}</td>
+                        <td>{{ $row->section_label ?: '—' }}</td>
                         <td>{{ (int) $row->total_points }}</td>
                         <td>{{ (int) $row->total_clicks }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ $showTeacher ? 7 : 6 }}" class="text-center text-slate-400 py-8">No topic clicks stored for this filter.</td>
+                        <td colspan="{{ $showTeacher ? 8 : 7 }}" class="text-center text-slate-400 py-8">No topic clicks stored for this filter.</td>
                     </tr>
                 @endforelse
             </tbody>
