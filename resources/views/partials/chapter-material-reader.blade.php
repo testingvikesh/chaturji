@@ -161,6 +161,13 @@
     }
     $hasSummaryLinks = $summaryLinks->isNotEmpty();
     $hideDetailsUntilEye = (bool) $hideDetailsUntilEye;
+    $tocToggleAttrs = function (string $anchor) use ($hideDetailsUntilEye): string {
+        if (! $hideDetailsUntilEye) {
+            return '';
+        }
+
+        return ' data-section="'.e($anchor).'" @click.prevent="toggleSection($el.dataset.section)" :class="isSectionOpen($el.dataset.section) ? \'is-open\' : \'\'" :aria-pressed="isSectionOpen($el.dataset.section) ? \'true\' : \'false\'"';
+    };
 @endphp
 
 <div class="admin-page material-reader" x-data="{
@@ -169,7 +176,60 @@
     textbookLoading: false,
     textbookTimer: null,
     summaryOpen: false,
-    detailsOpen: {{ $hideDetailsUntilEye ? 'false' : 'true' }},
+    sectionWise: {{ $hideDetailsUntilEye ? 'true' : 'false' }},
+    openSections: {},
+    init() {
+        if (!this.sectionWise) {
+            return;
+        }
+        const hash = (window.location.hash || '').replace(/^#/, '');
+        if (hash) {
+            this.openSections = { [hash]: true };
+            this.$nextTick(() => {
+                const el = document.getElementById(hash);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        }
+    },
+    isSectionOpen(id) {
+        if (!this.sectionWise) {
+            return true;
+        }
+        return !!(id && this.openSections[id]);
+    },
+    anySectionOpen() {
+        if (!this.sectionWise) {
+            return true;
+        }
+        return Object.keys(this.openSections).some((id) => this.openSections[id]);
+    },
+    toggleSection(id, scroll = true) {
+        if (!this.sectionWise || !id) {
+            return;
+        }
+        const next = { ...this.openSections };
+        if (next[id]) {
+            delete next[id];
+        } else {
+            next[id] = true;
+        }
+        this.openSections = next;
+        if (next[id]) {
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', '#' + id);
+            }
+            if (scroll) {
+                this.$nextTick(() => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            }
+        }
+    },
     topicPage: {{ $topicPageNumber ?: 0 }},
     startTextbookLoading() {
         this.textbookLoading = true;
@@ -211,8 +271,13 @@
         document.body.classList.remove('overflow-hidden');
     },
     goToSummaryPoint(anchor) {
-        this.detailsOpen = true;
         this.summaryOpen = false;
+        if (this.sectionWise && anchor) {
+            this.openSections = { ...this.openSections, [anchor]: true };
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', '#' + anchor);
+            }
+        }
         this.$nextTick(() => {
             const el = document.getElementById(anchor);
             if (!el) return;
@@ -253,25 +318,6 @@
                     class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 text-xs sm:text-sm font-semibold text-amber-900 shadow-sm transition hover:bg-amber-500 hover:text-white hover:border-amber-500">
                 <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                 Practice PDF
-            </button>
-        @endif
-        @if ($hideDetailsUntilEye)
-            <button type="button"
-                    @click="detailsOpen = !detailsOpen"
-                    class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs sm:text-sm font-semibold shadow-sm transition"
-                    :class="detailsOpen
-                        ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                        : 'border-brand-green-200 bg-brand-green text-white hover:bg-brand-green-dark'"
-                    :title="detailsOpen ? 'Hide all section details' : 'Show all section details'"
-                    :aria-pressed="detailsOpen.toString()">
-                <svg x-show="!detailsOpen" class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                </svg>
-                <svg x-show="detailsOpen" x-cloak class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
-                </svg>
-                <span x-text="detailsOpen ? 'Hide details' : 'Show all details'"></span>
             </button>
         @endif
     </div>
@@ -459,47 +505,74 @@
             ])
         </div>
 
+        @if ($hideDetailsUntilEye)
+            @once
+                <style>
+                    .material-reader-toc-link.is-open,
+                    .material-reader-toc-link.is-open:hover {
+                        background-color: rgb(26, 54, 124);
+                        color: #fff;
+                        border-color: rgb(26, 54, 124);
+                    }
+                    .material-reader-toc-link--question.is-open,
+                    .material-reader-toc-link--question.is-open:hover {
+                        background-color: #f59e0b;
+                        color: #fff;
+                        border-color: #f59e0b;
+                    }
+                    .material-reader-toc-link.is-open span,
+                    .material-reader-toc-link--question.is-open span {
+                        color: #fff;
+                        opacity: 0.9;
+                    }
+                </style>
+            @endonce
+        @endif
+
         <nav class="material-reader-toc admin-card" aria-label="Page contents">
             <div class="material-reader-toc-body pt-4">
+                @if ($hideDetailsUntilEye)
+                    <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Click a section to show or hide its details</p>
+                @endif
                 <div class="material-reader-toc-pills flex flex-wrap items-center gap-2">
                 @if ($introduction)
-                    <a href="#section-{{ $introduction->id }}" class="{{ $tocPillContent }}">Introduction</a>
+                    <a href="#section-{{ $introduction->id }}" {!! $tocToggleAttrs('section-'.$introduction->id) !!} class="{{ $tocPillContent }}">Introduction</a>
                 @endif
                 @if ($trailer)
-                    <a href="#section-{{ $trailer->id }}" class="{{ $tocPillContent }}">Trailer</a>
+                    <a href="#section-{{ $trailer->id }}" {!! $tocToggleAttrs('section-'.$trailer->id) !!} class="{{ $tocPillContent }}">Trailer</a>
                 @endif
                 @if ($importance)
-                    <a href="#section-{{ $importance->id }}" class="{{ $tocPillContent }}">Importance of this topic</a>
+                    <a href="#section-{{ $importance->id }}" {!! $tocToggleAttrs('section-'.$importance->id) !!} class="{{ $tocPillContent }}">Importance of this topic</a>
                 @endif
                 @if ($knowledgeLadderQuestions)
-                    <a href="#questions-knowledge_ladder" class="{{ $tocPillContent }}">
+                    <a href="#questions-knowledge_ladder" {!! $tocToggleAttrs('questions-knowledge_ladder') !!} class="{{ $tocPillContent }}">
                         Knowledge Ladder
                         <span class="opacity-70">({{ $knowledgeLadderQuestions->count() }})</span>
                     </a>
                 @endif
                 @if ($lineToLineQuestions)
-                    <a href="#questions-line_to_line" class="{{ $tocPillContent }}">
+                    <a href="#questions-line_to_line" {!! $tocToggleAttrs('questions-line_to_line') !!} class="{{ $tocPillContent }}">
                         Line to Line
                         <span class="opacity-70">({{ $lineToLineQuestions->count() }})</span>
                     </a>
                 @endif
                 @foreach ($bodySections as $section)
                     @continue($section->isGksSection())
-                    <a href="#section-{{ $section->id }}" class="{{ $tocPillContent }}">
+                    <a href="#section-{{ $section->id }}" {!! $tocToggleAttrs('section-'.$section->id) !!} class="{{ $tocPillContent }}">
                         {{ $section->title ?: $section->typeLabel() }}
                     </a>
                 @endforeach
                 @if ($hasGksSections)
-                    <a href="#section-gks" class="{{ $tocPillContent }}">{{ $gksPillLabel }}</a>
+                    <a href="#section-gks" {!! $tocToggleAttrs('section-gks') !!} class="{{ $tocPillContent }}">{{ $gksPillLabel }}</a>
                 @endif
                 @if ($workedExamples->isNotEmpty())
-                    <a href="#worked-examples" class="{{ $tocPillContent }}">
+                    <a href="#worked-examples" {!! $tocToggleAttrs('worked-examples') !!} class="{{ $tocPillContent }}">
                         Examples
                         <span class="opacity-70">({{ $workedExamples->count() }})</span>
                     </a>
                 @endif
                 @foreach ($otherQuestionGroups as $type => $questions)
-                    <a href="#questions-{{ $type }}" class="{{ $tocPillQuestion }}">
+                    <a href="#questions-{{ $type }}" {!! $tocToggleAttrs('questions-'.$type) !!} class="{{ $tocPillQuestion }}">
                         {{ $visibleQuestionLabels[$type] }}
                         <span>({{ $questions->count() }})</span>
                     </a>
@@ -533,7 +606,8 @@
                         <div class="flex flex-wrap gap-2">
                             @foreach ($summaryLinks as $link)
                                 <button type="button"
-                                        @click="goToSummaryPoint(@js($link['anchor']))"
+                                        @click='goToSummaryPoint(@js($link['anchor']))'
+                                        @if ($hideDetailsUntilEye) :class='isSectionOpen(@js($link['anchor'])) ? "is-open" : ""' @endif
                                         class="{{ ($link['style'] ?? 'content') === 'question' ? $tocPillQuestion : $tocPillContent }}">
                                     {{ $link['label'] }}
                                 </button>
@@ -555,8 +629,8 @@
         };
     @endphp
 
-    @if ($hideDetailsUntilEye)
-        <div x-show="!detailsOpen" x-cloak class="admin-card mb-6">
+    @if ($hideDetailsUntilEye && $hasSummaryLinks)
+        <div x-show="Object.keys(openSections).length === 0" x-cloak class="admin-card mb-6">
             <div class="admin-card-top"></div>
             <div class="p-6 sm:p-8 text-center space-y-4">
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-green-50 text-brand-green">
@@ -567,76 +641,77 @@
                 </div>
                 <div>
                     <h3 class="text-base font-bold text-slate-900">Topic details are hidden</h3>
-                    <p class="text-sm text-slate-500 mt-1">Click the eye icon to open all section details for this topic.</p>
+                    <p class="text-sm text-slate-500 mt-1">Click one section to show its details. Click it again to hide that section.</p>
                 </div>
-                @if ($hasSummaryLinks)
-                    <div class="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
-                        @foreach ($summaryLinks as $link)
-                            <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                                {{ $link['label'] }}
-                            </span>
-                        @endforeach
-                    </div>
-                @endif
-                <button type="button"
-                        @click="detailsOpen = true"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-green px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-brand-green-dark">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                    Show all section details
-                </button>
+                <div class="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
+                    @foreach ($summaryLinks as $link)
+                        <button type="button"
+                                @click='toggleSection(@js($link['anchor']))'
+                                class="{{ ($link['style'] ?? 'content') === 'question' ? $tocPillQuestion : $tocPillContent }}">
+                            {{ $link['label'] }}
+                        </button>
+                    @endforeach
+                </div>
             </div>
         </div>
     @endif
 
-    <div @if ($hideDetailsUntilEye) x-show="detailsOpen" x-cloak x-transition @endif>
+    <div>
     @if ($introduction)
-        @include('partials.material-sections.introduction', [
-            'section' => $introduction,
-            'blockClass' => $nextBlockClass(),
-        ])
+        <x-material-detail-gate :anchor="'section-'.$introduction->id" :gated="$hideDetailsUntilEye">
+            @include('partials.material-sections.introduction', [
+                'section' => $introduction,
+                'blockClass' => $nextBlockClass(),
+            ])
+        </x-material-detail-gate>
     @endif
 
     @if ($trailer)
-        @include('partials.material-sections.trailer', [
-            'section' => $trailer,
-            'blockClass' => $nextBlockClass(),
-        ])
+        <x-material-detail-gate :anchor="'section-'.$trailer->id" :gated="$hideDetailsUntilEye">
+            @include('partials.material-sections.trailer', [
+                'section' => $trailer,
+                'blockClass' => $nextBlockClass(),
+            ])
+        </x-material-detail-gate>
     @endif
 
     @if ($importance)
-        @include('partials.material-sections.importance', [
-            'section' => $importance,
-            'blockClass' => $nextBlockClass(),
-        ])
+        <x-material-detail-gate :anchor="'section-'.$importance->id" :gated="$hideDetailsUntilEye">
+            @include('partials.material-sections.importance', [
+                'section' => $importance,
+                'blockClass' => $nextBlockClass(),
+            ])
+        </x-material-detail-gate>
     @endif
 
     @if ($knowledgeLadderQuestions)
-        @include('partials.knowledge-ladder-grid', [
-            'questions' => $knowledgeLadderQuestions,
-            'label' => $visibleQuestionLabels['knowledge_ladder'] ?? 'Knowledge Ladder',
-            'toggleAnswer' => $practiceMode,
-            'sectionId' => 'questions-knowledge_ladder',
-            'blockClass' => $nextBlockClass(),
-            'questionEditUrlBuilder' => $questionEditUrlBuilder,
-        ])
+        <x-material-detail-gate anchor="questions-knowledge_ladder" :gated="$hideDetailsUntilEye">
+            @include('partials.knowledge-ladder-grid', [
+                'questions' => $knowledgeLadderQuestions,
+                'label' => $visibleQuestionLabels['knowledge_ladder'] ?? 'Knowledge Ladder',
+                'toggleAnswer' => $practiceMode,
+                'sectionId' => 'questions-knowledge_ladder',
+                'blockClass' => $nextBlockClass(),
+                'questionEditUrlBuilder' => $questionEditUrlBuilder,
+            ])
+        </x-material-detail-gate>
     @endif
 
     @if ($lineToLineQuestions)
-        @include('partials.knowledge-ladder-grid', [
-            'questions' => $lineToLineQuestions,
-            'label' => $visibleQuestionLabels['line_to_line'] ?? 'Line to Line',
-            'subtitle' => 'Linked question → answer → next question',
-            'icon' => '↔️',
-            'badgeClass' => 'admin-badge-gold',
-            'variant' => 'line',
-            'toggleAnswer' => $practiceMode,
-            'sectionId' => 'questions-line_to_line',
-            'blockClass' => $nextBlockClass(),
-            'questionEditUrlBuilder' => $questionEditUrlBuilder,
-        ])
+        <x-material-detail-gate anchor="questions-line_to_line" :gated="$hideDetailsUntilEye">
+            @include('partials.knowledge-ladder-grid', [
+                'questions' => $lineToLineQuestions,
+                'label' => $visibleQuestionLabels['line_to_line'] ?? 'Line to Line',
+                'subtitle' => 'Linked question → answer → next question',
+                'icon' => '↔️',
+                'badgeClass' => 'admin-badge-gold',
+                'variant' => 'line',
+                'toggleAnswer' => $practiceMode,
+                'sectionId' => 'questions-line_to_line',
+                'blockClass' => $nextBlockClass(),
+                'questionEditUrlBuilder' => $questionEditUrlBuilder,
+            ])
+        </x-material-detail-gate>
     @endif
 
     @php
@@ -646,43 +721,53 @@
     @foreach ($bodySections as $section)
         @if ($section->isGksSection())
             @if (! $gksRendered)
-                <div id="section-gks" class="material-gks-grid scroll-mt-36 lg:scroll-mt-32 {{ $nextBlockClass() }}">
-                    @foreach (\App\Models\ChapterContentSection::GKS_TYPES as $gksType)
-                        @if ($gksSections->has($gksType))
-                            @include('student.topics.partials.section', [
-                                'section' => $gksSections->get($gksType),
-                                'column' => true,
-                            ])
-                        @endif
-                    @endforeach
-                </div>
+                <x-material-detail-gate anchor="section-gks" :gated="$hideDetailsUntilEye">
+                    <div id="section-gks" class="material-gks-grid scroll-mt-36 lg:scroll-mt-32 {{ $nextBlockClass() }}">
+                        @foreach (\App\Models\ChapterContentSection::GKS_TYPES as $gksType)
+                            @if ($gksSections->has($gksType))
+                                @include('student.topics.partials.section', [
+                                    'section' => $gksSections->get($gksType),
+                                    'column' => true,
+                                ])
+                            @endif
+                        @endforeach
+                    </div>
+                </x-material-detail-gate>
                 @php $gksRendered = true; @endphp
             @endif
             @continue
         @endif
 
-        @include('student.topics.partials.section', [
-            'section' => $section,
-            'blockClass' => $nextBlockClass(),
-        ])
+        <x-material-detail-gate :anchor="'section-'.$section->id" :gated="$hideDetailsUntilEye">
+            @include('student.topics.partials.section', [
+                'section' => $section,
+                'blockClass' => $nextBlockClass(),
+            ])
+        </x-material-detail-gate>
     @endforeach
 
     @foreach ($otherQuestionGroups as $type => $questions)
-        @include('partials.material-question-group', [
-            'type' => $type,
-            'questions' => $questions,
-            'label' => $visibleQuestionLabels[$type],
-            'toggleAnswer' => $practiceMode,
-            'blockClass' => $nextBlockClass(),
-            'questionEditUrlBuilder' => $questionEditUrlBuilder,
-        ])
+        <x-material-detail-gate :anchor="'questions-'.$type" :gated="$hideDetailsUntilEye">
+            @include('partials.material-question-group', [
+                'type' => $type,
+                'questions' => $questions,
+                'label' => $visibleQuestionLabels[$type],
+                'toggleAnswer' => $practiceMode,
+                'blockClass' => $nextBlockClass(),
+                'questionEditUrlBuilder' => $questionEditUrlBuilder,
+            ])
+        </x-material-detail-gate>
     @endforeach
 
-    @include('partials.worked-examples', [
-        'examples' => $workedExamples,
-        'practiceMode' => $practiceMode,
-        'heading' => 'Solved Examples',
-    ])
+    @if ($workedExamples->isNotEmpty())
+        <x-material-detail-gate anchor="worked-examples" :gated="$hideDetailsUntilEye">
+            @include('partials.worked-examples', [
+                'examples' => $workedExamples,
+                'practiceMode' => $practiceMode,
+                'heading' => 'Solved Examples',
+            ])
+        </x-material-detail-gate>
+    @endif
 
     @if (! $introduction && ! $trailer && ! $importance && ! $knowledgeLadderQuestions && ! $lineToLineQuestions && $bodySections->isEmpty() && empty($otherQuestionGroups) && $workedExamples->isEmpty())
         <div class="admin-card p-10 text-center text-slate-400">
