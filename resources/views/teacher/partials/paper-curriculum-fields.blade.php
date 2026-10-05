@@ -27,6 +27,7 @@
                 <option :value="c.id" x-text="c.name"></option>
             </template>
         </select>
+        <p class="text-xs text-slate-500 mt-1">From Books materials — Subject → Chapter → Topic</p>
     </div>
 
     <div>

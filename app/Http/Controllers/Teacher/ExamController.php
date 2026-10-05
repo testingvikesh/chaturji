@@ -7,7 +7,6 @@ use App\Http\Controllers\Teacher\Concerns\HandlesPaperBuilder;
 use App\Models\Exam;
 use App\Models\ExamQuestion;
 use App\Models\Standard;
-use App\Services\QuestionPaperGeneratorService;
 use App\Services\StudentNotificationService;
 use App\Support\ActivityLogger;
 use App\Support\PaperTypeHelper;
@@ -18,10 +17,6 @@ use Illuminate\View\View;
 class ExamController extends Controller
 {
     use HandlesPaperBuilder;
-
-    public function __construct(
-        private readonly QuestionPaperGeneratorService $generator
-    ) {}
 
     public function index(): View
     {
@@ -46,23 +41,18 @@ class ExamController extends Controller
 
     public function preview(Request $request): View|RedirectResponse
     {
-        $validated = $request->validate($this->paperMetaRules(true));
+        $request->validate($this->paperMetaRules(true));
         $typeCounts = $this->extractTypeCounts($request);
         $marksPerType = $this->extractMarksPerType($request, $typeCounts);
         $meta = $this->extractPaperMeta($request, true);
 
-        $generated = $this->generator->generate(
-            (int) $meta['chapter_id'],
-            $meta['topic_id'],
-            $typeCounts,
-            $marksPerType
-        );
+        $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType);
 
         $payload = [
             'meta' => $meta,
             'type_counts' => $typeCounts,
             'marks_per_type' => $generated['marks_per_type'],
-            'question_ids' => $generated['questions']->pluck('id')->all(),
+            'questions' => $this->snapshotQuestions($generated['questions']),
             'breakdown' => $generated['breakdown'],
             'total_marks' => $generated['total_marks'],
         ];
@@ -91,13 +81,17 @@ class ExamController extends Controller
         }
 
         $exam = Exam::create([
-            ...$preview['meta'],
+            ...$this->persistablePaperMeta($preview['meta']),
             'teacher_id' => auth()->id(),
             'total_marks' => $preview['total_marks'],
             'generation_config' => [
                 'type_counts' => $preview['type_counts'],
                 'marks_per_type' => $preview['marks_per_type'],
-                'question_ids' => $preview['question_ids'],
+                'material_ids' => [($preview['meta']['material_id'] ?? null)],
+                'material_topic_ids' => array_values(array_filter([($preview['meta']['material_topic_id'] ?? null)])),
+                'chapter_name' => $preview['meta']['chapter_name'] ?? null,
+                'topic_name' => $preview['meta']['topic_name'] ?? null,
+                'generated_from' => 'teacher_exam_materials',
             ],
         ]);
 
@@ -141,6 +135,8 @@ class ExamController extends Controller
             'exam' => $exam,
             'standards' => $this->standardOptions(),
             'paperTypes' => PaperTypeHelper::types(),
+            'selectedChapterId' => old('chapter_id', $exam->generation_config['material_ids'][0] ?? ''),
+            'selectedTopicId' => old('topic_id', $exam->generation_config['material_topic_ids'][0] ?? ''),
         ]);
     }
 
@@ -149,32 +145,32 @@ class ExamController extends Controller
         $this->authorizeExam($exam);
 
         $wasPublished = $exam->isPublished();
-        $validated = $request->validate($this->paperMetaRules(true));
+        $request->validate($this->paperMetaRules(true));
         $typeCounts = $this->extractTypeCounts($request);
         $marksPerType = $this->extractMarksPerType($request, $typeCounts);
         $meta = $this->extractPaperMeta($request, true);
 
-        $generated = $this->generator->generate(
-            (int) $meta['chapter_id'],
-            $meta['topic_id'],
-            $typeCounts,
-            $marksPerType
-        );
+        $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType);
+        $preview = [
+            'marks_per_type' => $generated['marks_per_type'],
+            'questions' => $this->snapshotQuestions($generated['questions']),
+        ];
 
         $exam->update([
-            ...$meta,
+            ...$this->persistablePaperMeta($meta),
             'total_marks' => $generated['total_marks'],
             'generation_config' => [
                 'type_counts' => $typeCounts,
                 'marks_per_type' => $generated['marks_per_type'],
-                'question_ids' => $generated['questions']->pluck('id')->all(),
+                'material_ids' => [$meta['material_id'] ?? null],
+                'material_topic_ids' => array_values(array_filter([$meta['material_topic_id'] ?? null])),
+                'chapter_name' => $meta['chapter_name'] ?? null,
+                'topic_name' => $meta['topic_name'] ?? null,
+                'generated_from' => 'teacher_exam_materials',
             ],
         ]);
 
-        $this->syncGeneratedQuestions($exam, [
-            'question_ids' => $generated['questions']->pluck('id')->all(),
-            'marks_per_type' => $generated['marks_per_type'],
-        ], $generated['questions']);
+        $this->syncGeneratedQuestions($exam, $preview);
 
         if ($exam->isPublished()) {
             StudentNotificationService::examPublished($exam, $wasPublished ? 'updated' : 'created');
@@ -196,25 +192,38 @@ class ExamController extends Controller
         abort_unless($exam->teacher_id === auth()->id(), 403);
     }
 
-    private function syncGeneratedQuestions(Exam $exam, array $preview, $questions = null): void
+    private function persistablePaperMeta(array $meta): array
     {
-        $questions = $questions ?? \App\Models\ChapterQuestion::query()
-            ->whereIn('id', $preview['question_ids'])
-            ->get()
-            ->sortBy(fn ($q) => array_search($q->id, $preview['question_ids'], true));
+        return collect($meta)->only([
+            'standard',
+            'subject_id',
+            'chapter_id',
+            'topic_id',
+            'title',
+            'description',
+            'status',
+            'instructions',
+            'duration_minutes',
+            'starts_at',
+            'ends_at',
+        ])->all();
+    }
 
+    private function syncGeneratedQuestions(Exam $exam, array $preview): void
+    {
+        $rows = $preview['questions'] ?? [];
         $exam->questions()->delete();
 
         $sort = 0;
-        foreach ($questions as $question) {
+        foreach ($rows as $question) {
             ExamQuestion::create([
                 'exam_id' => $exam->id,
-                'chapter_question_id' => $question->id,
-                'question_type' => $question->question_type,
-                'question_text' => $question->question_text,
-                'options' => $question->options,
-                'answer' => $question->answer,
-                'marks' => $preview['marks_per_type'][$question->question_type] ?? 1,
+                'chapter_question_id' => $question['id'] ?? null,
+                'question_type' => $question['question_type'],
+                'question_text' => $question['question_text'],
+                'options' => $question['options'] ?? null,
+                'answer' => $question['answer'] ?? null,
+                'marks' => $preview['marks_per_type'][$question['question_type']] ?? 1,
                 'sort_order' => $sort++,
             ]);
         }

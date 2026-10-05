@@ -7,7 +7,6 @@ use App\Http\Controllers\Teacher\Concerns\HandlesPaperBuilder;
 use App\Models\Homework;
 use App\Models\HomeworkQuestion;
 use App\Models\Standard;
-use App\Services\QuestionPaperGeneratorService;
 use App\Services\StudentNotificationService;
 use App\Support\ActivityLogger;
 use App\Support\PaperTypeHelper;
@@ -18,10 +17,6 @@ use Illuminate\View\View;
 class HomeworkController extends Controller
 {
     use HandlesPaperBuilder;
-
-    public function __construct(
-        private readonly QuestionPaperGeneratorService $generator
-    ) {}
 
     public function index(): View
     {
@@ -54,17 +49,13 @@ class HomeworkController extends Controller
         $typeCounts = $this->extractTypeCounts($request);
         $meta = $this->extractPaperMeta($request, false);
 
-        $generated = $this->generator->generate(
-            (int) $meta['chapter_id'],
-            $meta['topic_id'],
-            $typeCounts
-        );
+        $generated = $this->generateFromMaterials($meta, $typeCounts);
 
         $payload = [
             'meta' => $meta,
             'type_counts' => $typeCounts,
             'marks_per_type' => [],
-            'question_ids' => $generated['questions']->pluck('id')->all(),
+            'questions' => $this->snapshotQuestions($generated['questions']),
             'breakdown' => $generated['breakdown'],
             'total_marks' => 0,
         ];
@@ -91,11 +82,15 @@ class HomeworkController extends Controller
         }
 
         $homework = Homework::create([
-            ...$preview['meta'],
+            ...$this->persistablePaperMeta($preview['meta']),
             'teacher_id' => auth()->id(),
             'generation_config' => [
                 'type_counts' => $preview['type_counts'],
-                'question_ids' => $preview['question_ids'],
+                'material_ids' => [($preview['meta']['material_id'] ?? null)],
+                'material_topic_ids' => array_values(array_filter([($preview['meta']['material_topic_id'] ?? null)])),
+                'chapter_name' => $preview['meta']['chapter_name'] ?? null,
+                'topic_name' => $preview['meta']['topic_name'] ?? null,
+                'generated_from' => 'teacher_homework_materials',
             ],
         ]);
 
@@ -138,6 +133,8 @@ class HomeworkController extends Controller
             'homework' => $homework,
             'standards' => $this->standardOptions(),
             'paperTypes' => PaperTypeHelper::types(),
+            'selectedChapterId' => old('chapter_id', $homework->generation_config['material_ids'][0] ?? ''),
+            'selectedTopicId' => old('topic_id', $homework->generation_config['material_topic_ids'][0] ?? ''),
         ]);
     }
 
@@ -150,23 +147,24 @@ class HomeworkController extends Controller
         $typeCounts = $this->extractTypeCounts($request);
         $meta = $this->extractPaperMeta($request, false);
 
-        $generated = $this->generator->generate(
-            (int) $meta['chapter_id'],
-            $meta['topic_id'],
-            $typeCounts
-        );
+        $generated = $this->generateFromMaterials($meta, $typeCounts);
+        $preview = [
+            'questions' => $this->snapshotQuestions($generated['questions']),
+        ];
 
         $homework->update([
-            ...$meta,
+            ...$this->persistablePaperMeta($meta),
             'generation_config' => [
                 'type_counts' => $typeCounts,
-                'question_ids' => $generated['questions']->pluck('id')->all(),
+                'material_ids' => [$meta['material_id'] ?? null],
+                'material_topic_ids' => array_values(array_filter([$meta['material_topic_id'] ?? null])),
+                'chapter_name' => $meta['chapter_name'] ?? null,
+                'topic_name' => $meta['topic_name'] ?? null,
+                'generated_from' => 'teacher_homework_materials',
             ],
         ]);
 
-        $this->syncGeneratedQuestions($homework, [
-            'question_ids' => $generated['questions']->pluck('id')->all(),
-        ], $generated['questions']);
+        $this->syncGeneratedQuestions($homework, $preview);
 
         if ($homework->isPublished()) {
             StudentNotificationService::homeworkAssigned($homework, $wasPublished ? 'updated' : 'created');
@@ -188,24 +186,34 @@ class HomeworkController extends Controller
         abort_unless($homework->teacher_id === auth()->id(), 403);
     }
 
-    private function syncGeneratedQuestions(Homework $homework, array $preview, $questions = null): void
+    private function persistablePaperMeta(array $meta): array
     {
-        $questions = $questions ?? \App\Models\ChapterQuestion::query()
-            ->whereIn('id', $preview['question_ids'])
-            ->get()
-            ->sortBy(fn ($q) => array_search($q->id, $preview['question_ids'], true));
+        return collect($meta)->only([
+            'standard',
+            'subject_id',
+            'chapter_id',
+            'topic_id',
+            'title',
+            'description',
+            'status',
+            'due_at',
+        ])->all();
+    }
 
+    private function syncGeneratedQuestions(Homework $homework, array $preview): void
+    {
+        $rows = $preview['questions'] ?? [];
         $homework->questions()->delete();
 
         $sort = 0;
-        foreach ($questions as $question) {
+        foreach ($rows as $question) {
             HomeworkQuestion::create([
                 'homework_id' => $homework->id,
-                'chapter_question_id' => $question->id,
-                'question_type' => $question->question_type,
-                'question_text' => $question->question_text,
-                'options' => $question->options,
-                'answer' => $question->answer,
+                'chapter_question_id' => $question['id'] ?? null,
+                'question_type' => $question['question_type'],
+                'question_text' => $question['question_text'],
+                'options' => $question['options'] ?? null,
+                'answer' => $question['answer'] ?? null,
                 'sort_order' => $sort++,
             ]);
         }

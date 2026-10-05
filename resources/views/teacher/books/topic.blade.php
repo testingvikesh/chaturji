@@ -24,5 +24,6 @@
         'materialTopic' => $materialTopic,
         'canEditQuestions' => true,
         'questionEditMedium' => $medium,
+        'hideDetailsUntilEye' => true,
     ])
 </x-teacher-layout>

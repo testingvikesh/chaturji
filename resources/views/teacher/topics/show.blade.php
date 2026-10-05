@@ -23,5 +23,6 @@
         'questionGroupLabels' => $questionGroupLabels,
         'backUrl' => route('teacher.subjects.show', $subject),
         'practiceMode' => false,
+        'hideDetailsUntilEye' => true,
     ])
 </x-teacher-layout>

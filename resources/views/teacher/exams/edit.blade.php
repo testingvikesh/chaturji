@@ -15,8 +15,8 @@
             'standards' => $standards,
             'selectedStandard' => old('standard', $exam->standard),
             'selectedSubjectId' => old('subject_id', $exam->subject_id),
-            'selectedChapterId' => old('chapter_id', $exam->chapter_id),
-            'selectedTopicId' => old('topic_id', $exam->topic_id),
+            'selectedChapterId' => old('chapter_id', $config['material_ids'][0] ?? $selectedChapterId ?? ''),
+            'selectedTopicId' => old('topic_id', $config['material_topic_ids'][0] ?? $selectedTopicId ?? ''),
         ])
 
         <div class="admin-card p-6 space-y-4">
