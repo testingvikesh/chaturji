@@ -172,148 +172,158 @@
     };
 @endphp
 
-<div class="admin-page material-reader" @if ($clickTrackUrl) data-click-url="{{ $clickTrackUrl }}" @endif x-data="{
-    pdfOpen: false,
-    textbookOpen: false,
-    textbookLoading: false,
-    textbookTimer: null,
-    summaryOpen: false,
-    sectionWise: {{ $hideDetailsUntilEye ? 'true' : 'false' }},
-    clickUrl: '',
-    openSections: {},
-    init() {
-        this.clickUrl = this.$el.dataset.clickUrl || '';
-        if (!this.sectionWise) {
-            return;
-        }
-        this.$root.querySelectorAll('details[data-section]').forEach((gate) => {
-            gate.open = false;
-            gate.addEventListener('toggle', () => {
-                if (gate.open) {
-                    this.closeOtherSections(gate);
-                    this.recordSectionClick(gate.dataset.section);
+@once
+    <script>
+        window.materialReader = function (config) {
+            config = config || {};
+            return {
+                pdfOpen: false,
+                textbookOpen: false,
+                textbookLoading: false,
+                textbookTimer: null,
+                summaryOpen: false,
+                sectionWise: !!config.sectionWise,
+                clickUrl: config.clickUrl || '',
+                openSections: {},
+                topicPage: Number(config.topicPage || 0),
+                init() {
+                    if (!this.sectionWise) {
+                        return;
+                    }
+                    this.$root.querySelectorAll('details[data-section]').forEach((gate) => {
+                        gate.open = false;
+                        gate.addEventListener('toggle', () => {
+                            if (gate.open) {
+                                this.closeOtherSections(gate);
+                                this.recordSectionClick(gate.dataset.section);
+                            }
+                            this.syncSection(gate.dataset.section, gate.open);
+                        });
+                    });
+                    this.openSections = {};
+                },
+                closeOtherSections(gate) {
+                    this.$root.querySelectorAll('details[data-section]').forEach((other) => {
+                        if (other !== gate && other.open) {
+                            other.open = false;
+                        }
+                    });
+                },
+                syncSection(id, open) {
+                    const next = Object.assign({}, this.openSections);
+                    if (open) {
+                        next[id] = true;
+                    } else {
+                        delete next[id];
+                    }
+                    this.openSections = next;
+                },
+                isSectionOpen(id) {
+                    return !!(id && this.openSections[id]);
+                },
+                recordSectionClick(id) {
+                    if (!this.clickUrl || !id) {
+                        return;
+                    }
+                    const token = document.querySelector('meta[name="csrf-token"]');
+                    const body = new FormData();
+                    body.append('section', id);
+                    fetch(this.clickUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': token ? token.content : '',
+                            'Accept': 'application/json',
+                        },
+                        body: body,
+                        keepalive: true,
+                    }).catch(function () {});
+                },
+                toggleSection(id, scroll) {
+                    if (scroll === undefined) {
+                        scroll = true;
+                    }
+                    if (!this.sectionWise || !id) {
+                        return;
+                    }
+                    const gate = document.getElementById('gate-' + id);
+                    if (!gate) {
+                        return;
+                    }
+                    const willOpen = !gate.open;
+                    if (willOpen) {
+                        this.closeOtherSections(gate);
+                    }
+                    gate.open = willOpen;
+                    if (gate.open && window.history && window.history.replaceState) {
+                        window.history.replaceState(null, '', '#' + id);
+                    }
+                    if (gate.open && scroll) {
+                        this.$nextTick(() => gate.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+                    }
+                },
+                startTextbookLoading() {
+                    this.textbookLoading = true;
+                    clearTimeout(this.textbookTimer);
+                    this.textbookTimer = setTimeout(() => { this.textbookLoading = false; }, 15000);
+                },
+                onTextbookLoaded() {
+                    this.textbookLoading = false;
+                    clearTimeout(this.textbookTimer);
+                },
+                openTextbook() {
+                    this.startTextbookLoading();
+                    this.textbookOpen = true;
+                    document.body.classList.add('overflow-hidden');
+                    this.$nextTick(() => {
+                        const start = () => {
+                            const box = document.querySelector('.textbook-modal [data-pdf-url]');
+                            if (!box || box.dataset.ready === '1') {
+                                return;
+                            }
+                            if (!window.renderTextbookPages) {
+                                setTimeout(start, 200);
+                                return;
+                            }
+                            window.renderTextbookPages(box);
+                        };
+                        setTimeout(start, 150);
+                        const el = document.getElementById(this.topicPage ? 'textbook-page-' + this.topicPage : 'textbook-pages');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        if (document.getElementById('textbook-pages')) {
+                            setTimeout(() => this.onTextbookLoaded(), 600);
+                        }
+                    });
+                },
+                closeTextbook() {
+                    this.textbookOpen = false;
+                    this.textbookLoading = false;
+                    clearTimeout(this.textbookTimer);
+                    document.body.classList.remove('overflow-hidden');
+                },
+                goToSummaryPoint(anchor) {
+                    this.summaryOpen = false;
+                    if (this.sectionWise && anchor) {
+                        const gate = document.getElementById('gate-' + anchor);
+                        if (gate) {
+                            gate.open = true;
+                        }
+                        if (window.history && window.history.replaceState) {
+                            window.history.replaceState(null, '', '#' + anchor);
+                        }
+                    }
+                    this.$nextTick(() => {
+                        const el = document.getElementById(this.sectionWise ? ('gate-' + anchor) : anchor) || document.getElementById(anchor);
+                        if (!el) return;
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        el.classList.add('ring-2', 'ring-brand-green', 'bg-emerald-50');
+                        setTimeout(() => el.classList.remove('ring-2', 'ring-brand-green', 'bg-emerald-50'), 1800);
+                    });
                 }
-                this.syncSection(gate.dataset.section, gate.open);
-            });
-        });
-        this.openSections = {};
-    },
-    closeOtherSections(gate) {
-        this.$root.querySelectorAll('details[data-section]').forEach((other) => {
-            if (other !== gate && other.open) {
-                other.open = false;
-            }
-        });
-    },
-    syncSection(id, open) {
-        const next = { ...this.openSections };
-        if (open) {
-            next[id] = true;
-        } else {
-            delete next[id];
-        }
-        this.openSections = next;
-    },
-    isSectionOpen(id) {
-        return !!(id && this.openSections[id]);
-    },
-    recordSectionClick(id) {
-        if (!this.clickUrl || !id) {
-            return;
-        }
-        const token = document.querySelector('meta[name="csrf-token"]');
-        const body = new FormData();
-        body.append('section', id);
-        fetch(this.clickUrl, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': token ? token.content : '',
-                'Accept': 'application/json',
-            },
-            body,
-            keepalive: true,
-        }).catch(() => {});
-    },
-    toggleSection(id, scroll = true) {
-        if (!this.sectionWise || !id) {
-            return;
-        }
-        const gate = document.getElementById('gate-' + id);
-        if (!gate) {
-            return;
-        }
-        const willOpen = !gate.open;
-        if (willOpen) {
-            this.closeOtherSections(gate);
-        }
-        gate.open = willOpen;
-        if (gate.open && window.history && window.history.replaceState) {
-            window.history.replaceState(null, '', '#' + id);
-        }
-        if (gate.open && scroll) {
-            this.$nextTick(() => gate.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-        }
-    },
-    topicPage: {{ $topicPageNumber ?: 0 }},
-    startTextbookLoading() {
-        this.textbookLoading = true;
-        clearTimeout(this.textbookTimer);
-        this.textbookTimer = setTimeout(() => { this.textbookLoading = false; }, 15000);
-    },
-    onTextbookLoaded() {
-        this.textbookLoading = false;
-        clearTimeout(this.textbookTimer);
-    },
-    openTextbook() {
-        this.startTextbookLoading();
-        this.textbookOpen = true;
-        document.body.classList.add('overflow-hidden');
-        this.$nextTick(() => {
-            const start = () => {
-                const box = document.querySelector('.textbook-modal [data-pdf-url]');
-                if (!box || box.dataset.ready === '1') {
-                    return;
-                }
-                if (!window.renderTextbookPages) {
-                    setTimeout(start, 200);
-                    return;
-                }
-                window.renderTextbookPages(box);
             };
-            setTimeout(start, 150);
-            const el = document.getElementById(this.topicPage ? 'textbook-page-' + this.topicPage : 'textbook-pages');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            if (document.getElementById('textbook-pages')) {
-                setTimeout(() => this.onTextbookLoaded(), 600);
-            }
-        });
-    },
-    closeTextbook() {
-        this.textbookOpen = false;
-        this.textbookLoading = false;
-        clearTimeout(this.textbookTimer);
-        document.body.classList.remove('overflow-hidden');
-    },
-    goToSummaryPoint(anchor) {
-        this.summaryOpen = false;
-        if (this.sectionWise && anchor) {
-            const gate = document.getElementById('gate-' + anchor);
-            if (gate) {
-                gate.open = true;
-            }
-            if (window.history && window.history.replaceState) {
-                window.history.replaceState(null, '', '#' + anchor);
-            }
-        }
-        this.$nextTick(() => {
-            const el = document.getElementById(this.sectionWise ? ('gate-' + anchor) : anchor) || document.getElementById(anchor);
-            if (!el) return;
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            el.classList.add('ring-2', 'ring-brand-green', 'bg-emerald-50');
-            setTimeout(() => el.classList.remove('ring-2', 'ring-brand-green', 'bg-emerald-50'), 1800);
-        });
-    }
-}" @keydown.escape.window="closeTextbook()" @textbook-ready="onTextbookLoaded()">
+        };
+    </script>
+@endonce
+<div class="admin-page material-reader" x-data="materialReader({{ \Illuminate\Support\Js::from(['sectionWise' => (bool) $hideDetailsUntilEye, 'clickUrl' => (string) ($clickTrackUrl ?? ''), 'topicPage' => (int) ($topicPageNumber ?: 0)]) }})" @keydown.escape.window="closeTextbook()" @textbook-ready="onTextbookLoaded()">
     @if ($hasSummaryLinks)
         <button type="button"
                 @click="summaryOpen = true"
