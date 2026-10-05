@@ -4,14 +4,14 @@
 
 <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
     @include('admin.partials.stat-card', [
-        'label' => 'Total clicks',
+        'label' => 'Sections opened',
         'value' => $summary['clicks'],
         'hint' => 'One click per section per teacher per date. Opening the same section again the same day still counts as 1.',
     ])
     @include('admin.partials.stat-card', [
-        'label' => 'Total points',
-        'value' => $summary['points'],
-        'hint' => 'Study lines and questions in the sections opened that day. Each section is counted once.',
+        'label' => 'Topics at 100%',
+        'value' => $summary['complete'],
+        'hint' => 'A topic is 100% when every section on that topic was opened.',
     ])
     @include('admin.partials.stat-card', ['label' => 'Teachers', 'value' => $summary['teachers']])
     @include('admin.partials.stat-card', ['label' => 'Topics opened', 'value' => $summary['topics']])
@@ -62,19 +62,21 @@
                 <thead>
                     <tr>
                         <th>Teacher</th>
-                        <th>Total points</th>
-                        <th>Total clicks</th>
+                        <th>Topics</th>
+                        <th>Clicks</th>
+                        <th>100% work</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($byTeacher as $row)
                         <tr>
                             <td class="font-semibold text-slate-800">{{ $row['teacher'] }}</td>
-                            <td>{{ $row['total_points'] }}</td>
-                            <td>{{ $row['total_clicks'] }}</td>
+                            <td>{{ $row['topics'] }}</td>
+                            <td>{{ $row['clicks'] }} / {{ $row['sections'] }}</td>
+                            <td>{{ $row['complete'] }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-slate-400 py-6">No clicks in this date range.</td></tr>
+                        <tr><td colspan="4" class="text-center text-slate-400 py-6">No clicks in this date range.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -89,19 +91,21 @@
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Total points</th>
-                        <th>Total clicks</th>
+                        <th>Topics</th>
+                        <th>Clicks</th>
+                        <th>100% work</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($byDate as $row)
                         <tr>
                             <td class="font-semibold text-slate-800">{{ \Illuminate\Support\Carbon::parse($row['date'])->format('d M Y') }}</td>
-                            <td>{{ $row['total_points'] }}</td>
-                            <td>{{ $row['total_clicks'] }}</td>
+                            <td>{{ $row['topics'] }}</td>
+                            <td>{{ $row['clicks'] }} / {{ $row['sections'] }}</td>
+                            <td>{{ $row['complete'] }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-slate-400 py-6">No clicks in this date range.</td></tr>
+                        <tr><td colspan="4" class="text-center text-slate-400 py-6">No clicks in this date range.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -131,31 +135,24 @@
                     <th>Subject</th>
                     <th>Chapter</th>
                     <th>Topic</th>
-                    <th>Section</th>
-                    <th>Points</th>
+                    <th>Total sections</th>
                     <th>Clicks</th>
+                    <th>Work</th>
                 </tr>
             </thead>
             <tbody>
-                @php $lastTeacher = null; @endphp
                 @forelse ($rows as $row)
-                    @if ($showTeacher && $lastTeacher !== $row->teacher_name)
-                        <tr class="bg-slate-50">
-                            <td colspan="{{ $showTeacher ? 8 : 7 }}" class="font-bold text-slate-900">{{ $row->teacher_name }}</td>
-                        </tr>
-                        @php $lastTeacher = $row->teacher_name; @endphp
-                    @endif
                     <tr>
                         <td class="whitespace-nowrap font-semibold text-slate-800">{{ \Illuminate\Support\Carbon::parse($row->click_date)->format('d M Y') }}</td>
                         @if ($showTeacher)
-                            <td>{{ $row->teacher_name }}</td>
+                            <td class="font-semibold text-slate-800">{{ $row->teacher_name }}</td>
                         @endif
                         <td>{{ $row->subject_name }}</td>
                         <td>{{ $row->chapter_name ?: '—' }}</td>
                         <td>{{ $row->topic_name }}</td>
-                        <td>{{ $row->section_label ?: '—' }}</td>
-                        <td>{{ (int) $row->total_points }}</td>
-                        <td>{{ (int) $row->total_clicks }}</td>
+                        <td>{{ (int) $row->total_sections }}</td>
+                        <td>{{ (int) $row->clicks }}</td>
+                        <td class="font-bold {{ (int) $row->work_percent === 100 ? 'text-emerald-700' : 'text-slate-800' }}">{{ (int) $row->work_percent }}%</td>
                     </tr>
                 @empty
                     <tr>

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\ChapterContentSection;
+use App\Models\ChapterQuestion;
 use App\Models\MaterialTopic;
 use App\Models\Subject;
 use App\Models\TeacherSectionClick;
@@ -57,6 +58,59 @@ class TeacherSectionClickRecorder
 
             return $row;
         });
+    }
+
+    /**
+     * How many section buttons the topic page shows. Opening all of them is 100% of the topic.
+     */
+    public static function sectionTotal(MaterialTopic $materialTopic): int
+    {
+        $payload = MaterialTopicReader::forTopic($materialTopic);
+        $sections = collect($payload['sections'] ?? []);
+        $groups = ChapterMaterialHelper::orderQuestionGroups(
+            ChapterQuestion::filterReaderGroups($payload['questionGroups'] ?? [])
+        );
+        $partition = ChapterMaterialHelper::partitionSections($sections);
+        $count = 0;
+
+        if ($partition['introduction']) {
+            $count++;
+        }
+        if ($partition['trailer']) {
+            $count++;
+        }
+        if ($partition['importance']) {
+            $count++;
+        }
+
+        [$ladder, $groups] = ChapterMaterialHelper::splitKnowledgeLadder($groups);
+        if ($ladder) {
+            $count++;
+        }
+        [$line, $groups] = ChapterMaterialHelper::splitQuestionGroup($groups, 'line_to_line');
+        if ($line) {
+            $count++;
+        }
+
+        $body = $partition['body'];
+        $gks = ChapterMaterialHelper::gksSections($body);
+        foreach ($body as $section) {
+            if ($section instanceof ChapterContentSection && $section->isGksSection()) {
+                continue;
+            }
+            $count++;
+        }
+        if ($gks->isNotEmpty()) {
+            $count++;
+        }
+        if (collect($payload['workedExamples'] ?? [])->isNotEmpty()) {
+            $count++;
+        }
+        foreach ($groups as $questions) {
+            $count++;
+        }
+
+        return $count;
     }
 
     /**

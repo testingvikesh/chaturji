@@ -33,7 +33,7 @@ class AdminReportCatalog
                     ],
                     [
                         'title' => 'Teacher Click Report',
-                        'description' => 'Teacher-wise and date-wise topic clicks with total points',
+                        'description' => 'Teacher, subject, chapter and topic work: sections opened and percent complete',
                         'route' => 'admin.reports.topic-clicks',
                         'match' => ['admin.reports.topic-clicks'],
                         'badge' => 'New',

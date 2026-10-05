@@ -73,7 +73,7 @@ class PrincipalReportCatalog
                     ],
                     [
                         'title' => 'Teacher Click Report',
-                        'description' => 'Teacher-wise and date-wise topic clicks with total points',
+                        'description' => 'Teacher, subject, chapter and topic work: sections opened and percent complete',
                         'route' => 'principal.reports.topic-clicks',
                         'match' => ['principal.reports.topic-clicks'],
                         'badge' => 'Print',

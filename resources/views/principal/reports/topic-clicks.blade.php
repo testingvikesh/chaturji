@@ -3,7 +3,7 @@
         <div>
             <span class="admin-section-label">Reports</span>
             <h2 class="admin-page-title">Teacher Click Report</h2>
-            <p class="admin-page-subtitle">Teachers on your standards · subject, chapter, topic, total points and total clicks</p>
+            <p class="admin-page-subtitle">Teachers on your standards. Subject, chapter and topic, with sections opened and work percent.</p>
         </div>
     </x-slot>
 

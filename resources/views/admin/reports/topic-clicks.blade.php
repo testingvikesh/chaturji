@@ -2,7 +2,7 @@
     <x-slot name="header">
         <x-admin.partials.page-header
             title="Teacher Click Report"
-            subtitle="Teacher-wise and date-wise topic opens, with total points and total clicks">
+            subtitle="Teacher, subject, chapter and topic. Sections opened out of the topic total, shown as work percent.">
         </x-admin.partials.page-header>
     </x-slot>
 

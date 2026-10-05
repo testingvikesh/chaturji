@@ -2,9 +2,11 @@
 
 namespace App\Support;
 
+use App\Models\MaterialTopic;
 use App\Models\TeacherSectionClick;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 
 class TeacherClickReport
@@ -57,16 +59,15 @@ class TeacherClickReport
             });
         }
 
-        $grouped = (clone $query)
+        $topicRows = (clone $query)
             ->selectRaw('teacher_section_clicks.teacher_id')
             ->selectRaw('users.name as teacher_name')
             ->selectRaw('teacher_section_clicks.click_date')
             ->selectRaw('teacher_section_clicks.subject_name')
             ->selectRaw('teacher_section_clicks.chapter_name')
             ->selectRaw('teacher_section_clicks.topic_name')
-            ->selectRaw('teacher_section_clicks.section_label')
-            ->selectRaw('MAX(teacher_section_clicks.points) as total_points')
-            ->selectRaw('1 as total_clicks')
+            ->selectRaw('teacher_section_clicks.material_topic_id')
+            ->selectRaw('COUNT(*) as clicks')
             ->groupBy(
                 'teacher_section_clicks.teacher_id',
                 'users.name',
@@ -75,51 +76,83 @@ class TeacherClickReport
                 'teacher_section_clicks.subject_name',
                 'teacher_section_clicks.chapter_name',
                 'teacher_section_clicks.material_topic_id',
-                'teacher_section_clicks.topic_name',
-                'teacher_section_clicks.section_key',
-                'teacher_section_clicks.section_label'
+                'teacher_section_clicks.topic_name'
             )
             ->orderBy('users.name')
             ->orderByDesc('teacher_section_clicks.click_date')
             ->orderBy('teacher_section_clicks.subject_name')
             ->orderBy('teacher_section_clicks.topic_name')
-            ->orderBy('teacher_section_clicks.section_label');
+            ->get()
+            ->map(function ($row) {
+                $totalSections = self::sectionsForTopic((int) $row->material_topic_id);
+                $clicks = (int) $row->clicks;
+                if ($totalSections > 0) {
+                    $clicks = min($clicks, $totalSections);
+                }
+                $percent = $totalSections > 0
+                    ? (int) round(($clicks / $totalSections) * 100)
+                    : 0;
 
-        $rows = $grouped->paginate(40)->withQueryString();
+                return (object) [
+                    'teacher_name' => $row->teacher_name,
+                    'teacher_id' => (int) $row->teacher_id,
+                    'click_date' => $row->click_date,
+                    'subject_name' => $row->subject_name,
+                    'chapter_name' => $row->chapter_name,
+                    'topic_name' => $row->topic_name,
+                    'clicks' => $clicks,
+                    'total_sections' => $totalSections,
+                    'work_percent' => $percent,
+                ];
+            })
+            ->values();
 
-        $summaryBase = (clone $query);
+        $page = max(1, (int) $request->input('page', 1));
+        $rows = new LengthAwarePaginator(
+            $topicRows->forPage($page, 40)->values(),
+            $topicRows->count(),
+            40,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
         $summary = [
-            'clicks' => (int) (clone $summaryBase)->count(),
-            'points' => (int) (clone $summaryBase)->sum('teacher_section_clicks.points'),
-            'teachers' => (int) (clone $summaryBase)->distinct()->count('teacher_section_clicks.teacher_id'),
-            'topics' => (int) (clone $summaryBase)->distinct()->count('teacher_section_clicks.material_topic_id'),
+            'clicks' => (int) $topicRows->sum('clicks'),
+            'sections' => (int) $topicRows->sum('total_sections'),
+            'teachers' => (int) $topicRows->pluck('teacher_id')->unique()->count(),
+            'topics' => $topicRows->count(),
+            'complete' => (int) $topicRows->where('work_percent', 100)->count(),
         ];
 
-        $byTeacher = (clone $query)
-            ->selectRaw('users.name as teacher_name')
-            ->selectRaw('SUM(teacher_section_clicks.points) as total_points')
-            ->selectRaw('COUNT(*) as total_clicks')
-            ->groupBy('teacher_section_clicks.teacher_id', 'users.name')
-            ->orderBy('users.name')
-            ->get()
-            ->map(fn ($row) => [
-                'teacher' => $row->teacher_name,
-                'total_points' => (int) $row->total_points,
-                'total_clicks' => (int) $row->total_clicks,
-            ]);
+        $byTeacher = $topicRows
+            ->groupBy('teacher_id')
+            ->map(function ($items) {
+                $first = $items->first();
 
-        $byDate = (clone $query)
-            ->selectRaw('teacher_section_clicks.click_date')
-            ->selectRaw('SUM(teacher_section_clicks.points) as total_points')
-            ->selectRaw('COUNT(*) as total_clicks')
-            ->groupBy('teacher_section_clicks.click_date')
-            ->orderByDesc('teacher_section_clicks.click_date')
-            ->get()
-            ->map(fn ($row) => [
-                'date' => Carbon::parse($row->click_date)->toDateString(),
-                'total_points' => (int) $row->total_points,
-                'total_clicks' => (int) $row->total_clicks,
-            ]);
+                return [
+                    'teacher' => $first->teacher_name,
+                    'topics' => $items->count(),
+                    'clicks' => (int) $items->sum('clicks'),
+                    'sections' => (int) $items->sum('total_sections'),
+                    'complete' => (int) $items->where('work_percent', 100)->count(),
+                ];
+            })
+            ->sortBy('teacher')
+            ->values();
+
+        $byDate = $topicRows
+            ->groupBy(fn ($row) => Carbon::parse($row->click_date)->toDateString())
+            ->map(function ($items, $date) {
+                return [
+                    'date' => $date,
+                    'topics' => $items->count(),
+                    'clicks' => (int) $items->sum('clicks'),
+                    'sections' => (int) $items->sum('total_sections'),
+                    'complete' => (int) $items->where('work_percent', 100)->count(),
+                ];
+            })
+            ->sortByDesc('date')
+            ->values();
 
         return [
             'rows' => $rows,
@@ -140,5 +173,20 @@ class TeacherClickReport
                     ->orderBy('name')
                     ->get(['id', 'name']),
         ];
+    }
+
+    private static function sectionsForTopic(int $topicId): int
+    {
+        static $cache = [];
+
+        if ($topicId <= 0) {
+            return 0;
+        }
+        if (! array_key_exists($topicId, $cache)) {
+            $topic = MaterialTopic::query()->find($topicId);
+            $cache[$topicId] = $topic ? TeacherSectionClickRecorder::sectionTotal($topic) : 0;
+        }
+
+        return $cache[$topicId];
     }
 }

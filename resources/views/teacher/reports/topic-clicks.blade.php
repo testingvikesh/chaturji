@@ -3,7 +3,7 @@
         <div>
             <span class="admin-section-label">Report</span>
             <h2 class="admin-page-title">My click report</h2>
-            <p class="admin-page-subtitle">Subject, chapter and topic clicks with total points, by date</p>
+            <p class="admin-page-subtitle">Subject, chapter and topic. Sections opened out of the topic total, shown as work percent.</p>
         </div>
     </x-slot>
 
