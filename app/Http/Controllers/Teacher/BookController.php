@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Support\MaterialPaperBank;
 use App\Support\MaterialTopicReader;
 use App\Support\MaterialWorkedExamples;
+use App\Support\TeacherSectionClickRecorder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -163,6 +165,33 @@ class BookController extends Controller
             'readerNav' => $this->assignedReaderNav($teacher, $standard, $medium),
             'readerMaterialId' => $material->id,
             'medium' => $medium,
+        ]);
+    }
+
+    public function recordClick(Request $request, Subject $subject, MaterialTopic $materialTopic): JsonResponse
+    {
+        $teacher = auth()->user();
+        $medium = $this->resolveMedium($request, $this->teacherAssignments($teacher));
+        $this->assertAssigned($teacher, $subject, $medium);
+
+        $sectionKey = trim((string) $request->input('section', ''));
+        abort_unless(preg_match('/^[A-Za-z0-9_-]{1,80}$/', $sectionKey) === 1, 422);
+
+        $materialTopic->load(['material.chapter.subject.standard']);
+        $material = $materialTopic->material;
+        $chapter = $material?->chapter;
+        abort_unless($material && $materialTopic->hasContent(), 404);
+
+        $row = TeacherSectionClickRecorder::record($teacher, $subject, $chapter ?: (object) [
+            'id' => 0,
+            'name' => $material->displayChapterName(),
+        ], $materialTopic, $sectionKey);
+
+        return response()->json([
+            'ok' => true,
+            'clicks' => (int) $row->clicks,
+            'points' => (int) $row->points,
+            'topic_points' => (int) $row->topic_points,
         ]);
     }
 

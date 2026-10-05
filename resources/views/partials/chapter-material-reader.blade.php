@@ -17,6 +17,7 @@
     'canEditQuestions' => false,
     'questionEditMedium' => null,
     'hideDetailsUntilEye' => false,
+    'clickTrackUrl' => null,
 ])
 
 @php
@@ -178,6 +179,7 @@
     textbookTimer: null,
     summaryOpen: false,
     sectionWise: {{ $hideDetailsUntilEye ? 'true' : 'false' }},
+    clickUrl: @js($clickTrackUrl ?? ''),
     openSections: {},
     init() {
         if (!this.sectionWise) {
@@ -188,6 +190,7 @@
             gate.addEventListener('toggle', () => {
                 if (gate.open) {
                     this.closeOtherSections(gate);
+                    this.recordSectionClick(gate.dataset.section);
                 }
                 this.syncSection(gate.dataset.section, gate.open);
             });
@@ -212,6 +215,23 @@
     },
     isSectionOpen(id) {
         return !!(id && this.openSections[id]);
+    },
+    recordSectionClick(id) {
+        if (!this.clickUrl || !id) {
+            return;
+        }
+        const token = document.querySelector('meta[name="csrf-token"]');
+        const body = new FormData();
+        body.append('section', id);
+        fetch(this.clickUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': token ? token.content : '',
+                'Accept': 'application/json',
+            },
+            body,
+            keepalive: true,
+        }).catch(() => {});
     },
     toggleSection(id, scroll = true) {
         if (!this.sectionWise || !id) {

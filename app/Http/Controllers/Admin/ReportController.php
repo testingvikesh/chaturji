@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Models\UserSession;
 use App\Support\AdminMaterialUploadReport;
 use App\Support\AdminReportCatalog;
+use App\Support\TeacherClickReport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -27,6 +28,11 @@ class ReportController extends Controller
         return view('admin.reports.index', [
             'groups' => AdminReportCatalog::groups(),
         ]);
+    }
+
+    public function topicClicks(Request $request): View
+    {
+        return view('admin.reports.topic-clicks', TeacherClickReport::build($request));
     }
 
     public function logins(Request $request): View

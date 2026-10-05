@@ -18,6 +18,7 @@ use App\Support\ActivityLogger;
 use App\Support\MailConfig;
 use App\Support\PrincipalReportCatalog;
 use App\Support\PrincipalSyllabusProgressReport;
+use App\Support\TeacherClickReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -675,6 +676,13 @@ class ReportController extends Controller
             'workAttemptsEnabled' => $workAttemptsTable,
             'hasAllotments' => $allottedSlugs !== [],
         ]);
+    }
+
+    public function topicClicks(Request $request): View
+    {
+        $teacherIds = $this->teacherIdsOnAllotment($this->allottedIds(auth()->user()));
+
+        return view('principal.reports.topic-clicks', TeacherClickReport::build($request, null, $teacherIds));
     }
 
     public function syllabusProgress(Request $request): View

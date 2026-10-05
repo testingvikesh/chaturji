@@ -25,5 +25,6 @@
         'canEditQuestions' => true,
         'questionEditMedium' => $medium,
         'hideDetailsUntilEye' => true,
+        'clickTrackUrl' => route('teacher.books.topics.clicks', ['subject' => $subject, 'materialTopic' => $materialTopic, 'medium' => $medium]),
     ])
 </x-teacher-layout>

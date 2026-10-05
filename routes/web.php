@@ -53,6 +53,7 @@ use App\Http\Controllers\Teacher\LogoutReportController;
 use App\Http\Controllers\Teacher\TodaysTeachingController;
 use App\Http\Controllers\Teacher\SettingController as TeacherSettingController;
 use App\Http\Controllers\Teacher\BookController as TeacherBookController;
+use App\Http\Controllers\Teacher\ClickReportController as TeacherClickReportController;
 use App\Http\Controllers\Teacher\NotificationController as TeacherNotificationController;
 use App\Http\Controllers\Teacher\ProfileController as TeacherProfileController;
 use App\Http\Controllers\UserTicketController;
@@ -133,6 +134,7 @@ Route::prefix('principal')->name('principal.')->group(function () {
         Route::get('/reports/logout-reports/{teacherLogoutReport}', [PrincipalReportController::class, 'logoutReportShow'])->name('reports.logout-reports.show');
         Route::get('/reports/student-work', [PrincipalReportController::class, 'studentWork'])->name('reports.student-work');
         Route::get('/reports/syllabus-progress', [PrincipalReportController::class, 'syllabusProgress'])->name('reports.syllabus-progress');
+        Route::get('/reports/topic-clicks', [PrincipalReportController::class, 'topicClicks'])->name('reports.topic-clicks');
         Route::get('/students/create', [PrincipalStudentController::class, 'create'])->name('students.create');
         Route::post('/students', [PrincipalStudentController::class, 'store'])->name('students.store');
         Route::get('/students/{student}/edit', [PrincipalStudentController::class, 'edit'])->name('students.edit');
@@ -219,6 +221,8 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/books/{subject}/materials/{material}/swadhyay', [\App\Http\Controllers\MaterialSwadhyayController::class, 'teacher'])->name('books.materials.swadhyay');
     Route::get('/books/{subject}/materials/{material}', [TeacherBookController::class, 'material'])->name('books.materials.show');
     Route::get('/books/{subject}/topics/{materialTopic}', [TeacherBookController::class, 'topic'])->name('books.topics.show');
+    Route::post('/books/{subject}/topics/{materialTopic}/clicks', [TeacherBookController::class, 'recordClick'])->name('books.topics.clicks');
+    Route::get('/click-report', [TeacherClickReportController::class, 'index'])->name('click-report');
     Route::get('/books/{subject}/topics/{materialTopic}/questions/{questionKey}/edit', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'edit'])->name('books.questions.edit');
     Route::put('/books/{subject}/topics/{materialTopic}/questions/{questionKey}', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'update'])->name('books.questions.update');
     Route::get('/logout-report', [LogoutReportController::class, 'create'])->name('logout-report.create');
@@ -413,6 +417,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/reports/chapter-list', [ReportController::class, 'chapterList'])->name('reports.chapter-list');
         Route::get('/reports/logout-reports', [ReportController::class, 'logoutReports'])->name('reports.logout-reports');
         Route::get('/reports/logout-reports/{teacherLogoutReport}', [ReportController::class, 'logoutReportShow'])->name('reports.logout-reports.show');
+        Route::get('/reports/topic-clicks', [ReportController::class, 'topicClicks'])->name('reports.topic-clicks');
         Route::get('/reports/activity', [ReportController::class, 'activity'])->name('reports.activity');
         Route::get('/reports/activity/{activityLog}', [ReportController::class, 'activityShow'])->name('reports.activity.show');
         Route::get('/email-logs', [EmailLogController::class, 'index'])->name('email-logs.index');

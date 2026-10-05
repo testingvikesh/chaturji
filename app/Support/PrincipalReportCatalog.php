@@ -72,6 +72,13 @@ class PrincipalReportCatalog
                         'badge' => 'Print',
                     ],
                     [
+                        'title' => 'Teacher Click Report',
+                        'description' => 'Teacher-wise and date-wise topic clicks with total points',
+                        'route' => 'principal.reports.topic-clicks',
+                        'match' => ['principal.reports.topic-clicks'],
+                        'badge' => 'Print',
+                    ],
+                    [
                         'title' => 'Logout Work Reports',
                         'description' => 'Teacher period / chapter / topic reports before logout',
                         'route' => 'principal.reports.logout-reports',

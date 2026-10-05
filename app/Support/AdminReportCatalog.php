@@ -32,6 +32,13 @@ class AdminReportCatalog
                         'badge' => null,
                     ],
                     [
+                        'title' => 'Teacher Click Report',
+                        'description' => 'Teacher-wise and date-wise topic clicks with total points',
+                        'route' => 'admin.reports.topic-clicks',
+                        'match' => ['admin.reports.topic-clicks'],
+                        'badge' => 'New',
+                    ],
+                    [
                         'title' => 'Logout Reports',
                         'description' => 'Teacher work report before logout (period · chapter · topics)',
                         'route' => 'admin.reports.logout-reports',
