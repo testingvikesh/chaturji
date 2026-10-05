@@ -161,6 +161,7 @@
     }
     $hasSummaryLinks = $summaryLinks->isNotEmpty();
     $hideDetailsUntilEye = (bool) $hideDetailsUntilEye;
+    $sectionLabels = $summaryLinks->mapWithKeys(fn ($link) => [$link['anchor'] => $link['label']])->all();
     $tocToggleAttrs = function (string $anchor) use ($hideDetailsUntilEye): string {
         if (! $hideDetailsUntilEye) {
             return '';
@@ -182,52 +183,54 @@
         if (!this.sectionWise) {
             return;
         }
-        const hash = (window.location.hash || '').replace(/^#/, '');
-        if (hash) {
-            this.openSections = { [hash]: true };
-            this.$nextTick(() => {
-                const el = document.getElementById(hash);
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        this.$root.querySelectorAll('details[data-section]').forEach((gate) => {
+            gate.open = false;
+            gate.addEventListener('toggle', () => {
+                if (gate.open) {
+                    this.closeOtherSections(gate);
                 }
+                this.syncSection(gate.dataset.section, gate.open);
             });
+        });
+        this.openSections = {};
+    },
+    closeOtherSections(gate) {
+        this.$root.querySelectorAll('details[data-section]').forEach((other) => {
+            if (other !== gate && other.open) {
+                other.open = false;
+            }
+        });
+    },
+    syncSection(id, open) {
+        const next = { ...this.openSections };
+        if (open) {
+            next[id] = true;
+        } else {
+            delete next[id];
         }
+        this.openSections = next;
     },
     isSectionOpen(id) {
-        if (!this.sectionWise) {
-            return true;
-        }
         return !!(id && this.openSections[id]);
-    },
-    anySectionOpen() {
-        if (!this.sectionWise) {
-            return true;
-        }
-        return Object.keys(this.openSections).some((id) => this.openSections[id]);
     },
     toggleSection(id, scroll = true) {
         if (!this.sectionWise || !id) {
             return;
         }
-        const next = { ...this.openSections };
-        if (next[id]) {
-            delete next[id];
-        } else {
-            next[id] = true;
+        const gate = document.getElementById('gate-' + id);
+        if (!gate) {
+            return;
         }
-        this.openSections = next;
-        if (next[id]) {
-            if (window.history && window.history.replaceState) {
-                window.history.replaceState(null, '', '#' + id);
-            }
-            if (scroll) {
-                this.$nextTick(() => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                });
-            }
+        const willOpen = !gate.open;
+        if (willOpen) {
+            this.closeOtherSections(gate);
+        }
+        gate.open = willOpen;
+        if (gate.open && window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', '#' + id);
+        }
+        if (gate.open && scroll) {
+            this.$nextTick(() => gate.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         }
     },
     topicPage: {{ $topicPageNumber ?: 0 }},
@@ -273,13 +276,16 @@
     goToSummaryPoint(anchor) {
         this.summaryOpen = false;
         if (this.sectionWise && anchor) {
-            this.openSections = { ...this.openSections, [anchor]: true };
+            const gate = document.getElementById('gate-' + anchor);
+            if (gate) {
+                gate.open = true;
+            }
             if (window.history && window.history.replaceState) {
                 window.history.replaceState(null, '', '#' + anchor);
             }
         }
         this.$nextTick(() => {
-            const el = document.getElementById(anchor);
+            const el = document.getElementById(this.sectionWise ? ('gate-' + anchor) : anchor) || document.getElementById(anchor);
             if (!el) return;
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             el.classList.add('ring-2', 'ring-brand-green', 'bg-emerald-50');
@@ -525,6 +531,62 @@
                         color: #fff;
                         opacity: 0.9;
                     }
+                    .material-section-details {
+                        margin-bottom: 0.75rem;
+                        scroll-margin-top: 9rem;
+                    }
+                    .material-section-details > summary {
+                        list-style: none;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 0.75rem;
+                        border-radius: 0.9rem;
+                        border: 1px solid rgb(168, 184, 220);
+                        background: #fff;
+                        padding: 0.8rem 1rem;
+                        font-weight: 700;
+                        color: rgb(26, 54, 124);
+                    }
+                    .material-section-details > summary::-webkit-details-marker {
+                        display: none;
+                    }
+                    .material-section-details[open] > summary {
+                        background: rgb(26, 54, 124);
+                        color: #fff;
+                        border-color: rgb(26, 54, 124);
+                    }
+                    .material-section-details.is-question > summary {
+                        border-color: #fcd34d;
+                        background: #fffbeb;
+                        color: #78350f;
+                    }
+                    .material-section-details.is-question[open] > summary {
+                        background: #f59e0b;
+                        color: #fff;
+                        border-color: #f59e0b;
+                    }
+                    .material-section-details-action {
+                        flex-shrink: 0;
+                        font-size: 0.75rem;
+                        font-weight: 700;
+                    }
+                    .material-section-details .hide-label {
+                        display: none;
+                    }
+                    .material-section-details[open] .show-label {
+                        display: none;
+                    }
+                    .material-section-details[open] .hide-label {
+                        display: inline;
+                    }
+                    .material-section-details:not([open]) > .material-section-details-body {
+                        display: none !important;
+                    }
+                    .material-section-details-body {
+                        padding-top: 0.75rem;
+                    }
                 </style>
             @endonce
         @endif
@@ -629,36 +691,9 @@
         };
     @endphp
 
-    @if ($hideDetailsUntilEye && $hasSummaryLinks)
-        <div x-show="Object.keys(openSections).length === 0" x-cloak class="admin-card mb-6">
-            <div class="admin-card-top"></div>
-            <div class="p-6 sm:p-8 text-center space-y-4">
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-green-50 text-brand-green">
-                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-base font-bold text-slate-900">Topic details are hidden</h3>
-                    <p class="text-sm text-slate-500 mt-1">Click one section to show its details. Click it again to hide that section.</p>
-                </div>
-                <div class="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
-                    @foreach ($summaryLinks as $link)
-                        <button type="button"
-                                @click='toggleSection(@js($link['anchor']))'
-                                class="{{ ($link['style'] ?? 'content') === 'question' ? $tocPillQuestion : $tocPillContent }}">
-                            {{ $link['label'] }}
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    @endif
-
     <div>
     @if ($introduction)
-        <x-material-detail-gate :anchor="'section-'.$introduction->id" :gated="$hideDetailsUntilEye">
+        <x-material-detail-gate :anchor="'section-'.$introduction->id" :gated="$hideDetailsUntilEye" :label="$sectionLabels['section-'.$introduction->id] ?? 'Introduction'">
             @include('partials.material-sections.introduction', [
                 'section' => $introduction,
                 'blockClass' => $nextBlockClass(),
@@ -667,7 +702,7 @@
     @endif
 
     @if ($trailer)
-        <x-material-detail-gate :anchor="'section-'.$trailer->id" :gated="$hideDetailsUntilEye">
+        <x-material-detail-gate :anchor="'section-'.$trailer->id" :gated="$hideDetailsUntilEye" :label="$sectionLabels['section-'.$trailer->id] ?? 'Trailer'">
             @include('partials.material-sections.trailer', [
                 'section' => $trailer,
                 'blockClass' => $nextBlockClass(),
@@ -676,7 +711,7 @@
     @endif
 
     @if ($importance)
-        <x-material-detail-gate :anchor="'section-'.$importance->id" :gated="$hideDetailsUntilEye">
+        <x-material-detail-gate :anchor="'section-'.$importance->id" :gated="$hideDetailsUntilEye" :label="$sectionLabels['section-'.$importance->id] ?? 'Importance of this topic'">
             @include('partials.material-sections.importance', [
                 'section' => $importance,
                 'blockClass' => $nextBlockClass(),
@@ -685,7 +720,7 @@
     @endif
 
     @if ($knowledgeLadderQuestions)
-        <x-material-detail-gate anchor="questions-knowledge_ladder" :gated="$hideDetailsUntilEye">
+        <x-material-detail-gate anchor="questions-knowledge_ladder" :gated="$hideDetailsUntilEye" :label="$sectionLabels['questions-knowledge_ladder'] ?? 'Knowledge Ladder'">
             @include('partials.knowledge-ladder-grid', [
                 'questions' => $knowledgeLadderQuestions,
                 'label' => $visibleQuestionLabels['knowledge_ladder'] ?? 'Knowledge Ladder',
@@ -698,7 +733,7 @@
     @endif
 
     @if ($lineToLineQuestions)
-        <x-material-detail-gate anchor="questions-line_to_line" :gated="$hideDetailsUntilEye">
+        <x-material-detail-gate anchor="questions-line_to_line" :gated="$hideDetailsUntilEye" :label="$sectionLabels['questions-line_to_line'] ?? 'Line to Line'">
             @include('partials.knowledge-ladder-grid', [
                 'questions' => $lineToLineQuestions,
                 'label' => $visibleQuestionLabels['line_to_line'] ?? 'Line to Line',
@@ -721,7 +756,7 @@
     @foreach ($bodySections as $section)
         @if ($section->isGksSection())
             @if (! $gksRendered)
-                <x-material-detail-gate anchor="section-gks" :gated="$hideDetailsUntilEye">
+                <x-material-detail-gate anchor="section-gks" :gated="$hideDetailsUntilEye" :label="$sectionLabels['section-gks'] ?? ($gksPillLabel ?? 'Section')">
                     <div id="section-gks" class="material-gks-grid scroll-mt-36 lg:scroll-mt-32 {{ $nextBlockClass() }}">
                         @foreach (\App\Models\ChapterContentSection::GKS_TYPES as $gksType)
                             @if ($gksSections->has($gksType))
@@ -738,7 +773,7 @@
             @continue
         @endif
 
-        <x-material-detail-gate :anchor="'section-'.$section->id" :gated="$hideDetailsUntilEye">
+        <x-material-detail-gate :anchor="'section-'.$section->id" :gated="$hideDetailsUntilEye" :label="$sectionLabels['section-'.$section->id] ?? ($section->title ?: $section->typeLabel())">
             @include('student.topics.partials.section', [
                 'section' => $section,
                 'blockClass' => $nextBlockClass(),
@@ -747,7 +782,7 @@
     @endforeach
 
     @foreach ($otherQuestionGroups as $type => $questions)
-        <x-material-detail-gate :anchor="'questions-'.$type" :gated="$hideDetailsUntilEye">
+        <x-material-detail-gate :anchor="'questions-'.$type" :gated="$hideDetailsUntilEye" :label="$sectionLabels['questions-'.$type] ?? ($visibleQuestionLabels[$type] ?? $type)" tone="question">
             @include('partials.material-question-group', [
                 'type' => $type,
                 'questions' => $questions,
@@ -760,7 +795,7 @@
     @endforeach
 
     @if ($workedExamples->isNotEmpty())
-        <x-material-detail-gate anchor="worked-examples" :gated="$hideDetailsUntilEye">
+        <x-material-detail-gate anchor="worked-examples" :gated="$hideDetailsUntilEye" :label="$sectionLabels['worked-examples'] ?? 'Examples'">
             @include('partials.worked-examples', [
                 'examples' => $workedExamples,
                 'practiceMode' => $practiceMode,
