@@ -338,6 +338,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/students/upload', [StudentController::class, 'uploadStore'])->name('students.upload.store');
         Route::post('/students/store-one', [StudentController::class, 'storeOne'])->name('students.store-one');
         Route::post('/students/send-credentials', [StudentController::class, 'sendCredentials'])->name('students.send-credentials');
+        Route::get('/students/export', [StudentController::class, 'export'])->name('students.export');
+        Route::post('/students/remove-duplicates', [StudentController::class, 'removeDuplicates'])->name('students.remove-duplicates');
         Route::post('/students/{student}/approve', [StudentController::class, 'approve'])->name('students.approve');
         Route::post('/students/{student}/pending', [StudentController::class, 'pending'])->name('students.pending');
         Route::resource('students', StudentController::class)->except(['create', 'store']);

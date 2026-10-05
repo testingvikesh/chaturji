@@ -2,6 +2,18 @@
     <x-slot name="header">
         <x-admin.partials.page-header title="Students" subtitle="Manage registered student accounts">
             <x-slot name="actions">
+                <a href="{{ route('admin.students.export', request()->query()) }}" class="admin-btn-primary">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1"/></svg>
+                    Export Excel
+                </a>
+                @if (($duplicateCount ?? 0) > 0)
+                    <form method="POST" action="{{ route('admin.students.remove-duplicates') }}" onsubmit="return confirm('Remove {{ $duplicateCount }} duplicate student name(s)? The account that already has an email is kept.');">
+                        @csrf
+                        <button type="submit" class="admin-btn-secondary">
+                            Remove duplicates ({{ $duplicateCount }})
+                        </button>
+                    </form>
+                @endif
                 <a href="{{ route('admin.students.upload') }}" class="admin-btn-secondary">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Upload students

@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Models\UserSession;
 use App\Support\ActivityLogger;
 use App\Support\MailConfig;
+use App\Support\StudentDuplicateCleaner;
+use App\Support\StudentExcelExporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,38 +25,46 @@ class StudentController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = User::students()->latest();
-
-        if ($search = $request->string('search')->trim()->toString()) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('mobile', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        if ($standard = $request->string('standard')->trim()->toString()) {
-            $query->where('standard', $standard);
-        }
-
-        if ($medium = $request->string('medium')->trim()->toString()) {
-            $query->where('medium', $medium);
-        }
-
-        if ($status = $request->string('status')->trim()->toString()) {
-            if ($status === 'approved') {
-                $query->approved();
-            } elseif ($status === 'pending') {
-                $query->pending();
-            }
-        }
-
         return view('admin.students.index', [
-            'students' => $query->paginate(500)->withQueryString(),
+            'students' => $this->filteredStudents($request)->latest()->paginate(500)->withQueryString(),
             'standards' => Standard::orderBy('sort_order')->pluck('name', 'slug'),
             'filters' => $request->only(['search', 'standard', 'medium', 'status']),
             'pendingCount' => User::students()->pending()->count(),
+            'duplicateCount' => StudentDuplicateCleaner::extraCount(),
         ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $students = $this->filteredStudents($request)
+            ->orderBy('standard')
+            ->orderBy('medium')
+            ->orderBy('name')
+            ->get();
+
+        $standards = Standard::orderBy('sort_order')->pluck('name', 'slug')->all();
+
+        return StudentExcelExporter::download($students, $standards);
+    }
+
+    public function removeDuplicates(): RedirectResponse
+    {
+        $result = StudentDuplicateCleaner::remove();
+
+        ActivityLogger::log(
+            'admin.students.remove_duplicates',
+            'Removed '.$result['removed'].' duplicate student accounts',
+            null,
+            ['removed' => $result['removed'], 'names' => array_slice($result['names'], 0, 40)]
+        );
+
+        $message = $result['removed'] > 0
+            ? 'Removed '.$result['removed'].' duplicate student name'.($result['removed'] === 1 ? '' : 's').'. The account with an email was kept.'
+            : 'No duplicate student names found.';
+
+        return redirect()
+            ->route('admin.students.index')
+            ->with('success', $message);
     }
 
     public function show(User $student): View
@@ -286,6 +296,22 @@ class StudentController extends Controller
 
             $seenMobiles[$mobile] = true;
 
+            $sameName = User::students()
+                ->where('standard', $standardSlug)
+                ->where('medium', $medium)
+                ->whereRaw('LOWER(TRIM(name)) = ?', [StudentDuplicateCleaner::normalizeName($name)])
+                ->orderBy('id')
+                ->first();
+            if ($sameName) {
+                if ($email && ! filled($sameName->email) && ! User::query()->where('email', $email)->where('id', '!=', $sameName->id)->exists()) {
+                    $sameName->email = $email;
+                    $sameName->save();
+                }
+                $skipped++;
+                $errors[] = "Row {$rowNum}: {$name} already exists in this class. Duplicate was not created.";
+                continue;
+            }
+
             if ($sendMail && ! $email) {
                 $skipped++;
                 $errors[] = "Row {$rowNum} ({$mobile}): email required when Send mail is checked.";
@@ -492,6 +518,37 @@ class StudentController extends Controller
 
             return false;
         }
+    }
+
+    private function filteredStudents(Request $request)
+    {
+        $query = User::students();
+
+        if ($search = $request->string('search')->trim()->toString()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('mobile', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($standard = $request->string('standard')->trim()->toString()) {
+            $query->where('standard', $standard);
+        }
+
+        if ($medium = $request->string('medium')->trim()->toString()) {
+            $query->where('medium', $medium);
+        }
+
+        if ($status = $request->string('status')->trim()->toString()) {
+            if ($status === 'approved') {
+                $query->approved();
+            } elseif ($status === 'pending') {
+                $query->pending();
+            }
+        }
+
+        return $query;
     }
 
     private function ensureStudent(User $user): void

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Support\StudentDuplicateCleaner;
 use Illuminate\Console\Command;
 
 class ImportLiveStudentsCommand extends Command
@@ -100,6 +101,28 @@ class ImportLiveStudentsCommand extends Command
                 } else {
                     $skipped++;
                 }
+
+                continue;
+            }
+
+            $sameName = User::students()
+                ->where('standard', $standard)
+                ->where('medium', $medium)
+                ->whereRaw('LOWER(TRIM(name)) = ?', [StudentDuplicateCleaner::normalizeName($name)])
+                ->orderBy('id')
+                ->first();
+            if ($sameName) {
+                if ($email && ! filled($sameName->email)) {
+                    $taken = User::query()->where('email', $email)->where('id', '!=', $sameName->id)->exists();
+                    if (! $taken) {
+                        $sameName->email = $email;
+                        $sameName->save();
+                        $updated++;
+                        continue;
+                    }
+                }
+                $skipped++;
+                $this->line("Skip {$name}: duplicate name in {$standard} {$medium}");
 
                 continue;
             }
