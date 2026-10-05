@@ -66,7 +66,7 @@ class TeacherClickReport
             ->selectRaw('teacher_section_clicks.topic_name')
             ->selectRaw('teacher_section_clicks.section_label')
             ->selectRaw('MAX(teacher_section_clicks.points) as total_points')
-            ->selectRaw('SUM(teacher_section_clicks.clicks) as total_clicks')
+            ->selectRaw('1 as total_clicks')
             ->groupBy(
                 'teacher_section_clicks.teacher_id',
                 'users.name',
@@ -89,7 +89,7 @@ class TeacherClickReport
 
         $summaryBase = (clone $query);
         $summary = [
-            'clicks' => (int) (clone $summaryBase)->sum('teacher_section_clicks.clicks'),
+            'clicks' => (int) (clone $summaryBase)->count(),
             'points' => (int) (clone $summaryBase)->sum('teacher_section_clicks.points'),
             'teachers' => (int) (clone $summaryBase)->distinct()->count('teacher_section_clicks.teacher_id'),
             'topics' => (int) (clone $summaryBase)->distinct()->count('teacher_section_clicks.material_topic_id'),
@@ -98,7 +98,7 @@ class TeacherClickReport
         $byTeacher = (clone $query)
             ->selectRaw('users.name as teacher_name')
             ->selectRaw('SUM(teacher_section_clicks.points) as total_points')
-            ->selectRaw('SUM(teacher_section_clicks.clicks) as total_clicks')
+            ->selectRaw('COUNT(*) as total_clicks')
             ->groupBy('teacher_section_clicks.teacher_id', 'users.name')
             ->orderBy('users.name')
             ->get()
@@ -111,7 +111,7 @@ class TeacherClickReport
         $byDate = (clone $query)
             ->selectRaw('teacher_section_clicks.click_date')
             ->selectRaw('SUM(teacher_section_clicks.points) as total_points')
-            ->selectRaw('SUM(teacher_section_clicks.clicks) as total_clicks')
+            ->selectRaw('COUNT(*) as total_clicks')
             ->groupBy('teacher_section_clicks.click_date')
             ->orderByDesc('teacher_section_clicks.click_date')
             ->get()

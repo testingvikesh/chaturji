@@ -52,7 +52,7 @@ class TeacherSectionClickRecorder
             }
 
             $row->fill($attributes);
-            $row->clicks = (int) $row->clicks + 1;
+            $row->clicks = 1;
             $row->save();
 
             return $row;

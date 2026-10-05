@@ -3,11 +3,15 @@
 @endphp
 
 <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-    @include('admin.partials.stat-card', ['label' => 'Total clicks', 'value' => $summary['clicks']])
+    @include('admin.partials.stat-card', [
+        'label' => 'Total clicks',
+        'value' => $summary['clicks'],
+        'hint' => 'One click per section per teacher per date. Opening the same section again the same day still counts as 1.',
+    ])
     @include('admin.partials.stat-card', [
         'label' => 'Total points',
         'value' => $summary['points'],
-        'hint' => 'Study lines and questions in opened sections. Each section counts once. Another open adds a click only.',
+        'hint' => 'Study lines and questions in the sections opened that day. Each section is counted once.',
     ])
     @include('admin.partials.stat-card', ['label' => 'Teachers', 'value' => $summary['teachers']])
     @include('admin.partials.stat-card', ['label' => 'Topics opened', 'value' => $summary['topics']])
