@@ -3,7 +3,9 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-use Illuminate\Session\TokenMismatchException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -28,23 +30,50 @@ class Handler extends ExceptionHandler
             //
         });
 
-        $this->renderable(function (TokenMismatchException $e, $request) {
-            $path = trim($request->path(), '/');
-            $previous = (string) url()->previous();
+        // Laravel turns a CSRF mismatch into HttpException 419 before these callbacks run.
+        $this->renderable(function (HttpException $e, Request $request) {
+            if ($e->getStatusCode() !== 419) {
+                return null;
+            }
 
-            if (str_starts_with($path, 'teacher') || str_contains($previous, '/teacher')) {
-                $route = 'teacher.login';
-            } elseif (str_starts_with($path, 'student') || str_contains($previous, '/student')) {
-                $route = 'student.login';
-            } elseif ((str_starts_with($path, 'admin') || str_contains($previous, '/admin')) && \Illuminate\Support\Facades\Route::has('admin.login')) {
-                $route = 'admin.login';
-            } else {
-                $route = 'login';
+            $route = $this->loginRouteFor($request);
+            $message = 'Your session expired. Please sign in again.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $message,
+                    'redirect' => route($route),
+                ], 419);
             }
 
             return redirect()
                 ->route($route)
-                ->with('status', 'Your session expired. Please sign in again.');
+                ->with('status', $message);
         });
+    }
+
+    private function loginRouteFor(Request $request): string
+    {
+        $previousPath = trim((string) parse_url((string) url()->previous(), PHP_URL_PATH), '/');
+        $areas = [
+            explode('/', trim($request->path(), '/'))[0] ?? '',
+            explode('/', $previousPath)[0] ?? '',
+        ];
+
+        foreach ($areas as $area) {
+            $route = match ($area) {
+                'admin' => 'admin.login',
+                'principal' => 'principal.login',
+                'teacher' => 'teacher.login',
+                'student' => 'student.login',
+                default => null,
+            };
+
+            if ($route && Route::has($route)) {
+                return $route;
+            }
+        }
+
+        return 'login';
     }
 }
