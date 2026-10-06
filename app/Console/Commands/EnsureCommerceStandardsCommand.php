@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 class EnsureCommerceStandardsCommand extends Command
 {
     protected $signature = 'students:ensure-commerce-standards
-        {file=commerce-students-2026-10-02.json : JSON file inside database/data}';
+        {file=commerce-students-2026-10-06.json : JSON file inside database/data}';
 
     protected $description = 'Show Std 11 Commerce and Std 12 Commerce in the student standard list';
 
