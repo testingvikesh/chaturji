@@ -28,7 +28,7 @@ class StudentController extends Controller
     {
         return view('admin.students.index', [
             'students' => $this->filteredStudents($request)->latest()->paginate(500)->withQueryString(),
-            'standards' => Standard::orderBy('sort_order')->pluck('name', 'slug'),
+            'standards' => Standard::orderBy('sort_order')->orderBy('name')->pluck('name', 'slug'),
             'filters' => $request->only(['search', 'standard', 'medium', 'status']),
             'pendingCount' => User::students()->pending()->count(),
             'duplicateCount' => StudentDuplicateCleaner::extraCount(),
@@ -43,7 +43,7 @@ class StudentController extends Controller
             ->orderBy('name')
             ->get();
 
-        $standards = Standard::orderBy('sort_order')->pluck('name', 'slug')->all();
+        $standards = Standard::orderBy('sort_order')->orderBy('name')->pluck('name', 'slug')->all();
 
         return StudentExcelExporter::download($students, $standards);
     }
@@ -85,7 +85,7 @@ class StudentController extends Controller
 
         return view('admin.students.edit', [
             'student' => $student,
-            'standards' => Standard::orderBy('sort_order')->pluck('name', 'slug'),
+            'standards' => Standard::orderBy('sort_order')->orderBy('name')->pluck('name', 'slug'),
             'mediums' => ['english' => 'English', 'gujarati' => 'Gujarati'],
         ]);
     }
@@ -189,7 +189,7 @@ class StudentController extends Controller
     public function uploadForm(): View
     {
         return view('admin.students.upload', [
-            'standards' => Standard::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug', 'medium']),
+            'standards' => Standard::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug', 'medium']),
             'mediums' => Standard::MEDIUMS,
             'defaultPassword' => 'Student@123',
         ]);
