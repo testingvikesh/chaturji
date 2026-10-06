@@ -191,6 +191,8 @@ class StudentController extends Controller
 
     public function uploadForm(): View
     {
+        CommerceStandardSetup::ensure();
+
         return view('admin.students.upload', [
             'standards' => Standard::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug', 'medium']),
             'mediums' => Standard::MEDIUMS,

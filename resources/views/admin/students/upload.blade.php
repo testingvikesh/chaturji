@@ -2,7 +2,7 @@
     <x-slot name="header">
         <x-admin.partials.page-header
             title="Upload Students"
-            subtitle="Upload by Medium · Standard — students can login and use all features">
+            subtitle="Upload one class at a time: Std 11 Science, Std 12 Science, Std 11 Commerce, or Std 12 Commerce">
             <x-slot name="actions">
                 <a href="{{ route('admin.students.upload.template') }}" class="admin-btn-secondary">Download CSV template</a>
                 <a href="{{ route('admin.students.index') }}" class="admin-btn-primary">All students</a>
@@ -52,7 +52,7 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             <p class="font-semibold text-slate-800">How it works</p>
             <ol class="mt-2 list-decimal pl-5 space-y-1">
-                <li>Select <strong>Medium</strong> and <strong>Standard</strong> (applied to every student in the file).</li>
+                <li>Select <strong>Medium</strong>, then one class: <strong>Std 11 Science</strong>, <strong>Std 12 Science</strong>, <strong>Std 11 Commerce</strong>, or <strong>Std 12 Commerce</strong>. That class is applied to every student in the file.</li>
                 <li>Upload CSV with columns: <code class="text-xs bg-white px-1 rounded border">name, mobile, email, password</code> (email optional)</li>
                 <li>Empty password → uses default password below.</li>
                 <li>Students log in with <strong>mobile + password</strong> (email is not required).</li>

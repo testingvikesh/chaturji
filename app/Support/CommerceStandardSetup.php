@@ -11,38 +11,74 @@ class CommerceStandardSetup
 {
     public static function ensure(): void
     {
-        if (Cache::get('commerce-standards-ready') === '2026-10-06-v2') {
+        if (Cache::get('stream-classes-ready') === '2026-10-06-v3') {
             return;
         }
 
         try {
             $slugs = [];
             foreach (['11', '12'] as $class) {
-                $slugs[$class] = self::ensureStandard($class);
+                $slugs[$class] = [
+                    'science' => self::ensureStream($class, 'science'),
+                    'commerce' => self::ensureStream($class, 'commerce'),
+                ];
             }
 
-            $path = database_path('data/commerce-students-2026-10-06.json');
-            if (! is_file($path)) {
+            $scienceFile = database_path('data/science-students-2026-10-06.json');
+            $commerceFile = database_path('data/commerce-students-2026-10-06.json');
+            if (! is_file($scienceFile) || ! is_file($commerceFile)) {
                 return;
             }
 
-            self::assignStudents($slugs);
-            Cache::forever('commerce-standards-ready', '2026-10-06-v2');
+            self::assignFile($scienceFile, $slugs, 'science');
+            self::assignFile($commerceFile, $slugs, 'commerce');
+            Cache::forever('stream-classes-ready', '2026-10-06-v3');
         } catch (Throwable $e) {
             report($e);
         }
     }
 
-    /**
-     * @param  array<string, string>  $slugs
-     */
-    private static function assignStudents(array $slugs): void
+    private static function ensureStream(string $class, string $stream): string
     {
-        $path = database_path('data/commerce-students-2026-10-06.json');
-        if (! is_file($path)) {
-            return;
+        $title = $stream === 'commerce' ? 'Commerce' : 'Science';
+        $name = "Std {$class} {$title}";
+        $preferred = "std-{$class}-{$stream}";
+        $other = $stream === 'commerce' ? 'science' : 'commerce';
+
+        $existing = Standard::query()->get()->first(function (Standard $standard) use ($class, $stream, $other) {
+            $haystack = strtolower($standard->name.' '.$standard->slug);
+
+            return str_contains($haystack, $class)
+                && str_contains($haystack, $stream)
+                && ! str_contains($haystack, $other);
+        });
+
+        if ($existing) {
+            $existing->is_active = true;
+            if (! str_contains(strtolower((string) $existing->name), $stream)) {
+                $existing->name = $name;
+            }
+            $existing->save();
+
+            return (string) $existing->slug;
         }
 
+        Standard::query()->create([
+            'name' => $name,
+            'slug' => $preferred,
+            'medium' => 'gujarati',
+            'sort_order' => 0,
+            'is_active' => true,
+        ]);
+
+        return $preferred;
+    }
+
+    /**
+     * @param  array<string, array{science: string, commerce: string}>  $slugs
+     */
+    private static function assignFile(string $path, array $slugs, string $stream): void
+    {
         $rows = json_decode((string) file_get_contents($path), true);
         if (! is_array($rows)) {
             return;
@@ -50,7 +86,7 @@ class CommerceStandardSetup
 
         foreach ($rows as $row) {
             $class = (string) ($row['class'] ?? '');
-            $slug = $slugs[$class] ?? null;
+            $slug = $slugs[$class][$stream] ?? null;
             $name = trim(preg_replace('/\s+/u', ' ', (string) ($row['name'] ?? '')) ?? '');
             $mobile = preg_replace('/\D+/', '', (string) ($row['mobile'] ?? '')) ?: '';
             $medium = strtolower(trim((string) ($row['medium'] ?? '')));
@@ -95,41 +131,5 @@ class CommerceStandardSetup
                 'is_approved' => true,
             ]);
         }
-    }
-
-    private static function ensureStandard(string $class): string
-    {
-        $name = "Std {$class} Commerce";
-        $slug = "std-{$class}-commerce";
-
-        $existing = Standard::query()
-            ->where('slug', $slug)
-            ->orWhere('name', $name)
-            ->first();
-
-        $science = Standard::query()
-            ->where('name', 'like', '%'.$class.'%Science%')
-            ->orWhere('name', 'like', '%'.$class.'%science%')
-            ->first();
-        $sort = (int) ($science->sort_order ?? 0);
-
-        if ($existing) {
-            $existing->name = $name;
-            $existing->is_active = true;
-            $existing->sort_order = $sort;
-            $existing->save();
-
-            return (string) $existing->slug;
-        }
-
-        Standard::query()->create([
-            'name' => $name,
-            'slug' => $slug,
-            'medium' => 'gujarati',
-            'sort_order' => $sort,
-            'is_active' => true,
-        ]);
-
-        return $slug;
     }
 }
