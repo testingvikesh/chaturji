@@ -9,6 +9,7 @@ use App\Models\Standard;
 use App\Models\User;
 use App\Models\UserSession;
 use App\Support\ActivityLogger;
+use App\Support\CommerceStandardSetup;
 use App\Support\MailConfig;
 use App\Support\StudentDuplicateCleaner;
 use App\Support\StudentExcelExporter;
@@ -26,6 +27,8 @@ class StudentController extends Controller
 {
     public function index(Request $request): View
     {
+        CommerceStandardSetup::ensure();
+
         return view('admin.students.index', [
             'students' => $this->filteredStudents($request)->latest()->paginate(500)->withQueryString(),
             'standards' => Standard::orderBy('sort_order')->orderBy('name')->pluck('name', 'slug'),
