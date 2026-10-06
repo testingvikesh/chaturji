@@ -34,8 +34,8 @@
                     <div>
                         <label class="admin-label">Standard</label>
                         <select name="standard" required class="admin-select">
-                            @foreach ($standards as $slug => $name)
-                                <option value="{{ $slug }}" @selected(old('standard', $student->standard) === $slug)>{{ $name }}</option>
+                            @foreach ($standards as $standard)
+                                <option value="{{ $standard->slug }}" @selected(old('standard', $student->standard) === $standard->slug)>{{ $standard->name }}</option>
                             @endforeach
                         </select>
                     </div>

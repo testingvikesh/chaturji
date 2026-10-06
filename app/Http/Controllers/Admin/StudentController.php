@@ -31,7 +31,7 @@ class StudentController extends Controller
 
         return view('admin.students.index', [
             'students' => $this->filteredStudents($request)->latest()->paginate(500)->withQueryString(),
-            'standards' => Standard::orderBy('sort_order')->orderBy('name')->pluck('name', 'slug'),
+            'standards' => $this->standardChoices(),
             'filters' => $request->only(['search', 'standard', 'medium', 'status']),
             'pendingCount' => User::students()->pending()->count(),
             'duplicateCount' => StudentDuplicateCleaner::extraCount(),
@@ -46,7 +46,7 @@ class StudentController extends Controller
             ->orderBy('name')
             ->get();
 
-        $standards = Standard::orderBy('sort_order')->orderBy('name')->pluck('name', 'slug')->all();
+        $standards = $this->standardChoices()->pluck('name', 'slug')->all();
 
         return StudentExcelExporter::download($students, $standards);
     }
@@ -88,7 +88,7 @@ class StudentController extends Controller
 
         return view('admin.students.edit', [
             'student' => $student,
-            'standards' => Standard::orderBy('sort_order')->orderBy('name')->pluck('name', 'slug'),
+            'standards' => $this->standardChoices(),
             'mediums' => ['english' => 'English', 'gujarati' => 'Gujarati'],
         ]);
     }
@@ -524,6 +524,15 @@ class StudentController extends Controller
 
             return false;
         }
+    }
+
+    private function standardChoices()
+    {
+        return Standard::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get(['id', 'name', 'slug']);
     }
 
     private function filteredStudents(Request $request)

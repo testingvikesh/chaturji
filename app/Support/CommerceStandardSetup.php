@@ -11,7 +11,15 @@ class CommerceStandardSetup
 {
     public static function ensure(): void
     {
-        if (Cache::get('stream-classes-ready') === '2026-10-06-v3') {
+        try {
+            foreach (['11', '12'] as $class) {
+                self::separateSlug($class);
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        if (Cache::get('stream-classes-ready') === '2026-10-06-v4') {
             return;
         }
 
@@ -32,10 +40,50 @@ class CommerceStandardSetup
 
             self::assignFile($scienceFile, $slugs, 'science');
             self::assignFile($commerceFile, $slugs, 'commerce');
-            Cache::forever('stream-classes-ready', '2026-10-06-v3');
+            Cache::forever('stream-classes-ready', '2026-10-06-v4');
         } catch (Throwable $e) {
             report($e);
         }
+    }
+
+    /**
+     * The student dropdown is keyed by slug. Commerce must not keep Science's slug,
+     * or the list shows only Science.
+     */
+    private static function separateSlug(string $class): void
+    {
+        $commerce = self::findStream($class, 'commerce');
+        $science = self::findStream($class, 'science');
+        if (! $commerce || ! $science) {
+            return;
+        }
+
+        if ($commerce->slug !== $science->slug && str_contains(strtolower((string) $commerce->slug), 'commerce')) {
+            return;
+        }
+
+        $slug = 'std-'.$class.'-commerce';
+        if (Standard::query()->where('slug', $slug)->where('id', '!=', $commerce->id)->exists()) {
+            $slug .= '-'.$commerce->id;
+        }
+
+        if ($commerce->slug !== $slug) {
+            $commerce->slug = $slug;
+            $commerce->save();
+        }
+    }
+
+    private static function findStream(string $class, string $stream): ?Standard
+    {
+        $other = $stream === 'commerce' ? 'science' : 'commerce';
+
+        return Standard::query()->orderBy('id')->get()->first(function (Standard $standard) use ($class, $stream, $other) {
+            $haystack = strtolower($standard->name.' '.$standard->slug);
+
+            return str_contains($haystack, $class)
+                && str_contains($haystack, $stream)
+                && ! str_contains($haystack, $other);
+        });
     }
 
     private static function ensureStream(string $class, string $stream): string
@@ -43,15 +91,8 @@ class CommerceStandardSetup
         $title = $stream === 'commerce' ? 'Commerce' : 'Science';
         $name = "Std {$class} {$title}";
         $preferred = "std-{$class}-{$stream}";
-        $other = $stream === 'commerce' ? 'science' : 'commerce';
 
-        $existing = Standard::query()->get()->first(function (Standard $standard) use ($class, $stream, $other) {
-            $haystack = strtolower($standard->name.' '.$standard->slug);
-
-            return str_contains($haystack, $class)
-                && str_contains($haystack, $stream)
-                && ! str_contains($haystack, $other);
-        });
+        $existing = self::findStream($class, $stream);
 
         if ($existing) {
             $existing->is_active = true;

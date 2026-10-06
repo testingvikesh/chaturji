@@ -46,8 +46,8 @@
                         <label class="admin-label">Standard</label>
                         <select name="standard" class="admin-select">
                             <option value="">All Standards</option>
-                            @foreach ($standards as $slug => $name)
-                                <option value="{{ $slug }}" @selected(($filters['standard'] ?? '') === $slug)>{{ $name }}</option>
+                            @foreach ($standards as $standard)
+                                <option value="{{ $standard->slug }}" @selected(($filters['standard'] ?? '') === $standard->slug)>{{ $standard->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -149,7 +149,7 @@
                                 </td>
                                 <td>{{ $student->mobile }}</td>
                                 <td>{{ $student->email ?: '—' }}</td>
-                                <td><span class="admin-badge-green">{{ $standards[$student->standard] ?? $student->standardLabel() }}</span></td>
+                                <td><span class="admin-badge-green">{{ optional($standards->firstWhere('slug', $student->standard))->name ?? $student->standardLabel() }}</span></td>
                                 <td><span class="admin-badge-gold capitalize">{{ $student->medium }}</span></td>
                                 <td>
                                     @include('admin.partials.status-badge', [
