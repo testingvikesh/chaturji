@@ -110,27 +110,6 @@
         .material-reader select {
             font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
         }
-        .example-page-btn {
-            display: inline-flex;
-            height: 2.4rem;
-            min-width: 2.6rem;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.7rem;
-            border: 2px solid #e2e8f0;
-            background: #fff;
-            padding: 0 0.7rem;
-            font-size: 0.9rem;
-            font-weight: 800;
-            color: #334155;
-            cursor: pointer;
-        }
-        .example-page-btn:hover { border-color: #15803d; color: #15803d; background: #f0fdf4; }
-        .example-page-btn--active {
-            background: #15803d !important;
-            border-color: #15803d !important;
-            color: #fff !important;
-        }
     </style>
     <div class="mb-4 flex flex-wrap items-center gap-3 text-sm">
         @if ($backUrl)
@@ -267,24 +246,6 @@
             'pageMode' => true,
             'pages' => $pages,
         ])
-
-        @if ($pages->isNotEmpty())
-            <div class="example-page-strip border-t border-brand-green-100 bg-white px-3 py-3 sm:px-4">
-                <p class="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Page no</p>
-                <div class="flex flex-wrap gap-2">
-                    @foreach ($pages as $page)
-                        <button type="button"
-                                @click="setPage(@js((string) $page))"
-                                :class="isPage(@js((string) $page))
-                                    ? 'example-page-btn example-page-btn--active'
-                                    : 'example-page-btn'"
-                                aria-label="Page {{ $page }}">
-                            {{ str_pad((string) $page, 2, '0', STR_PAD_LEFT) }}
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-        @endif
     </div>
 
     @include('partials.worked-examples', [
