@@ -37,7 +37,23 @@ class MaterialWorkedExamples
         return self::itemsFromSection(
             $topic->sectionData(),
             (int) $topic->id,
-            (int) $topic->topic_order
+            (int) $topic->topic_order,
+            is_array($topic->question_edits) ? $topic->question_edits : []
+        );
+    }
+
+    /**
+     * Raw examples with edit keys, before optional display-only transforms.
+     *
+     * @return Collection<int, array{uid: string, topic_id: int, page: string, label: string, edit_key: string, item: array<string, mixed>}>
+     */
+    public static function rawFromTopic(MaterialTopic $topic): Collection
+    {
+        return self::itemsFromSection(
+            $topic->sectionData(),
+            (int) $topic->id,
+            (int) $topic->topic_order,
+            null
         );
     }
 
@@ -65,6 +81,7 @@ class MaterialWorkedExamples
                 'title_gu',
                 'generated',
                 'section_json',
+                'question_edits',
             ]);
 
         return $topics
@@ -118,9 +135,10 @@ class MaterialWorkedExamples
 
     /**
      * @param  array<string, mixed>|null  $section
-     * @return Collection<int, array{uid: string, topic_id: int, page: string, label: string, item: array<string, mixed>}>
+     * @param  array<string, mixed>|null  $edits  Pass null to skip applying saved edits (raw keys only).
+     * @return Collection<int, array{uid: string, topic_id: int, page: string, label: string, edit_key: string, item: array<string, mixed>}>
      */
-    private static function itemsFromSection(?array $section, int $topicId, int $topicOrder = 0): Collection
+    private static function itemsFromSection(?array $section, int $topicId, int $topicOrder = 0, ?array $edits = []): Collection
     {
         $rawItems = $section['worked_examples']['items'] ?? null;
         if (! is_array($rawItems) || $rawItems === []) {
@@ -134,7 +152,7 @@ class MaterialWorkedExamples
 
         return collect($rawItems)
             ->values()
-            ->map(function ($item, int $index) use ($topicId, $pageFallback, $topicOrder) {
+            ->map(function ($item, int $index) use ($topicId, $pageFallback, $topicOrder, $edits) {
                 if (! is_array($item)) {
                     return null;
                 }
@@ -160,12 +178,20 @@ class MaterialWorkedExamples
                 }
 
                 $itemId = (string) ($item['id'] ?? ($index + 1));
+                $editKey = MaterialExampleEditor::exampleKey($topicId, $itemId, $question);
+
+                if (is_array($edits)) {
+                    $item = MaterialExampleEditor::applyItemEdits($item, $edits, $topicId, $itemId);
+                    $editKey = (string) ($item['_edit_key'] ?? $editKey);
+                    unset($item['_edit_key']);
+                }
 
                 return [
                     'uid' => 'example-'.$topicId.'-'.$itemId,
                     'topic_id' => $topicId,
                     'page' => $page,
                     'label' => $label,
+                    'edit_key' => $editKey,
                     'item' => $item,
                 ];
             })

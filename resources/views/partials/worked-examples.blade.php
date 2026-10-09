@@ -4,6 +4,9 @@
     'heading' => 'Solved Examples',
     'filterByPage' => false,
     'pages' => [],
+    'canEditExamples' => false,
+    'subject' => null,
+    'exampleEditMedium' => null,
 ])
 
 @php
@@ -18,6 +21,33 @@
     $pages = collect($pages ?? [])->isNotEmpty()
         ? collect($pages)->map(fn ($page) => (string) $page)->values()
         : $groups->keys()->reject(fn ($page) => (string) $page === '0')->values();
+
+    $canEditExamples = (bool) $canEditExamples
+        && $subject
+        && auth()->check()
+        && (auth()->user()->role ?? null) === 'teacher';
+
+    $exampleEditUrl = function (array $row) use ($subject, $exampleEditMedium, $canEditExamples) {
+        if (! $canEditExamples) {
+            return null;
+        }
+        $key = trim((string) ($row['edit_key'] ?? ''));
+        $topicId = (int) ($row['topic_id'] ?? 0);
+        if ($key === '' || $topicId < 1 || ! $subject) {
+            return null;
+        }
+
+        $params = [
+            'subject' => $subject,
+            'materialTopic' => $topicId,
+            'exampleKey' => $key,
+        ];
+        if ($exampleEditMedium) {
+            $params['medium'] = $exampleEditMedium;
+        }
+
+        return route('teacher.books.examples.edit', $params);
+    };
 @endphp
 
 @if ($examples->isNotEmpty())
@@ -89,12 +119,25 @@
                         $stepColors = ['blue', 'purple', 'green', 'teal', 'orange', 'gold'];
                     @endphp
 
+                    @php $editUrl = $exampleEditUrl($row); @endphp
                     <article id="{{ $row['uid'] }}" class="ex-card scroll-mt-36 lg:scroll-mt-32"
                              x-data="{ open: {{ $practiceMode ? 'false' : 'true' }} }">
                         <header class="ex-card-head">
-                            <span class="ex-card-label">{{ $row['label'] }}</span>
-                            @if (! empty($item['difficulty']))
-                                <span class="ex-card-diff">{{ ucfirst((string) $item['difficulty']) }}</span>
+                            <div class="ex-card-head-main">
+                                <span class="ex-card-label">{{ $row['label'] }}</span>
+                                @if (! empty($item['difficulty']))
+                                    <span class="ex-card-diff">{{ ucfirst((string) $item['difficulty']) }}</span>
+                                @endif
+                            </div>
+                            @if ($editUrl)
+                                <a href="{{ $editUrl }}"
+                                   class="ex-card-edit"
+                                   title="Edit example">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Edit
+                                </a>
                             @endif
                         </header>
 
@@ -279,7 +322,24 @@
                 margin-bottom:1.25rem;
                 box-shadow:0 10px 30px -18px rgba(15,23,42,.35);
             }
-            .ex-card-head { display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem; }
+            .ex-card-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.6rem; }
+            .ex-card-head-main { display:flex; align-items:center; flex-wrap:wrap; gap:.5rem; min-width:0; }
+            .ex-card-edit {
+                display:inline-flex;
+                align-items:center;
+                gap:.35rem;
+                flex-shrink:0;
+                height:2rem;
+                border-radius:.65rem;
+                border:1px solid #bbf7d0;
+                background:#f0fdf4;
+                padding:0 .7rem;
+                font-size:.75rem;
+                font-weight:700;
+                color:#15803d;
+                text-decoration:none;
+            }
+            .ex-card-edit:hover { background:#15803d; border-color:#15803d; color:#fff; }
             .ex-card-label {
                 display:inline-flex; align-items:center; border-radius:9999px;
                 background:linear-gradient(135deg,#0f766e,#15803d);

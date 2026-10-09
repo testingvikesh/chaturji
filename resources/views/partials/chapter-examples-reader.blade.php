@@ -6,6 +6,8 @@
     'backUrl' => null,
     'practiceMode' => false,
     'readerNav' => [],
+    'canEditExamples' => false,
+    'exampleEditMedium' => null,
 ])
 
 @php
@@ -291,5 +293,8 @@
         'heading' => 'Solved Examples — '.$material->displayChapterName(),
         'filterByPage' => true,
         'pages' => $pages,
+        'canEditExamples' => $canEditExamples,
+        'subject' => $subject,
+        'exampleEditMedium' => $exampleEditMedium,
     ])
 </div>

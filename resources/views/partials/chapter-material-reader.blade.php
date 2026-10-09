@@ -831,6 +831,9 @@
                 'examples' => $workedExamples,
                 'practiceMode' => $practiceMode,
                 'heading' => 'Solved Examples',
+                'canEditExamples' => $canEditQuestions,
+                'subject' => $subject,
+                'exampleEditMedium' => $questionEditMedium,
             ])
         </x-material-detail-gate>
     @endif

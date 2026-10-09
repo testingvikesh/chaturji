@@ -225,6 +225,12 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/click-report', [TeacherClickReportController::class, 'index'])->name('click-report');
     Route::get('/books/{subject}/topics/{materialTopic}/questions/{questionKey}/edit', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'edit'])->name('books.questions.edit');
     Route::put('/books/{subject}/topics/{materialTopic}/questions/{questionKey}', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'update'])->name('books.questions.update');
+    Route::get('/books/{subject}/topics/{materialTopic}/examples/{exampleKey}/edit', [\App\Http\Controllers\Teacher\MaterialExampleController::class, 'edit'])
+        ->where('exampleKey', '[a-f0-9]{64}')
+        ->name('books.examples.edit');
+    Route::put('/books/{subject}/topics/{materialTopic}/examples/{exampleKey}', [\App\Http\Controllers\Teacher\MaterialExampleController::class, 'update'])
+        ->where('exampleKey', '[a-f0-9]{64}')
+        ->name('books.examples.update');
     Route::get('/logout-report', [LogoutReportController::class, 'create'])->name('logout-report.create');
     Route::get('/logout-report/chapters', [LogoutReportController::class, 'chapters'])->name('logout-report.chapters');
     Route::get('/logout-report/topics', [LogoutReportController::class, 'topics'])->name('logout-report.topics');

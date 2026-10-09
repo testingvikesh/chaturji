@@ -15,5 +15,7 @@
         'backUrl' => $backUrl,
         'practiceMode' => $practiceMode,
         'readerNav' => $readerNav ?? [],
+        'canEditExamples' => true,
+        'exampleEditMedium' => $medium ?? null,
     ])
 </x-teacher-layout>

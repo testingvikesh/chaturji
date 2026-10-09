@@ -140,7 +140,7 @@ class MaterialTopicReader
             'total_questions' => (int) ($parsed['total_questions'] ?? count($parsed['questions'] ?? [])),
             'sections' => array_values($parsed['sections'] ?? []),
             'questions' => array_values($parsed['questions'] ?? []),
-            'workedExamples' => MaterialWorkedExamples::fromTopic($materialTopic)->values()->all(),
+            'workedExamples' => MaterialWorkedExamples::rawFromTopic($materialTopic)->values()->all(),
         ];
     }
 
@@ -200,7 +200,8 @@ class MaterialTopicReader
             'questions' => $questions,
             'questionGroups' => $questionGroups,
             'questionGroupLabels' => $questionGroupLabels,
-            'workedExamples' => collect($cached['workedExamples'] ?? []),
+            // Always merge teacher example edits at read time (cache stores raw examples).
+            'workedExamples' => MaterialWorkedExamples::fromTopic($materialTopic),
         ];
     }
 
