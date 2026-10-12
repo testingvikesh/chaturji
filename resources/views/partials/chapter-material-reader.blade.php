@@ -277,7 +277,15 @@
                     this.$nextTick(() => {
                         const start = () => {
                             const box = document.querySelector('.textbook-modal [data-pdf-url]');
-                            if (!box || box.dataset.ready === '1') {
+                            if (!box) {
+                                this.watchTextbookImages();
+                                return;
+                            }
+                            if (box.dataset.ready === '1') {
+                                this.onTextbookLoaded();
+                                return;
+                            }
+                            if (box.dataset.rendering === '1') {
                                 return;
                             }
                             if (!window.renderTextbookPages) {
@@ -289,10 +297,21 @@
                         setTimeout(start, 150);
                         const el = document.getElementById(this.topicPage ? 'textbook-page-' + this.topicPage : 'textbook-pages');
                         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        if (document.getElementById('textbook-pages')) {
-                            setTimeout(() => this.onTextbookLoaded(), 600);
-                        }
                     });
+                },
+                watchTextbookImages() {
+                    const pages = document.getElementById('textbook-pages');
+                    const img = pages ? pages.querySelector('img') : null;
+                    if (!img) {
+                        this.onTextbookLoaded();
+                        return;
+                    }
+                    if (img.complete && img.naturalWidth > 0) {
+                        this.onTextbookLoaded();
+                        return;
+                    }
+                    img.addEventListener('load', () => this.onTextbookLoaded(), { once: true });
+                    img.addEventListener('error', () => this.onTextbookLoaded(), { once: true });
                 },
                 closeTextbook() {
                     this.textbookOpen = false;
@@ -323,7 +342,7 @@
         };
     </script>
 @endonce
-<div class="admin-page material-reader" x-data="materialReader({{ \Illuminate\Support\Js::from(['sectionWise' => (bool) $hideDetailsUntilEye, 'clickUrl' => (string) ($clickTrackUrl ?? ''), 'topicPage' => (int) ($topicPageNumber ?: 0)]) }})" @keydown.escape.window="closeTextbook()" @textbook-ready="onTextbookLoaded()">
+<div class="admin-page material-reader" x-data="materialReader({{ \Illuminate\Support\Js::from(['sectionWise' => (bool) $hideDetailsUntilEye, 'clickUrl' => (string) ($clickTrackUrl ?? ''), 'topicPage' => (int) ($topicPageNumber ?: 0)]) }})" @keydown.escape.window="closeTextbook()" @textbook-ready.window="onTextbookLoaded()">
     @if ($hasSummaryLinks)
         <button type="button"
                 @click="summaryOpen = true"
@@ -389,6 +408,8 @@
                 .textbook-modal-panel { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; max-height: 100dvh; overflow: hidden; background: #fff; }
                 .textbook-pdf-canvas, .textbook-page-list { width: 100%; max-width: 100%; }
                 .textbook-pdf-canvas canvas, .textbook-page-image { width: 100% !important; max-width: 100%; height: auto !important; }
+                .textbook-loader-spin { width: 46px; height: 46px; border: 4px solid #d1fae5; border-top-color: #15803d; border-radius: 9999px; animation: textbook-spin .75s linear infinite; }
+                @keyframes textbook-spin { to { transform: rotate(360deg); } }
                 @media (min-width: 1280px) {
                     .textbook-modal { padding: 16px; }
                     .textbook-modal-panel { width: min(1100px, 100%); height: min(96dvh, 100%); margin: auto; border-radius: 16px; }
@@ -440,13 +461,10 @@
 
                 <div class="relative min-h-0 flex-1 overflow-hidden bg-slate-100">
                     <div x-show="textbookLoading"
-                         x-cloak
-                         class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-brand-green-50 via-white to-amber-50">
-                        <img src="{{ asset('images/brand/ganpati.png') }}"
-                             alt="Shree Ganpati"
-                             class="h-20 w-20 sm:h-24 sm:w-24 object-contain drop-shadow-lg animate-pulse">
-                        <p class="text-sm font-bold text-brand-green">જય શ્રી ગણેશ</p>
-                        <p class="text-sm font-semibold text-slate-700">Loading textbook…</p>
+                         class="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3"
+                         style="background:#f8fafc;">
+                        <div class="textbook-loader-spin" role="status" aria-label="Loading textbook"></div>
+                        <p class="text-sm font-bold text-slate-800">Loading textbook…</p>
                         <p class="text-xs text-slate-500">Please wait while the PDF opens</p>
                     </div>
 

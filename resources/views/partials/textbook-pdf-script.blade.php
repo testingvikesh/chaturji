@@ -29,6 +29,15 @@
 
                 let painting = false;
                 let paintAgain = false;
+                let toldReady = false;
+                function tellReady() {
+                    if (toldReady) {
+                        return;
+                    }
+                    toldReady = true;
+                    window.dispatchEvent(new CustomEvent('textbook-ready'));
+                    container.dispatchEvent(new CustomEvent('textbook-ready', { bubbles: true }));
+                }
                 async function paint() {
                     if (painting) {
                         paintAgain = true;
@@ -49,9 +58,10 @@
                         item.canvas.style.width = '100%';
                         item.canvas.style.height = 'auto';
                         await item.page.render({ canvasContext: item.canvas.getContext('2d'), viewport: viewport }).promise;
+                        tellReady();
                     }
                     painting = false;
-                    container.dispatchEvent(new CustomEvent('textbook-ready', { bubbles: true }));
+                    tellReady();
                     if (paintAgain) {
                         paintAgain = false;
                         paint();
@@ -75,6 +85,7 @@
                 container.innerHTML = '';
                 container.appendChild(frame);
                 container.dataset.ready = '1';
+                window.dispatchEvent(new CustomEvent('textbook-ready'));
                 container.dispatchEvent(new CustomEvent('textbook-ready', { bubbles: true }));
             });
         };
