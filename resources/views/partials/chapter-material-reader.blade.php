@@ -408,7 +408,9 @@
                 .textbook-modal-panel { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; max-height: 100dvh; overflow: hidden; background: #fff; }
                 .textbook-pdf-canvas, .textbook-page-list { width: 100%; max-width: 100%; }
                 .textbook-pdf-canvas canvas, .textbook-page-image { width: 100% !important; max-width: 100%; height: auto !important; }
-                .textbook-loader-spin { width: 46px; height: 46px; border: 4px solid #d1fae5; border-top-color: #15803d; border-radius: 9999px; animation: textbook-spin .75s linear infinite; }
+                .textbook-loader-ganesh { width: 7rem; height: 7rem; object-fit: contain; filter: drop-shadow(0 10px 15px rgba(0,0,0,.12)); animation: textbook-ganesh 1.4s ease-in-out infinite; }
+                .textbook-loader-spin { width: 36px; height: 36px; border: 4px solid #d1fae5; border-top-color: #15803d; border-radius: 9999px; animation: textbook-spin .75s linear infinite; }
+                @keyframes textbook-ganesh { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .88; transform: scale(1.04); } }
                 @keyframes textbook-spin { to { transform: rotate(360deg); } }
                 @media (min-width: 1280px) {
                     .textbook-modal { padding: 16px; }
@@ -462,7 +464,11 @@
                 <div class="relative min-h-0 flex-1 overflow-hidden bg-slate-100">
                     <div x-show="textbookLoading"
                          class="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3"
-                         style="background:#f8fafc;">
+                         style="background:linear-gradient(to bottom,#ecfdf5 0%,#ffffff 45%,#fffbeb 100%);">
+                        <img src="{{ asset('images/brand/ganpati.png') }}"
+                             alt="Shree Ganpati"
+                             class="textbook-loader-ganesh">
+                        <p class="text-base font-extrabold text-brand-green">જય શ્રી ગણેશ</p>
                         <div class="textbook-loader-spin" role="status" aria-label="Loading textbook"></div>
                         <p class="text-sm font-bold text-slate-800">Loading textbook…</p>
                         <p class="text-xs text-slate-500">Please wait while the PDF opens</p>
