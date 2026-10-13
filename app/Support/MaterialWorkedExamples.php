@@ -221,7 +221,7 @@ class MaterialWorkedExamples
             return self::looksLikeLatex($text);
         }
 
-        return (bool) preg_match('/[=×÷√∑∫≤≥≠≈^]|\\\(|\\\[/u', $text)
+        return (bool) preg_match('/[=×÷√∑∫≤≥≠≈^]|\\\\[\(\[]/u', $text)
             && ! preg_match('/\p{Gujarati}|\p{Devanagari}/u', $text);
     }
 
