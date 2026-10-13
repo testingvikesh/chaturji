@@ -24,11 +24,15 @@
             border: 1px solid #e2e8f0;
             background: #fff;
             padding: .7rem .85rem;
-            font-size: .95rem;
+            font-size: 16px;
             line-height: 1.55;
             color: #0f172a;
             white-space: pre-wrap;
             outline: none;
+            -webkit-user-select: text;
+            user-select: text;
+            -webkit-user-modify: read-write;
+            -webkit-touch-callout: default;
         }
         .math-editor-area:focus { border-color: #15803d; box-shadow: 0 0 0 3px rgba(21, 128, 61, .15); }
         .math-editor-area:empty:before { content: attr(data-placeholder); color: #94a3b8; }
@@ -110,9 +114,15 @@
                 }).join('\n');
             }
 
-            function clipboardHtml(event) {
-                const html = event.clipboardData ? event.clipboardData.getData('text/html') : '';
-                const plain = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
+            function readClipboard(event, type) {
+                try {
+                    return event.clipboardData ? (event.clipboardData.getData(type) || '') : '';
+                } catch (error) {
+                    return '';
+                }
+            }
+
+            function clipboardHtml(html, plain) {
                 if (!html) {
                     return escapeHtml(plain).replace(/\n/g, '<br>');
                 }
@@ -202,6 +212,68 @@
                 });
             }
 
+            function caretRange(box) {
+                const selection = window.getSelection();
+                if (!selection) {
+                    return null;
+                }
+                if (selection.rangeCount) {
+                    const current = selection.getRangeAt(0);
+                    if (box.contains(current.commonAncestorContainer)) {
+                        return current;
+                    }
+                }
+                const range = document.createRange();
+                range.selectNodeContents(box);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                return range;
+            }
+
+            function insertHtml(box, html) {
+                if (!html) {
+                    return false;
+                }
+                const selection = window.getSelection();
+                const range = caretRange(box);
+                if (!selection || !range) {
+                    return false;
+                }
+                const holder = document.createElement('div');
+                holder.innerHTML = html;
+                if (!holder.childNodes.length) {
+                    return false;
+                }
+                range.deleteContents();
+                const fragment = document.createDocumentFragment();
+                let last = null;
+                while (holder.firstChild) {
+                    last = holder.firstChild;
+                    fragment.appendChild(last);
+                }
+                range.insertNode(fragment);
+                if (last && last.parentNode) {
+                    const after = document.createRange();
+                    after.setStartAfter(last);
+                    after.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(after);
+                }
+                return true;
+            }
+
+            function insertPlain(text) {
+                if (!text) {
+                    return false;
+                }
+                try {
+                    return document.execCommand('insertText', false, text) === true;
+                } catch (error) {
+                    return false;
+                }
+            }
+
             function sync(box) {
                 const root = box.parentElement;
                 const store = root.querySelector('.math-editor-store');
@@ -220,9 +292,21 @@
                 const box = root.querySelector('.math-editor-area');
                 const form = root.closest('form');
                 box.addEventListener('paste', function (event) {
+                    const plain = readClipboard(event, 'text/plain');
+                    const html = readClipboard(event, 'text/html');
+                    if (plain === '' && html === '') {
+                        window.setTimeout(function () { sync(box); }, 0);
+                        return;
+                    }
                     event.preventDefault();
-                    document.execCommand('insertHTML', false, clipboardHtml(event));
-                    sync(box);
+                    const markup = clipboardHtml(html, plain);
+                    window.setTimeout(function () {
+                        box.focus();
+                        if (!insertHtml(box, markup) && !insertPlain(plain)) {
+                            box.appendChild(document.createTextNode(plain || markup.replace(/<[^>]+>/g, '')));
+                        }
+                        sync(box);
+                    }, 0);
                 });
                 box.addEventListener('input', function () { sync(box); });
                 if (form) {
