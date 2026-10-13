@@ -6,11 +6,6 @@
 ])
 
 <div class="math-editor" data-math-editor>
-    <div class="math-editor-bar">
-        <button type="button" data-math-cmd="subscript" title="Subscript">x<sub>2</sub></button>
-        <button type="button" data-math-cmd="superscript" title="Superscript">x<sup>2</sup></button>
-        <span class="math-editor-hint">Paste the equation as it is. The preview below shows how it will look.</span>
-    </div>
     <div class="math-editor-area"
          contenteditable="true"
          role="textbox"
@@ -23,21 +18,6 @@
 @once
     <style>
         .math-editor { display: flex; flex-direction: column; gap: .4rem; }
-        .math-editor-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
-        .math-editor-bar button {
-            height: 2rem;
-            min-width: 2.4rem;
-            border-radius: .6rem;
-            border: 1px solid #bbf7d0;
-            background: #f0fdf4;
-            padding: 0 .55rem;
-            font-size: .85rem;
-            font-weight: 800;
-            color: #166534;
-            cursor: pointer;
-        }
-        .math-editor-bar button:hover { background: #15803d; color: #fff; border-color: #15803d; }
-        .math-editor-hint { font-size: .75rem; color: #64748b; }
         .math-editor-area {
             width: 100%;
             border-radius: .85rem;
@@ -239,16 +219,6 @@
                 root.dataset.ready = '1';
                 const box = root.querySelector('.math-editor-area');
                 const form = root.closest('form');
-                root.querySelectorAll('[data-math-cmd]').forEach(function (button) {
-                    button.addEventListener('mousedown', function (event) {
-                        event.preventDefault();
-                    });
-                    button.addEventListener('click', function () {
-                        box.focus();
-                        document.execCommand(button.dataset.mathCmd, false, null);
-                        sync(box);
-                    });
-                });
                 box.addEventListener('paste', function (event) {
                     event.preventDefault();
                     document.execCommand('insertHTML', false, clipboardHtml(event));
