@@ -76,12 +76,12 @@ class MaterialExampleEditor
         $oldQuestion = trim((string) ($item['question_text'] ?? ''));
         $oldAnswer = trim((string) ($item['final_answer'] ?? ''));
 
-        $newQuestion = TextSanitizer::forDatabase($payload['question_text'] ?? '') ?? '';
-        $newFind = TextSanitizer::forDatabase($payload['find'] ?? null);
-        $newGiven = TextSanitizer::forDatabase($payload['given'] ?? null);
-        $newAnswer = TextSanitizer::forDatabase($payload['final_answer'] ?? null);
-        $newOverview = TextSanitizer::forDatabase($payload['solution_overview'] ?? null);
-        $newSolution = self::parseSolutionText((string) ($payload['solution_text'] ?? ''));
+        $newQuestion = MathMarkup::sanitize($payload['question_text'] ?? '');
+        $newFind = MathMarkup::sanitize($payload['find'] ?? null);
+        $newGiven = MathMarkup::sanitize($payload['given'] ?? null);
+        $newAnswer = MathMarkup::sanitize($payload['final_answer'] ?? null);
+        $newOverview = MathMarkup::sanitize($payload['solution_overview'] ?? null);
+        $newSolution = self::parseSolutionText(MathMarkup::sanitize((string) ($payload['solution_text'] ?? '')));
 
         DB::transaction(function () use (
             $teacher,

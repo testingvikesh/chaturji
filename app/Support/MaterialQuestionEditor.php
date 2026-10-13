@@ -85,9 +85,15 @@ class MaterialQuestionEditor
             : (string) ($match->answer ?? '');
         $oldOptions = is_array($match->options ?? null) ? $match->options : null;
 
-        $newText = TextSanitizer::forDatabase($payload['question_text']) ?? '';
-        $newAnswer = TextSanitizer::forDatabase($payload['answer'] ?? null);
+        $newText = MathMarkup::sanitize($payload['question_text']);
+        $newAnswer = MathMarkup::sanitize($payload['answer'] ?? null);
         $newOptions = $payload['options'] ?? null;
+        if (is_array($newOptions)) {
+            $newOptions = array_values(array_filter(array_map(
+                fn ($line) => MathMarkup::sanitize(is_string($line) ? $line : ''),
+                $newOptions
+            ), fn ($line) => $line !== ''));
+        }
 
         DB::transaction(function () use (
             $teacher,

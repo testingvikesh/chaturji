@@ -201,7 +201,8 @@ class MaterialWorkedExamples
 
     public static function latex(?string $text): string
     {
-        $text = trim(html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $text = trim(html_entity_decode((string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $text = preg_replace('/<\/?(?:sub|sup)\s*>/i', '', $text) ?? $text;
 
         return str_replace(['\\(', '\\)', '\\[', '\\]'], '', $text);
     }
@@ -213,6 +214,17 @@ class MaterialWorkedExamples
         return (bool) preg_match('/\\\\[a-zA-Z]+|[_^{}]|\\\\boxed|\\\\frac|\\\\text/', $text);
     }
 
+    public static function looksLikeEquation(?string $text): bool
+    {
+        $text = trim((string) $text);
+        if ($text === '' || self::looksLikeLatex($text)) {
+            return self::looksLikeLatex($text);
+        }
+
+        return (bool) preg_match('/[=×÷√∑∫≤≥≠≈^]|\\\(|\\\[/u', $text)
+            && ! preg_match('/\p{Gujarati}|\p{Devanagari}/u', $text);
+    }
+
     /**
      * Split a paragraph into short readable points.
      *
@@ -220,12 +232,16 @@ class MaterialWorkedExamples
      */
     public static function toPoints(?string $text): array
     {
-        $text = trim(html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $text = trim(html_entity_decode(strip_tags((string) $text, '<sub><sup>'), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
         if ($text === '') {
             return [];
         }
 
         $text = preg_replace("/\r\n|\r/", "\n", $text) ?? $text;
+        if (self::looksLikeLatex($text) || self::looksLikeEquation($text)) {
+            return [$text];
+        }
+
         $text = self::readable($text);
         $chunks = preg_split('/\n+/', $text) ?: [$text];
         $points = [];
@@ -265,8 +281,8 @@ class MaterialWorkedExamples
      */
     public static function readable(?string $text): string
     {
-        $text = trim(html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        if ($text === '' || self::looksLikeLatex($text)) {
+        $text = trim(html_entity_decode(strip_tags((string) $text, '<sub><sup>'), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if ($text === '' || self::looksLikeLatex($text) || self::looksLikeEquation($text)) {
             return $text;
         }
 

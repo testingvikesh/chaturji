@@ -65,7 +65,7 @@
         <span class="material-question-no">{{ $number }}</span>
         <div class="min-w-0 flex-1 space-y-3">
             <div class="flex items-start justify-between gap-3">
-                <p class="material-question-text flex-1">{{ $question->question_text }}</p>
+                <p class="material-question-text flex-1">{!! \App\Support\MathMarkup::render($question->question_text) !!}</p>
                 <div class="flex shrink-0 items-center gap-2">
                     @if (($questionOnly && $showMarks) || $useInteractive)
                         @if ($questionMarks > 0)
@@ -131,7 +131,7 @@
                             <span class="js-objective-letter flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-amber-300 bg-white text-xs font-bold text-amber-700 group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500">
                                 {{ strtoupper($entry['key']) }}
                             </span>
-                            <span class="min-w-0 flex-1 leading-snug text-slate-700">{{ $entry['text'] }}</span>
+                            <span class="min-w-0 flex-1 leading-snug text-slate-700">{!! \App\Support\MathMarkup::render($entry['text']) !!}</span>
                         </button>
                     @endforeach
                 </div>
@@ -142,7 +142,7 @@
                             <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-brand-green/30 bg-white text-xs font-bold text-brand-green">
                                 {{ strtoupper($entry['key']) }}
                             </span>
-                            <span class="min-w-0 flex-1 leading-snug text-slate-700">{{ $entry['text'] }}</span>
+                            <span class="min-w-0 flex-1 leading-snug text-slate-700">{!! \App\Support\MathMarkup::render($entry['text']) !!}</span>
                         </div>
                     @endforeach
                 </div>
@@ -185,11 +185,11 @@
                         @if ($pointwiseAnswer && count($answerPoints) > 1)
                             <ul class="material-answer-points">
                                 @foreach ($answerPoints as $point)
-                                    <li>{{ $point }}</li>
+                                    <li>{!! \App\Support\MathMarkup::render($point) !!}</li>
                                 @endforeach
                             </ul>
                         @else
-                            <span class="material-answer-text">{{ $resolvedAnswer }}</span>
+                            <span class="material-answer-text">{!! \App\Support\MathMarkup::render($resolvedAnswer) !!}</span>
                         @endif
                     </div>
                 @elseif ($showAnswer)
@@ -198,11 +198,11 @@
                         @if ($pointwiseAnswer && count($answerPoints) > 1)
                             <ul class="material-answer-points">
                                 @foreach ($answerPoints as $point)
-                                    <li>{{ $point }}</li>
+                                    <li>{!! \App\Support\MathMarkup::render($point) !!}</li>
                                 @endforeach
                             </ul>
                         @else
-                            <span class="material-answer-text">{{ $resolvedAnswer }}</span>
+                            <span class="material-answer-text">{!! \App\Support\MathMarkup::render($resolvedAnswer) !!}</span>
                         @endif
                     </div>
                 @endif

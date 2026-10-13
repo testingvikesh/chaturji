@@ -198,13 +198,16 @@ class DataUploadController extends Controller
 
         $options = null;
         if ($request->filled('options_text')) {
-            $lines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $validated['options_text']))));
+            $lines = array_values(array_filter(array_map(
+                fn ($line) => \App\Support\MathMarkup::sanitize(trim($line)),
+                preg_split('/\r\n|\r|\n/', $validated['options_text']) ?: []
+            ), fn ($line) => $line !== ''));
             $options = $lines !== [] ? $lines : null;
         }
 
         $question->update([
-            'question_text' => TextSanitizer::forDatabase($validated['question_text']) ?? '',
-            'answer' => TextSanitizer::forDatabase($validated['answer'] ?? null),
+            'question_text' => \App\Support\MathMarkup::sanitize($validated['question_text']),
+            'answer' => \App\Support\MathMarkup::sanitize($validated['answer'] ?? null),
             'options' => $options,
         ]);
 

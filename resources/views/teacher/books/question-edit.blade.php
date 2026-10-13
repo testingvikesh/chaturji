@@ -24,7 +24,7 @@
                 <input type="hidden" name="medium" value="{{ $medium }}">
 
                 <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    Edit subjective / objective question and answer. Changes update this material and create an admin log.
+                    Edit the question, options, and answer. Subscript and superscript stay when you paste maths.
                 </div>
 
                 <div>
@@ -34,19 +34,19 @@
 
                 <div>
                     <label class="admin-label">Question <span class="text-red-500">*</span></label>
-                    <textarea name="question_text" rows="4" required class="admin-input">{{ old('question_text', $question->question_text) }}</textarea>
+                    <x-math-editor name="question_text" :rows="4" :value="old('question_text', $question->question_text)" placeholder="Question text" />
                     @error('question_text')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
                     <label class="admin-label">Options <span class="font-normal text-slate-400">(one per line, for MCQ / objective)</span></label>
-                    <textarea name="options_text" rows="5" class="admin-input" placeholder="Option A&#10;Option B&#10;Option C&#10;Option D">{{ old('options_text', $optionsText) }}</textarea>
+                    <x-math-editor name="options_text" :rows="5" :value="old('options_text', $optionsText)" placeholder="One option per line" />
                     @error('options_text')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
                     <label class="admin-label">Answer</label>
-                    <textarea name="answer" rows="4" class="admin-input" placeholder="Correct answer">{{ old('answer', is_array($question->answer) ? json_encode($question->answer, JSON_UNESCAPED_UNICODE) : $question->answer) }}</textarea>
+                    <x-math-editor name="answer" :rows="4" :value="old('answer', is_array($question->answer) ? json_encode($question->answer, JSON_UNESCAPED_UNICODE) : $question->answer)" placeholder="Correct answer" />
                     @error('answer')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 

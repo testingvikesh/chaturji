@@ -10,7 +10,7 @@
     <div class="flex items-start gap-4">
         <span class="material-question-no">{{ $number }}</span>
         <div class="min-w-0 flex-1 space-y-3">
-            <p class="material-question-text">{{ $question->question_text }}</p>
+            <p class="material-question-text">{!! \App\Support\MathMarkup::render($question->question_text) !!}</p>
 
             @if ($question->options)
                 @if (isset($question->options['column_a']) || isset($question->options['column_b']))
@@ -58,7 +58,7 @@
                             @endforeach
                         </ul>
                     @else
-                        <span class="material-answer-text">{{ $question->answer }}</span>
+                        <span class="material-answer-text">{!! \App\Support\MathMarkup::render($question->answer) !!}</span>
                     @endif
                 </div>
             @endif

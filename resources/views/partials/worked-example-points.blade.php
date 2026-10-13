@@ -14,7 +14,7 @@
                     @if ($asFormula && MaterialWorkedExamples::looksLikeLatex($point))
                         \( {{ MaterialWorkedExamples::latex($point) }} \)
                     @else
-                        {{ $point }}
+                        {!! \App\Support\MathMarkup::render($point) !!}
                     @endif
                 </span>
             </li>

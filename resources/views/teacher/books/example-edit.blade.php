@@ -29,38 +29,38 @@
 
                 <div>
                     <label class="admin-label">Question <span class="text-red-500">*</span></label>
-                    <textarea name="question_text" rows="4" required class="admin-input">{{ old('question_text', $item['question_text'] ?? '') }}</textarea>
+                    <x-math-editor name="question_text" :rows="4" :value="old('question_text', $item['question_text'] ?? '')" placeholder="Question" />
                     @error('question_text')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label class="admin-label">Find</label>
-                        <textarea name="find" rows="3" class="admin-input">{{ old('find', $item['find'] ?? '') }}</textarea>
+                        <x-math-editor name="find" :rows="3" :value="old('find', $item['find'] ?? '')" />
                         @error('find')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label class="admin-label">Given</label>
-                        <textarea name="given" rows="3" class="admin-input">{{ old('given', $item['given'] ?? '') }}</textarea>
+                        <x-math-editor name="given" :rows="3" :value="old('given', $item['given'] ?? '')" />
                         @error('given')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                     </div>
                 </div>
 
                 <div>
                     <label class="admin-label">Solution overview</label>
-                    <textarea name="solution_overview" rows="3" class="admin-input">{{ old('solution_overview', $item['solution_overview'] ?? '') }}</textarea>
+                    <x-math-editor name="solution_overview" :rows="3" :value="old('solution_overview', $item['solution_overview'] ?? '')" />
                     @error('solution_overview')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
                     <label class="admin-label">Step-by-step <span class="font-normal text-slate-400">(one step per line; use <code>equation :: note</code>)</span></label>
-                    <textarea name="solution_text" rows="8" class="admin-input font-mono text-sm" placeholder="x = 5 :: Find the value&#10;Area = 25">{{ old('solution_text', $solutionText) }}</textarea>
+                    <x-math-editor name="solution_text" :rows="8" :value="old('solution_text', $solutionText)" placeholder="One step per line. equation :: note" />
                     @error('solution_text')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
                     <label class="admin-label">Final answer</label>
-                    <textarea name="final_answer" rows="3" class="admin-input">{{ old('final_answer', $item['final_answer'] ?? '') }}</textarea>
+                    <x-math-editor name="final_answer" :rows="3" :value="old('final_answer', $item['final_answer'] ?? '')" />
                     @error('final_answer')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 

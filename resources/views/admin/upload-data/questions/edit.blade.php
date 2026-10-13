@@ -25,7 +25,7 @@
 
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1.5">Question <span class="text-red-500">*</span></label>
-                <textarea name="question_text" rows="4" required class="admin-input">{{ old('question_text', $question->question_text) }}</textarea>
+                <x-math-editor name="question_text" :rows="4" :value="old('question_text', $question->question_text)" placeholder="Question text" />
                 @error('question_text')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
 
@@ -36,13 +36,13 @@
                         <span class="font-normal text-slate-500">— add 4 choices for A/B/C/D</span>
                     @endif
                 </label>
-                <textarea name="options_text" rows="5" class="admin-input" placeholder="Option A&#10;Option B&#10;Option C&#10;Option D">{{ old('options_text', $question->options ? implode("\n", array_map(fn ($o) => is_array($o) ? json_encode($o, JSON_UNESCAPED_UNICODE) : $o, $question->options)) : '') }}</textarea>
+                <x-math-editor name="options_text" :rows="5" :value="old('options_text', $question->options ? implode("\n", array_map(fn ($o) => is_array($o) ? json_encode($o, JSON_UNESCAPED_UNICODE) : $o, $question->options)) : '')" placeholder="One option per line" />
                 @error('options_text')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
 
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1.5">Answer</label>
-                <textarea name="answer" rows="3" class="admin-input">{{ old('answer', $question->answer) }}</textarea>
+                <x-math-editor name="answer" :rows="3" :value="old('answer', $question->answer)" placeholder="Answer" />
                 @error('answer')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
 

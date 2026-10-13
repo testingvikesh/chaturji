@@ -94,7 +94,7 @@
                     <span class="knowledge-ladder-card-dot" aria-hidden="true"></span>
                     <span class="knowledge-ladder-card-step">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
 
-                    <p class="knowledge-ladder-card-question">{{ $question->question_text }}</p>
+                    <p class="knowledge-ladder-card-question">{!! \App\Support\MathMarkup::render($question->question_text) !!}</p>
 
                     @php
                         $ladderEditUrl = is_callable($questionEditUrlBuilder)
@@ -116,11 +116,11 @@
                                 @click="showAnswer = !showAnswer"
                             >
                                 <span x-show="!showAnswer" class="knowledge-ladder-card-answer-hint">Tap to reveal answer</span>
-                                <span x-show="showAnswer" x-cloak class="knowledge-ladder-card-answer-text">{{ $question->answer }}</span>
+                                <span x-show="showAnswer" x-cloak class="knowledge-ladder-card-answer-text">{!! \App\Support\MathMarkup::render($question->answer) !!}</span>
                             </button>
                         @else
                             <div class="knowledge-ladder-card-answer">
-                                <span class="knowledge-ladder-card-answer-text">{{ $question->answer }}</span>
+                                <span class="knowledge-ladder-card-answer-text">{!! \App\Support\MathMarkup::render($question->answer) !!}</span>
                             </div>
                         @endif
                     @endif
