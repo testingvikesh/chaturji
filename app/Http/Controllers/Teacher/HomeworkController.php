@@ -81,13 +81,15 @@ class HomeworkController extends Controller
                 ->with('error', 'Preview expired. Please configure and preview the homework again.');
         }
 
+        [$materialIds, $topicIds] = $this->generationScope($preview['meta']);
+
         $homework = Homework::create([
             ...$this->persistablePaperMeta($preview['meta']),
             'teacher_id' => auth()->id(),
             'generation_config' => [
                 'type_counts' => $preview['type_counts'],
-                'material_ids' => [($preview['meta']['material_id'] ?? null)],
-                'material_topic_ids' => array_values(array_filter([($preview['meta']['material_topic_id'] ?? null)])),
+                'material_ids' => $materialIds,
+                'material_topic_ids' => $topicIds,
                 'chapter_name' => $preview['meta']['chapter_name'] ?? null,
                 'topic_name' => $preview['meta']['topic_name'] ?? null,
                 'generated_from' => 'teacher_homework_materials',
@@ -152,12 +154,14 @@ class HomeworkController extends Controller
             'questions' => $this->snapshotQuestions($generated['questions']),
         ];
 
+        [$materialIds, $topicIds] = $this->generationScope($meta);
+
         $homework->update([
             ...$this->persistablePaperMeta($meta),
             'generation_config' => [
                 'type_counts' => $typeCounts,
-                'material_ids' => [$meta['material_id'] ?? null],
-                'material_topic_ids' => array_values(array_filter([$meta['material_topic_id'] ?? null])),
+                'material_ids' => $materialIds,
+                'material_topic_ids' => $topicIds,
                 'chapter_name' => $meta['chapter_name'] ?? null,
                 'topic_name' => $meta['topic_name'] ?? null,
                 'generated_from' => 'teacher_homework_materials',

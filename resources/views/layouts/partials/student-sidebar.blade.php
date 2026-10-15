@@ -1,4 +1,5 @@
 @php
+    $liveTeacherExam = $liveTeacherExam ?? null;
     $unreadNotifications = auth()->user()->unreadNotifications()
         ->where(function ($q) {
             $q->where('data->type', 'exam')->orWhere('data->type', 'homework')->orWhere('data->type', 'ticket');
@@ -17,6 +18,12 @@
     </div>
 
     <nav class="flex-1 px-3 py-5 space-y-0.5">
+        @if (! empty($liveTeacherExam))
+            <a href="{{ route('student.exams.show', $liveTeacherExam) }}" class="admin-sidebar-link-active">
+                <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span class="truncate">{{ $liveTeacherExam->subject?->name ?? 'Exam' }}</span>
+            </a>
+        @else
         <a href="{{ route('student.dashboard') }}" class="{{ request()->routeIs('student.dashboard') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/80 hover:!bg-white/10 hover:!text-white' }}">
             <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             Dashboard
@@ -65,6 +72,7 @@
             <div class="mx-1 mt-2 rounded-xl border border-brand-gold/40 bg-black/25 px-3 py-3 shadow-inner">
                 @include('layouts.partials.student-nav-trail')
             </div>
+        @endif
         @endif
     </nav>
 
@@ -136,6 +144,9 @@
          x-transition:leave-end="-translate-x-full"
          class="fixed top-14 left-0 bottom-0 z-50 w-[min(18rem,86vw)] overflow-y-auto bg-gradient-to-b from-brand-green-darker via-brand-green to-brand-green-light text-white shadow-2xl">
         <div class="px-3 py-4 space-y-0.5">
+            @if (! empty($liveTeacherExam))
+                <a href="{{ route('student.exams.show', $liveTeacherExam) }}" @click="open = false" class="admin-sidebar-link-active">{{ $liveTeacherExam->subject?->name ?? 'Exam' }}</a>
+            @else
             <a href="{{ route('student.dashboard') }}" @click="open = false" class="{{ request()->routeIs('student.dashboard') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Dashboard</a>
             <a href="{{ route('student.subjects.index') }}" @click="open = false" class="{{ request()->routeIs('student.subjects.*', 'student.topics.*', 'student.chapters.*', 'student.material-topics.*', 'student.materials.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">My Subjects</a>
             <a href="{{ route('student.self-practice.index') }}" @click="open = false" class="{{ request()->routeIs('student.self-practice.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Self Practice</a>
@@ -151,6 +162,7 @@
             <a href="{{ route('student.profile.edit') }}" @click="open = false" class="{{ request()->routeIs('student.profile.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Edit Profile</a>
             <a href="{{ route('student.change-password') }}" @click="open = false" class="{{ request()->routeIs('student.change-password') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Change Password</a>
             <a href="{{ route('pwa.install') }}" @click="open = false" class="{{ request()->routeIs('pwa.install') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Install App</a>
+            @endif
         </div>
         <div class="border-t border-white/15 p-4 mt-2">
             <p class="px-2 text-sm font-semibold truncate">{{ Auth::user()->name }}</p>

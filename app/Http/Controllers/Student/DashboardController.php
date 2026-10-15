@@ -7,6 +7,7 @@ use App\Models\Exam;
 use App\Models\Homework;
 use App\Models\Material;
 use App\Models\Standard;
+use App\Support\StudentExamSchedule;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -48,6 +49,7 @@ class DashboardController extends Controller
             'examCount' => $examCount,
             'homeworkCount' => $homeworkCount,
             'unreadNotifications' => $unreadNotifications,
+            'examTimetable' => StudentExamSchedule::timetable($user),
         ]);
     }
 }

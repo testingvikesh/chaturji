@@ -66,11 +66,7 @@
 
             <form method="POST" action="{{ route('teacher.exams.preview') }}">
                 @csrf
-                @foreach ($meta as $key => $value)
-                    @if (is_scalar($value) || $value === null)
-                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-                    @endif
-                @endforeach
+                @include('teacher.partials.paper-meta-inputs', ['meta' => $meta])
                 @foreach ($paperTypes as $type => $label)
                     <input type="hidden" name="type_counts[{{ $type }}]" value="{{ $typeCounts[$type] ?? 0 }}">
                     <input type="hidden" name="marks_per_type[{{ $type }}]" value="{{ $marksPerType[$type] ?? 1 }}">

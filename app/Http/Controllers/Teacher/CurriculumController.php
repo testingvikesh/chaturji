@@ -77,44 +77,77 @@ class CurriculumController extends Controller
      */
     public function topics(Request $request): JsonResponse
     {
+        $chapterIds = $this->idList($request, 'chapter_ids', 'chapter_id');
+
         $request->validate([
-            'chapter_id' => ['required', 'integer', 'exists:materials,id'],
+            'chapter_id' => ['nullable', 'integer', 'exists:materials,id'],
+            'chapter_ids' => ['nullable', 'array'],
+            'chapter_ids.*' => ['integer', 'exists:materials,id'],
         ]);
 
-        $material = Material::query()->findOrFail((int) $request->chapter_id);
+        if ($chapterIds === []) {
+            return response()->json([]);
+        }
+
+        $materials = Material::query()->whereIn('id', $chapterIds)->get()->keyBy('id');
+        $prefixChapter = $materials->count() > 1;
 
         return response()->json(
             MaterialTopic::query()
-                ->where('material_id', $material->id)
+                ->whereIn('material_id', $chapterIds)
+                ->orderBy('material_id')
                 ->orderBy('topic_order')
-                ->get(['id', 'title', 'title_gu', 'topic_order', 'generated'])
-                ->map(fn (MaterialTopic $topic) => [
-                    'id' => $topic->id,
-                    'name' => $topic->displayName(),
-                ])
+                ->get(['id', 'material_id', 'title', 'title_gu', 'topic_order', 'generated'])
+                ->map(function (MaterialTopic $topic) use ($materials, $prefixChapter) {
+                    $name = $topic->displayName();
+                    if ($prefixChapter) {
+                        $chapter = $materials->get($topic->material_id);
+                        $chapterName = $chapter ? $chapter->displayChapterName() : 'Chapter';
+                        $name = $chapterName.' — '.$name;
+                    }
+
+                    return [
+                        'id' => $topic->id,
+                        'name' => $name,
+                    ];
+                })
                 ->values()
         );
     }
 
     public function questionCounts(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'chapter_id' => ['required', 'integer', 'exists:materials,id'],
+        $request->validate([
+            'chapter_id' => ['nullable', 'integer', 'exists:materials,id'],
+            'chapter_ids' => ['nullable', 'array'],
+            'chapter_ids.*' => ['integer', 'exists:materials,id'],
             'topic_id' => ['nullable', 'integer', 'exists:material_topics,id'],
+            'topic_ids' => ['nullable', 'array'],
+            'topic_ids.*' => ['integer', 'exists:material_topics,id'],
         ]);
 
-        $material = Material::query()->with(['topics' => fn ($q) => $q->orderBy('topic_order')])->findOrFail((int) $validated['chapter_id']);
-        $materials = collect([$material]);
+        $chapterIds = $this->idList($request, 'chapter_ids', 'chapter_id');
+        $topicIds = $this->idList($request, 'topic_ids', 'topic_id');
+
+        if ($chapterIds === []) {
+            return response()->json([
+                'counts' => [],
+                'types' => [],
+                'total' => 0,
+            ]);
+        }
+
+        $materials = Material::query()
+            ->with(['topics' => fn ($q) => $q->orderBy('topic_order')])
+            ->whereIn('id', $chapterIds)
+            ->get();
         $topics = collect();
 
-        if (! empty($validated['topic_id'])) {
-            $topic = MaterialTopic::query()
-                ->where('material_id', $material->id)
-                ->whereKey((int) $validated['topic_id'])
-                ->first();
-            if ($topic) {
-                $topics = collect([$topic]);
-            }
+        if ($topicIds !== []) {
+            $topics = MaterialTopic::query()
+                ->whereIn('material_id', $materials->pluck('id'))
+                ->whereIn('id', $topicIds)
+                ->get();
         }
 
         $counts = MaterialPaperBank::availableCounts($materials, $topics->isEmpty() ? null : $topics);
@@ -130,6 +163,20 @@ class CurriculumController extends Controller
             'types' => $types,
             'total' => array_sum($counts),
         ]);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function idList(Request $request, string $listKey, string $singleKey): array
+    {
+        return collect($request->input($listKey, []))
+            ->when($request->filled($singleKey), fn ($ids) => $ids->push($request->input($singleKey)))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

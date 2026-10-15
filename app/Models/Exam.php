@@ -12,6 +12,8 @@ class Exam extends Model
 {
     public const SELF_MARK_OPTIONS = [20, 30, 50, 70, 100];
 
+    public const SCHOOL_TIMEZONE = 'Asia/Kolkata';
+
     protected $fillable = [
         'teacher_id',
         'student_id',
@@ -151,16 +153,63 @@ class Exam extends Model
             return false;
         }
 
+        return in_array($this->schedulePhase(), ['open', 'live'], true);
+    }
+
+    public function isTeacherScheduled(): bool
+    {
+        return ! $this->isSelfExam() && $this->starts_at !== null;
+    }
+
+    public function effectiveEndsAt(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->ends_at) {
+            return $this->ends_at;
+        }
+
+        if ($this->starts_at && $this->duration_minutes) {
+            return $this->starts_at->copy()->addMinutes((int) $this->duration_minutes);
+        }
+
+        return null;
+    }
+
+    /**
+     * open: not a timed teacher exam, or started with no end time.
+     * upcoming / live / ended: teacher exam with a start time.
+     */
+    public function schedulePhase(): string
+    {
+        if (! $this->isTeacherScheduled()) {
+            return 'open';
+        }
+
         $now = now();
 
-        if ($this->starts_at && $now->lt($this->starts_at)) {
-            return false;
+        if ($now->lt($this->starts_at)) {
+            return 'upcoming';
         }
 
-        if ($this->ends_at && $now->gt($this->ends_at)) {
-            return false;
+        $end = $this->effectiveEndsAt();
+
+        if ($end && $now->gt($end)) {
+            return 'ended';
         }
 
-        return true;
+        if (! $end) {
+            return 'open';
+        }
+
+        return 'live';
+    }
+
+    public function localStart(): ?\Illuminate\Support\Carbon
+    {
+        return $this->starts_at?->copy()->timezone(self::SCHOOL_TIMEZONE);
+    }
+
+    public function localEnd(): ?\Illuminate\Support\Carbon
+    {
+        return $this->effectiveEndsAt()?->copy()->timezone(self::SCHOOL_TIMEZONE);
     }
 }

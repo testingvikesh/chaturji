@@ -80,6 +80,8 @@ class ExamController extends Controller
                 ->with('error', 'Preview expired. Please configure and preview the exam again.');
         }
 
+        [$materialIds, $topicIds] = $this->generationScope($preview['meta']);
+
         $exam = Exam::create([
             ...$this->persistablePaperMeta($preview['meta']),
             'teacher_id' => auth()->id(),
@@ -87,8 +89,8 @@ class ExamController extends Controller
             'generation_config' => [
                 'type_counts' => $preview['type_counts'],
                 'marks_per_type' => $preview['marks_per_type'],
-                'material_ids' => [($preview['meta']['material_id'] ?? null)],
-                'material_topic_ids' => array_values(array_filter([($preview['meta']['material_topic_id'] ?? null)])),
+                'material_ids' => $materialIds,
+                'material_topic_ids' => $topicIds,
                 'chapter_name' => $preview['meta']['chapter_name'] ?? null,
                 'topic_name' => $preview['meta']['topic_name'] ?? null,
                 'generated_from' => 'teacher_exam_materials',
@@ -156,14 +158,16 @@ class ExamController extends Controller
             'questions' => $this->snapshotQuestions($generated['questions']),
         ];
 
+        [$materialIds, $topicIds] = $this->generationScope($meta);
+
         $exam->update([
             ...$this->persistablePaperMeta($meta),
             'total_marks' => $generated['total_marks'],
             'generation_config' => [
                 'type_counts' => $typeCounts,
                 'marks_per_type' => $generated['marks_per_type'],
-                'material_ids' => [$meta['material_id'] ?? null],
-                'material_topic_ids' => array_values(array_filter([$meta['material_topic_id'] ?? null])),
+                'material_ids' => $materialIds,
+                'material_topic_ids' => $topicIds,
                 'chapter_name' => $meta['chapter_name'] ?? null,
                 'topic_name' => $meta['topic_name'] ?? null,
                 'generated_from' => 'teacher_exam_materials',

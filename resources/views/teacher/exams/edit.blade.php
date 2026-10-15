@@ -15,8 +15,8 @@
             'standards' => $standards,
             'selectedStandard' => old('standard', $exam->standard),
             'selectedSubjectId' => old('subject_id', $exam->subject_id),
-            'selectedChapterId' => old('chapter_id', $config['material_ids'][0] ?? $selectedChapterId ?? ''),
-            'selectedTopicId' => old('topic_id', $config['material_topic_ids'][0] ?? $selectedTopicId ?? ''),
+            'selectedChapterIds' => array_values(array_filter((array) ($config['material_ids'] ?? []))),
+            'selectedTopicIds' => array_values(array_filter((array) ($config['material_topic_ids'] ?? []))),
         ])
 
         <div class="admin-card p-6 space-y-4">
@@ -50,12 +50,13 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Starts At</label>
-                    <input type="datetime-local" name="starts_at" value="{{ old('starts_at', $exam->starts_at?->format('Y-m-d\TH:i')) }}" class="w-full rounded-xl border-slate-200">
+                    <input type="datetime-local" name="starts_at" value="{{ old('starts_at', $exam->localStart()?->format('Y-m-d\TH:i')) }}" class="w-full rounded-xl border-slate-200">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Ends At</label>
-                    <input type="datetime-local" name="ends_at" value="{{ old('ends_at', $exam->ends_at?->format('Y-m-d\TH:i')) }}" class="w-full rounded-xl border-slate-200">
+                    <input type="datetime-local" name="ends_at" value="{{ old('ends_at', $exam->ends_at?->copy()->timezone(\App\Models\Exam::SCHOOL_TIMEZONE)->format('Y-m-d\TH:i')) }}" class="w-full rounded-xl border-slate-200">
                 </div>
+                <p class="sm:col-span-3 text-xs text-slate-500">Students see this date, time, exam and subject on their timetable. The paper opens only between Starts At and Ends At.</p>
             </div>
         </div>
 

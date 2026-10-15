@@ -44,6 +44,7 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1">Ends At</label>
                     <input type="datetime-local" name="ends_at" value="{{ old('ends_at') }}" class="w-full rounded-xl border-slate-200">
                 </div>
+                <p class="sm:col-span-3 text-xs text-slate-500">Students see this date, time, exam and subject on their timetable. The paper opens only between Starts At and Ends At. Before that, the paper stays hidden and the other menus stay available. During the exam, only this paper is shown.</p>
             </div>
         </div>
 

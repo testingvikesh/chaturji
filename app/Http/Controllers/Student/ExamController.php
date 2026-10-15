@@ -338,6 +338,19 @@ class ExamController extends BaseStudentController
         }
 
         abort_unless($exam->standard === $user->standard, 404);
+
+        $phase = $exam->schedulePhase();
+        if ($phase === 'upcoming') {
+            throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                redirect()->route('student.dashboard')->with('error', 'This exam paper opens at '.$exam->localStart()?->format('d M Y, h:i A').'.')
+            );
+        }
+
+        if ($phase === 'ended') {
+            throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                redirect()->route('student.dashboard')->with('error', 'This exam has ended. The paper is closed.')
+            );
+        }
     }
 
     private function paperViewData(Exam $exam): array

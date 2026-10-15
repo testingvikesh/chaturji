@@ -77,29 +77,45 @@
                 <table class="admin-table w-full">
                     <thead>
                         <tr>
-                            <th>Title</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Exam</th>
                             <th>Subject</th>
-                            <th>Teacher</th>
-                            <th>Questions</th>
-                            <th>Marks</th>
-                            <th>Actions</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse (($teacherExams ?? []) as $exam)
+                            @php $phase = $exam->schedulePhase(); @endphp
                             <tr>
+                                <td class="whitespace-nowrap">{{ $exam->localStart()?->format('d M Y') ?? '—' }}</td>
+                                <td class="whitespace-nowrap">
+                                    @if ($exam->localStart())
+                                        {{ $exam->localStart()->format('h:i A') }}
+                                        @if ($exam->localEnd())
+                                            – {{ $exam->localEnd()->format('h:i A') }}
+                                        @endif
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 <td class="font-semibold text-slate-900">{{ $exam->title }}</td>
                                 <td>{{ optional($exam->subject)->name ?? '—' }}</td>
-                                <td>{{ optional($exam->teacher)->name ?? 'Teacher' }}</td>
-                                <td>{{ $exam->questions_count ?? 0 }}</td>
-                                <td>{{ $exam->total_marks ?: '—' }}</td>
                                 <td>
-                                    <a href="{{ url('/student/exams/'.$exam->id) }}" class="text-xs font-semibold text-brand-green hover:underline">View</a>
+                                    @if ($phase === 'live')
+                                        <a href="{{ url('/student/exams/'.$exam->id) }}" class="text-xs font-semibold text-brand-green hover:underline">Open paper</a>
+                                    @elseif ($phase === 'upcoming')
+                                        <span class="text-xs font-semibold text-amber-700">Not started</span>
+                                    @elseif ($phase === 'ended')
+                                        <span class="text-xs font-semibold text-slate-500">Ended</span>
+                                    @else
+                                        <a href="{{ url('/student/exams/'.$exam->id) }}" class="text-xs font-semibold text-brand-green hover:underline">Open paper</a>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center text-slate-500 py-10">No teacher exams yet.</td>
+                                <td colspan="5" class="text-center text-slate-500 py-10">No teacher exams yet.</td>
                             </tr>
                         @endforelse
                     </tbody>
