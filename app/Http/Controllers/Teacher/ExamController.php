@@ -7,6 +7,7 @@ use App\Http\Controllers\Teacher\Concerns\HandlesPaperBuilder;
 use App\Models\Exam;
 use App\Models\ExamQuestion;
 use App\Models\Standard;
+use App\Services\SelfExamGeneratorService;
 use App\Services\StudentNotificationService;
 use App\Support\ActivityLogger;
 use App\Support\PaperTypeHelper;
@@ -42,9 +43,8 @@ class ExamController extends Controller
     public function preview(Request $request): View|RedirectResponse
     {
         $request->validate($this->paperMetaRules(true));
-        $typeCounts = $this->extractTypeCounts($request);
-        $marksPerType = $this->extractMarksPerType($request, $typeCounts);
         $meta = $this->extractPaperMeta($request, true);
+        [$typeCounts, $marksPerType] = $this->countsForExam($request, $meta);
 
         $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType);
 
@@ -148,9 +148,8 @@ class ExamController extends Controller
 
         $wasPublished = $exam->isPublished();
         $request->validate($this->paperMetaRules(true));
-        $typeCounts = $this->extractTypeCounts($request);
-        $marksPerType = $this->extractMarksPerType($request, $typeCounts);
         $meta = $this->extractPaperMeta($request, true);
+        [$typeCounts, $marksPerType] = $this->countsForExam($request, $meta);
 
         $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType);
         $preview = [
@@ -189,6 +188,35 @@ class ExamController extends Controller
         $exam->delete();
 
         return redirect()->route('teacher.exams.index')->with('success', 'Exam deleted successfully.');
+    }
+
+    /**
+     * @return array{0: array<string, int>, 1: array<string, int>}
+     */
+    private function countsForExam(Request $request, array $meta): array
+    {
+        $typeCounts = $this->extractTypeCounts($request);
+        $marksPerType = $this->extractMarksPerType($request, $typeCounts);
+
+        if ($typeCounts !== []) {
+            return [$typeCounts, $marksPerType];
+        }
+
+        $target = (int) $request->input('target_marks');
+        if (! in_array($target, SelfExamGeneratorService::MARK_OPTIONS, true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'target_marks' => 'Select total marks: 20, 30, 50, 70 or 100.',
+            ]);
+        }
+
+        $resolved = $this->resolvePaperMaterials($meta);
+        $plan = app(SelfExamGeneratorService::class)->buildPlan(
+            $resolved['materials'],
+            $resolved['topics']->isEmpty() ? null : $resolved['topics'],
+            $target
+        );
+
+        return [$plan['type_counts'], $plan['marks_per_type']];
     }
 
     private function authorizeExam(Exam $exam): void

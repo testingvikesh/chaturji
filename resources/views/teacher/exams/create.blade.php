@@ -7,6 +7,16 @@
         @csrf
         @include('teacher.partials.paper-builder-alpine-open', ['standards' => $standards])
 
+        @if ($errors->any())
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <ul class="list-disc pl-4 space-y-1">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="admin-card p-6 space-y-4">
             @include('teacher.partials.paper-curriculum-fields', ['standards' => $standards])
 

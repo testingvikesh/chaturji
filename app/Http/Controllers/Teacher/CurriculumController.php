@@ -8,8 +8,10 @@ use App\Models\MaterialTopic;
 use App\Models\Standard;
 use App\Models\Subject;
 use App\Models\TeacherSubject;
+use App\Services\SelfExamGeneratorService;
 use App\Support\MaterialPaperBank;
 use App\Support\PaperTypeHelper;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -150,7 +152,8 @@ class CurriculumController extends Controller
                 ->get();
         }
 
-        $counts = MaterialPaperBank::availableCounts($materials, $topics->isEmpty() ? null : $topics);
+        $scopedTopics = $topics->isEmpty() ? null : $topics;
+        $counts = MaterialPaperBank::availableCounts($materials, $scopedTopics);
 
         $types = collect(PaperTypeHelper::types())->map(fn ($label, $type) => [
             'type' => $type,
@@ -158,10 +161,23 @@ class CurriculumController extends Controller
             'available' => $counts[$type] ?? 0,
         ])->values();
 
+        $plan = null;
+        $planError = '';
+        $target = (int) $request->input('target_marks');
+        if (in_array($target, SelfExamGeneratorService::MARK_OPTIONS, true)) {
+            try {
+                $plan = app(SelfExamGeneratorService::class)->buildPlan($materials, $scopedTopics, $target);
+            } catch (ValidationException $e) {
+                $planError = (string) collect($e->errors())->flatten()->first();
+            }
+        }
+
         return response()->json([
             'counts' => $counts,
             'types' => $types,
             'total' => array_sum($counts),
+            'plan' => $plan,
+            'plan_error' => $planError,
         ]);
     }
 

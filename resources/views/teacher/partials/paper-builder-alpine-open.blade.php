@@ -36,6 +36,9 @@ function teacherPaperBuilder(cfg) {
         topics: [],
         available: {},
         loadingCounts: false,
+        markOptions: [20, 30, 50, 70, 100],
+        targetMarks: Number(cfg.targetMarks || 0),
+        planError: '',
         subjectsUrl: cfg.subjectsUrl,
         chaptersUrl: cfg.chaptersUrl,
         topicsUrl: cfg.topicsUrl,
@@ -144,21 +147,53 @@ function teacherPaperBuilder(cfg) {
             this.loadCounts();
         },
 
+        selectMarks(marks) {
+            this.targetMarks = Number(marks);
+            this.loadCounts();
+        },
+
+        applyPlan(plan) {
+            const form = this.$root.closest('form') || this.$root;
+            const counts = plan.type_counts || {};
+            const marks = plan.marks_per_type || {};
+            form.querySelectorAll('[name^="type_counts["]').forEach(function (input) {
+                const match = input.name.match(/type_counts\[(.+)\]/);
+                const type = match ? match[1] : '';
+                input.value = counts[type] || 0;
+            });
+            form.querySelectorAll('[name^="marks_per_type["]').forEach(function (input) {
+                const match = input.name.match(/marks_per_type\[(.+)\]/);
+                const type = match ? match[1] : '';
+                if (marks[type]) {
+                    input.value = marks[type];
+                }
+            });
+        },
+
         async loadCounts() {
             if (!this.chapterIds.length) {
                 this.available = {};
+                this.planError = '';
                 return;
             }
             this.loadingCounts = true;
             const params = new URLSearchParams();
             this.chapterIds.forEach(id => params.append('chapter_ids[]', id));
             this.topicIds.forEach(id => params.append('topic_ids[]', id));
+            if (this.targetMarks) {
+                params.set('target_marks', this.targetMarks);
+            }
             try {
                 const res = await fetch(this.countsUrl + '?' + params.toString());
                 const data = await res.json();
                 this.available = data.counts || {};
+                this.planError = data.plan_error || '';
+                if (data.plan) {
+                    this.applyPlan(data.plan);
+                }
             } catch (error) {
                 this.available = {};
+                this.planError = 'Could not load marks for these chapters.';
             } finally {
                 this.loadingCounts = false;
             }
@@ -175,5 +210,6 @@ function teacherPaperBuilder(cfg) {
         chaptersUrl: @js(route('teacher.curriculum.chapters')),
         topicsUrl: @js(route('teacher.curriculum.topics')),
         countsUrl: @js(route('teacher.curriculum.question-counts')),
+        targetMarks: @js((int) old('target_marks', 0)),
      })"
      x-init="boot()">

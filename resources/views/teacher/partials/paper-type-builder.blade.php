@@ -5,9 +5,27 @@
 @endphp
 
 <div class="space-y-4">
+    @if ($showMarks)
+        <div>
+            <p class="block text-sm font-medium text-slate-700 mb-2">Total marks *</p>
+            <input type="hidden" name="target_marks" :value="targetMarks">
+            <div class="flex flex-wrap gap-2">
+                <template x-for="marks in markOptions" :key="marks">
+                    <label class="cursor-pointer">
+                        <input type="radio" :value="marks" x-model.number="targetMarks" @change="selectMarks(marks)" class="peer sr-only">
+                        <span class="inline-flex h-10 min-w-[3.25rem] items-center justify-center rounded-lg border px-3 text-sm font-semibold leading-none border-slate-200 bg-white text-slate-700 peer-checked:border-brand-green peer-checked:bg-emerald-50 peer-checked:text-brand-green peer-checked:ring-1 peer-checked:ring-brand-green"
+                              x-text="marks"></span>
+                    </label>
+                </template>
+            </div>
+            <p class="text-xs text-slate-500 mt-2">Choose the paper total. Question counts fill in from the chapters you selected.</p>
+            <p class="text-xs text-rose-700 mt-1" x-show="planError" x-text="planError"></p>
+        </div>
+    @endif
+
     <div>
         <h3 class="font-bold text-slate-900">Question Paper Builder</h3>
-        <p class="text-sm text-slate-500 mt-1">Enter how many questions you want from each type. Questions are picked randomly from the uploaded question bank.</p>
+        <p class="text-sm text-slate-500 mt-1">Quantities follow the total marks. You can still change a row before preview.</p>
     </div>
 
     <div class="overflow-x-auto">
