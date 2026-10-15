@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Teacher\Concerns;
 use App\Models\Exam;
 use App\Models\Material;
 use App\Models\MaterialTopic;
+use App\Models\Standard;
 use App\Models\Subject;
+use App\Models\TeacherSubject;
 use Illuminate\Support\Carbon;
 use App\Support\MaterialPaperBank;
 use App\Support\PaperTypeHelper;
@@ -79,7 +81,7 @@ trait HandlesPaperBuilder
             ]);
         }
 
-        $materials = MaterialPaperBank::resolveMaterials($subject, null, $materialIds);
+        $materials = $this->resolveTeacherChapterMaterials($subject, $materialIds);
         $topics = MaterialPaperBank::resolveTopics($materials, $topicIds);
 
         $meta['material_ids'] = $materials->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
@@ -129,6 +131,62 @@ trait HandlesPaperBuilder
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * Chapters the teacher can tick on the exam form, matched by the same medium list.
+     *
+     * @param  list<int>  $materialIds
+     * @return Collection<int, Material>
+     */
+    private function resolveTeacherChapterMaterials(Subject $subject, array $materialIds): Collection
+    {
+        if ($materialIds === []) {
+            throw ValidationException::withMessages([
+                'chapter_ids' => 'Select at least one chapter.',
+            ]);
+        }
+
+        $allowed = collect();
+        foreach ($this->teacherMediumsForSubject((int) $subject->id) as $medium) {
+            foreach (Material::forStudentSubject($subject, $medium) as $material) {
+                $allowed->put((int) $material->id, $material);
+            }
+        }
+
+        $materials = collect();
+        foreach ($materialIds as $id) {
+            $material = $allowed->get((int) $id);
+            if (! $material) {
+                throw ValidationException::withMessages([
+                    'chapter_ids' => 'One or more selected chapters are invalid for this subject.',
+                ]);
+            }
+            if (! $material->relationLoaded('topics')) {
+                $material->load(['topics' => fn ($q) => $q->orderBy('topic_order')]);
+            }
+            $materials->push($material);
+        }
+
+        return $materials->values();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function teacherMediumsForSubject(int $subjectId): array
+    {
+        $fromAllotment = TeacherSubject::query()
+            ->where('teacher_id', auth()->id())
+            ->where('subject_id', $subjectId)
+            ->pluck('medium')
+            ->map(fn ($medium) => Material::normalizeMedium($medium) ?: strtolower(trim((string) $medium)))
+            ->filter(fn ($medium) => array_key_exists((string) $medium, Standard::MEDIUMS))
+            ->unique()
+            ->values()
+            ->all();
+
+        return $fromAllotment !== [] ? $fromAllotment : array_keys(Standard::MEDIUMS);
     }
 
     /**
