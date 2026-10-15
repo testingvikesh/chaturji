@@ -38,6 +38,7 @@
                             </td>
                             <td class="space-x-2 whitespace-nowrap">
                                 <a href="{{ route('teacher.exams.show', $exam) }}" class="text-xs font-semibold text-brand-green hover:underline">View</a>
+                                <a href="{{ route('teacher.exams.print', $exam) }}" target="_blank" rel="noopener" class="text-xs font-semibold text-slate-700 hover:underline">Print</a>
                                 <a href="{{ route('teacher.exams.edit', $exam) }}" class="text-xs font-semibold text-slate-600 hover:underline">Edit</a>
                                 <form method="POST" action="{{ route('teacher.exams.destroy', $exam) }}" class="inline" onsubmit="return confirm('Delete this exam?')">
                                     @csrf @method('DELETE')

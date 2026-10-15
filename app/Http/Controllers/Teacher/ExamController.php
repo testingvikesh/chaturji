@@ -128,6 +128,20 @@ class ExamController extends Controller
         return view('teacher.exams.show', compact('exam', 'grouped', 'breakdown'));
     }
 
+    public function printPaper(Exam $exam): View
+    {
+        $this->authorizeExam($exam);
+
+        $exam->load(['subject', 'chapter:id,name,sort_order', 'topic:id,name', 'questions']);
+        $grouped = PaperTypeHelper::groupInPaperOrder($exam->questions);
+        $breakdown = PaperTypeHelper::breakdown(
+            $exam->generation_config['type_counts'] ?? $grouped->map->count()->all(),
+            $exam->generation_config['marks_per_type'] ?? []
+        );
+
+        return view('teacher.exams.print', compact('exam', 'grouped', 'breakdown'));
+    }
+
     public function edit(Exam $exam): View
     {
         $this->authorizeExam($exam);

@@ -248,6 +248,7 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/subjects/{subject}/chapters/{chapter}', [TeacherTopicController::class, 'chapter'])->name('subjects.chapters.show');
 
     Route::post('exams/preview', [TeacherExamController::class, 'preview'])->name('exams.preview');
+    Route::get('exams/{exam}/print', [TeacherExamController::class, 'printPaper'])->name('exams.print');
     Route::post('homework/preview', [TeacherHomeworkController::class, 'preview'])->name('homework.preview');
 
     Route::resource('exams', TeacherExamController::class);
