@@ -13,7 +13,8 @@
                 <template x-for="marks in markOptions" :key="marks">
                     <label class="cursor-pointer">
                         <input type="radio" :value="marks" x-model.number="targetMarks" @change="selectMarks(marks)" class="peer sr-only">
-                        <span class="inline-flex h-10 min-w-[3.25rem] items-center justify-center rounded-lg border px-3 text-sm font-semibold leading-none border-slate-200 bg-white text-slate-700 peer-checked:border-brand-green peer-checked:bg-emerald-50 peer-checked:text-brand-green peer-checked:ring-1 peer-checked:ring-brand-green"
+                        <span class="inline-flex h-10 min-w-[3.25rem] items-center justify-center rounded-lg border px-3 text-sm font-semibold leading-none"
+                              :class="Number(targetMarks) === Number(marks) ? 'border-brand-green bg-emerald-50 text-brand-green ring-1 ring-brand-green' : 'border-slate-200 bg-white text-slate-700'"
                               x-text="marks"></span>
                     </label>
                 </template>
@@ -59,7 +60,7 @@
                         @if ($showMarks)
                             <td class="py-3 pl-2">
                                 <input type="number" name="marks_per_type[{{ $type }}]" min="1" max="100"
-                                    value="{{ $oldMarks[$type] ?? 1 }}"
+                                    value="{{ $oldMarks[$type] ?? (\App\Support\ExamPaperWeightage::MARKS_PER_QUESTION[$type] ?? 1) }}"
                                     class="w-full rounded-lg border-slate-200 text-center">
                             </td>
                         @endif

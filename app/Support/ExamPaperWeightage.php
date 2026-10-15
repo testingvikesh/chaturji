@@ -38,6 +38,8 @@ class ExamPaperWeightage
         'one_mark' => 1,
         'two_marks' => 2,
         'three_marks' => 3,
+        'five_marks' => 5,
+        'short_answer' => 3,
         'long_answer' => 4,
     ];
 
@@ -59,24 +61,39 @@ class ExamPaperWeightage
         $typeCounts = [];
         $marksPerType = [];
 
-        foreach ($typeMarks as $type => $bucketMarks) {
-            if ($bucketMarks <= 0) {
-                continue;
-            }
-
+        foreach (self::TYPE_PERCENTS as $type => $percent) {
             $perQuestion = max(1, (int) (self::MARKS_PER_QUESTION[$type] ?? 1));
-
-            if (($bucketMarks % $perQuestion) === 0) {
-                $count = intdiv($bucketMarks, $perQuestion);
-                $marksPerType[$type] = $perQuestion;
-            } else {
-                $count = $bucketMarks;
-                $marksPerType[$type] = 1;
-            }
+            $marksPerType[$type] = $perQuestion;
+            $count = intdiv((int) ($typeMarks[$type] ?? 0), $perQuestion);
 
             if ($count > 0) {
                 $typeCounts[$type] = $count;
             }
+        }
+
+        $guard = 0;
+        while (PaperTypeHelper::totalMarks($typeCounts, $marksPerType) < $totalMarks && $guard < 300) {
+            $guard++;
+            $shortfall = $totalMarks - PaperTypeHelper::totalMarks($typeCounts, $marksPerType);
+            $choice = null;
+
+            foreach (self::TYPE_PERCENTS as $type => $percent) {
+                $perQuestion = $marksPerType[$type];
+                if ($perQuestion > $shortfall) {
+                    continue;
+                }
+
+                $underBucket = (($typeCounts[$type] ?? 0) * $perQuestion) < (int) ($typeMarks[$type] ?? 0);
+                if ($choice === null || ($underBucket && ! $choice['under']) || ($underBucket === $choice['under'] && $perQuestion < $choice['per'])) {
+                    $choice = ['type' => $type, 'under' => $underBucket, 'per' => $perQuestion];
+                }
+            }
+
+            if ($choice === null) {
+                break;
+            }
+
+            $typeCounts[$choice['type']] = ($typeCounts[$choice['type']] ?? 0) + 1;
         }
 
         $typeCounts = PaperTypeHelper::normalizeCounts($typeCounts);

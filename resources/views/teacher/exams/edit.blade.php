@@ -7,6 +7,15 @@
         $config = $exam->generation_config ?? [];
         $selectedTypeCounts = $config['type_counts'] ?? [];
         $selectedMarksPerType = $config['marks_per_type'] ?? [];
+        $markChoices = [20, 30, 50, 70, 100];
+        $savedTarget = (int) ($config['target_marks'] ?? 0);
+        $paperTotal = (int) $exam->total_marks;
+        $selectedTargetMarks = in_array($savedTarget, $markChoices, true) ? $savedTarget : 0;
+        if ($selectedTargetMarks === 0 && $paperTotal > 0) {
+            $selectedTargetMarks = in_array($paperTotal, $markChoices, true)
+                ? $paperTotal
+                : collect($markChoices)->sortBy(fn ($marks) => abs($marks - $paperTotal))->first();
+        }
     @endphp
 
     <form method="POST" action="{{ route('teacher.exams.update', $exam) }}" class="admin-page max-w-4xl space-y-6">
@@ -17,6 +26,7 @@
             'selectedSubjectId' => old('subject_id', $exam->subject_id),
             'selectedChapterIds' => array_values(array_filter((array) ($config['material_ids'] ?? []))),
             'selectedTopicIds' => array_values(array_filter((array) ($config['material_topic_ids'] ?? []))),
+            'selectedTargetMarks' => (int) old('target_marks', $selectedTargetMarks),
         ])
 
         <div class="admin-card p-6 space-y-4">

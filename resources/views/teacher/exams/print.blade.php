@@ -32,7 +32,7 @@
                 'chapterName' => $chapterName,
                 'topicName' => $topicName,
                 'instructions' => $exam->instructions,
-                'blankStudentFields' => true,
+                'hideIdentityBoxes' => true,
             ],
         ])
     @endif

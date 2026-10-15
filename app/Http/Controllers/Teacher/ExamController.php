@@ -55,6 +55,7 @@ class ExamController extends Controller
             'questions' => $this->snapshotQuestions($generated['questions']),
             'breakdown' => $generated['breakdown'],
             'total_marks' => $generated['total_marks'],
+            'target_marks' => (int) $request->input('target_marks'),
         ];
 
         $this->storePreview('exam', $payload);
@@ -93,6 +94,7 @@ class ExamController extends Controller
                 'material_topic_ids' => $topicIds,
                 'chapter_name' => $preview['meta']['chapter_name'] ?? null,
                 'topic_name' => $preview['meta']['topic_name'] ?? null,
+                'target_marks' => (int) ($preview['target_marks'] ?? 0),
                 'generated_from' => 'teacher_exam_materials',
             ],
         ]);
@@ -183,6 +185,7 @@ class ExamController extends Controller
                 'material_topic_ids' => $topicIds,
                 'chapter_name' => $meta['chapter_name'] ?? null,
                 'topic_name' => $meta['topic_name'] ?? null,
+                'target_marks' => (int) $request->input('target_marks'),
                 'generated_from' => 'teacher_exam_materials',
             ],
         ]);

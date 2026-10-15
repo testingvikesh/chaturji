@@ -32,7 +32,12 @@ class SelfExamGeneratorService
 
         $layout = TeachingHomeworkLayout::autoLayout($targetMarks);
         $available = MaterialPaperBank::availableCounts($materials, $topics);
+        $marksPerType = array_merge(
+            \App\Support\ExamPaperWeightage::MARKS_PER_QUESTION,
+            $layout['marks_per_type']
+        );
         $typeCounts = $this->fitCountsToAvailable($layout['type_counts'], $available);
+        [$typeCounts, $marksPerType] = $this->topUpToTarget($typeCounts, $marksPerType, $available, $targetMarks);
 
         if ($typeCounts === []) {
             throw ValidationException::withMessages([
@@ -40,7 +45,10 @@ class SelfExamGeneratorService
             ]);
         }
 
-        $marksPerType = PaperTypeHelper::normalizeMarksPerType($layout['marks_per_type'], $typeCounts);
+        $marksPerType = array_merge(
+            \App\Support\ExamPaperWeightage::MARKS_PER_QUESTION,
+            PaperTypeHelper::normalizeMarksPerType($marksPerType, $typeCounts)
+        );
 
         return [
             'target_marks' => $targetMarks,
@@ -186,10 +194,43 @@ class SelfExamGeneratorService
     }
 
     /**
-     * @param  array<string, int>  $desired
+     * @param  array<string, int>  $typeCounts
+     * @param  array<string, int>  $marksPerType
      * @param  array<string, int>  $available
-     * @return array<string, int>
+     * @return array{0: array<string, int>, 1: array<string, int>}
      */
+    private function topUpToTarget(array $typeCounts, array $marksPerType, array $available, int $targetMarks): array
+    {
+        $guard = 0;
+
+        while (PaperTypeHelper::totalMarks($typeCounts, $marksPerType) < $targetMarks && $guard < 400) {
+            $guard++;
+            $shortfall = $targetMarks - PaperTypeHelper::totalMarks($typeCounts, $marksPerType);
+            $choice = null;
+
+            foreach ($marksPerType as $type => $perQuestion) {
+                $perQuestion = max(1, (int) $perQuestion);
+                if ($perQuestion > $shortfall) {
+                    continue;
+                }
+                if (($typeCounts[$type] ?? 0) >= (int) ($available[$type] ?? 0)) {
+                    continue;
+                }
+                if ($choice === null || $perQuestion < $choice['per']) {
+                    $choice = ['type' => $type, 'per' => $perQuestion];
+                }
+            }
+
+            if ($choice === null) {
+                break;
+            }
+
+            $typeCounts[$choice['type']] = ($typeCounts[$choice['type']] ?? 0) + 1;
+        }
+
+        return [$typeCounts, $marksPerType];
+    }
+
     private function fitCountsToAvailable(array $desired, array $available): array
     {
         $fitted = [];

@@ -22,6 +22,8 @@
 
     $selectedChapterIds = array_values(array_filter(array_map('strval', (array) $chapterIdList), fn ($id) => $id !== ''));
     $selectedTopicIds = array_values(array_filter(array_map('strval', (array) $topicIdList), fn ($id) => $id !== ''));
+    $selectedTargetMarks = (int) ($selectedTargetMarks ?? old('target_marks', 0));
+    $holdCounts = (bool) ($holdCounts ?? false);
 @endphp
 
 <script>
@@ -38,6 +40,7 @@ function teacherPaperBuilder(cfg) {
         loadingCounts: false,
         markOptions: [20, 30, 50, 70, 100],
         targetMarks: Number(cfg.targetMarks || 0),
+        holdCounts: Boolean(cfg.holdCounts),
         planError: '',
         subjectsUrl: cfg.subjectsUrl,
         chaptersUrl: cfg.chaptersUrl,
@@ -74,8 +77,19 @@ function teacherPaperBuilder(cfg) {
                 this.subjects = [];
                 return;
             }
+            const keep = String(this.subjectId || '');
             const res = await fetch(this.subjectsUrl + '?standard=' + encodeURIComponent(this.standard));
             this.subjects = await res.json();
+            if (!keep) {
+                return;
+            }
+            await this.$nextTick();
+            await this.$nextTick();
+            this.subjectId = keep;
+            const select = this.$root.querySelector('[data-subject-select]');
+            if (select && [...select.options].some(option => option.value === keep)) {
+                select.value = keep;
+            }
         },
 
         async loadChapters(reset) {
@@ -149,6 +163,7 @@ function teacherPaperBuilder(cfg) {
 
         selectMarks(marks) {
             this.targetMarks = Number(marks);
+            this.holdCounts = false;
             this.loadCounts();
         },
 
@@ -188,7 +203,7 @@ function teacherPaperBuilder(cfg) {
                 const data = await res.json();
                 this.available = data.counts || {};
                 this.planError = data.plan_error || '';
-                if (data.plan) {
+                if (data.plan && !this.holdCounts) {
                     this.applyPlan(data.plan);
                 }
             } catch (error) {
@@ -210,6 +225,7 @@ function teacherPaperBuilder(cfg) {
         chaptersUrl: @js(route('teacher.curriculum.chapters')),
         topicsUrl: @js(route('teacher.curriculum.topics')),
         countsUrl: @js(route('teacher.curriculum.question-counts')),
-        targetMarks: @js((int) old('target_marks', 0)),
+        targetMarks: @js($selectedTargetMarks),
+        holdCounts: @js($holdCounts),
      })"
      x-init="boot()">

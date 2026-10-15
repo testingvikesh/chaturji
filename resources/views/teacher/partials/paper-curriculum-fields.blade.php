@@ -12,10 +12,10 @@
     <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">Subject *</label>
         <input type="hidden" name="subject_id" :value="subjectId">
-        <select x-model="subjectId" @change="onSubjectChange()" required class="w-full rounded-xl border-slate-200">
+        <select data-subject-select :key="subjects.map(function (s) { return s.id; }).join(',')" x-model="subjectId" @change="onSubjectChange()" required class="w-full rounded-xl border-slate-200">
             <option value="">Select Subject</option>
             <template x-for="s in subjects" :key="s.id">
-                <option :value="String(s.id)" x-text="s.name"></option>
+                <option :value="String(s.id)" x-text="s.name" :selected="String(s.id) === String(subjectId)"></option>
             </template>
         </select>
     </div>
