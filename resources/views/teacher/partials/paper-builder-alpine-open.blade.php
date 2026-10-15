@@ -41,6 +41,7 @@ function teacherPaperBuilder(cfg) {
         markOptions: [20, 30, 50, 70, 100],
         targetMarks: Number(cfg.targetMarks || 0),
         holdCounts: Boolean(cfg.holdCounts),
+        paperTotal: 0,
         planError: '',
         subjectsUrl: cfg.subjectsUrl,
         chaptersUrl: cfg.chaptersUrl,
@@ -51,6 +52,7 @@ function teacherPaperBuilder(cfg) {
             if (this.standard) await this.loadSubjects();
             if (this.subjectId) await this.loadChapters(false);
             if (this.chapterIds.length) await this.loadTopics(false);
+            this.refreshPaperTotal();
         },
 
         async onStandardChange() {
@@ -183,6 +185,23 @@ function teacherPaperBuilder(cfg) {
                     input.value = marks[type];
                 }
             });
+            this.refreshPaperTotal();
+        },
+
+        refreshPaperTotal() {
+            const form = this.$root.closest('form') || this.$root;
+            let total = 0;
+            form.querySelectorAll('[name^="type_counts["]').forEach(function (input) {
+                const match = input.name.match(/type_counts\[(.+)\]/);
+                const type = match ? match[1] : '';
+                const count = Math.max(0, Number(input.value) || 0);
+                const marksInput = form.querySelector('[name="marks_per_type[' + type + ']"]');
+                const marks = marksInput ? Math.max(1, Number(marksInput.value) || 1) : 1;
+                if (count > 0) {
+                    total += count * marks;
+                }
+            });
+            this.paperTotal = total;
         },
 
         async loadCounts() {

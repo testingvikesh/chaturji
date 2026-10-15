@@ -20,6 +20,10 @@
                 </template>
             </div>
             <p class="text-xs text-slate-500 mt-2">Choose the paper total. Question counts fill in from the chapters you selected.</p>
+            <p class="mt-3 inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold"
+               :class="Number(targetMarks) && paperTotal !== Number(targetMarks) ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'">
+                Paper total: <span class="text-base font-bold" x-text="paperTotal + ' marks'"></span>
+            </p>
             <p class="text-xs text-rose-700 mt-1" x-show="planError" x-text="planError"></p>
         </div>
     @endif
@@ -55,12 +59,14 @@
                         <td class="py-3 px-2">
                             <input type="number" name="type_counts[{{ $type }}]" min="0" max="200"
                                 value="{{ $oldCounts[$type] ?? 0 }}"
+                                @if ($showMarks) @input="refreshPaperTotal()" @endif
                                 class="w-full rounded-lg border-slate-200 text-center">
                         </td>
                         @if ($showMarks)
                             <td class="py-3 pl-2">
                                 <input type="number" name="marks_per_type[{{ $type }}]" min="1" max="100"
                                     value="{{ $oldMarks[$type] ?? (\App\Support\ExamPaperWeightage::MARKS_PER_QUESTION[$type] ?? 1) }}"
+                                    @input="refreshPaperTotal()"
                                     class="w-full rounded-lg border-slate-200 text-center">
                             </td>
                         @endif
@@ -71,6 +77,7 @@
     </div>
 
     @if ($showMarks)
-        <p class="text-xs text-slate-500">Total marks = sum of (quantity × marks each) for each row with quantity &gt; 0.</p>
+        <p class="text-sm font-semibold text-slate-800">Paper total: <span class="text-brand-green" x-text="paperTotal + ' marks'"></span></p>
+        <p class="text-xs text-slate-500">This updates when you change quantity or marks each. It is the sum of quantity × marks each.</p>
     @endif
 </div>
