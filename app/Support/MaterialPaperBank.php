@@ -319,11 +319,22 @@ class MaterialPaperBank
     public static function availableCounts(Collection $materials, ?Collection $topics = null): array
     {
         $counts = array_fill_keys(array_keys(PaperTypeHelper::types()), 0);
+        $seen = [];
 
-        foreach (self::questionPool($materials, $topics)->groupBy('question_type') as $type => $group) {
-            if (array_key_exists($type, $counts)) {
-                $counts[$type] = $group->count();
+        foreach (self::questionPool($materials, $topics) as $question) {
+            if (! $question instanceof ChapterQuestion) {
+                continue;
             }
+            $type = (string) $question->question_type;
+            if (! array_key_exists($type, $counts)) {
+                continue;
+            }
+            $key = self::questionKey($question);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $counts[$type]++;
         }
 
         return $counts;
@@ -402,6 +413,7 @@ class MaterialPaperBank
     {
         $materialIds = $materials->pluck('id')->map(fn ($id) => (int) $id)->unique()->values()->all();
         $buckets = [];
+        $loose = [];
         foreach ($materialIds as $id) {
             $buckets[$id] = [];
         }
@@ -414,6 +426,8 @@ class MaterialPaperBank
             $type = (string) $question->question_type;
             if ($materialId > 0 && array_key_exists($materialId, $buckets)) {
                 $buckets[$materialId][$type][] = $question;
+            } else {
+                $loose[$type][] = $question;
             }
         }
 
@@ -423,6 +437,10 @@ class MaterialPaperBank
             }
         }
         unset($typeLists, $list);
+        foreach ($loose as &$list) {
+            shuffle($list);
+        }
+        unset($list);
 
         $slots = [];
         foreach (array_keys(PaperTypeHelper::types()) as $type) {
@@ -482,9 +500,13 @@ class MaterialPaperBank
                     }
                 }
             }
+            if (! $question && isset($loose[$type])) {
+                $question = self::takeUnusedQuestion($loose[$type], $usedKeys);
+                $chosenId = null;
+            }
             if (! $question) {
                 throw ValidationException::withMessages([
-                    "type_counts.{$type}" => PaperTypeHelper::label($type).' does not have enough different questions for an even chapter split.',
+                    "type_counts.{$type}" => PaperTypeHelper::label($type).' does not have enough questions in the selected chapters.',
                 ]);
             }
 
@@ -534,7 +556,15 @@ class MaterialPaperBank
 
     private static function questionKey(ChapterQuestion $question): string
     {
-        return $question->question_type.'|'.md5((string) $question->question_text);
+        $materialId = (int) ($question->getAttribute('source_material_id') ?? 0);
+        $payload = json_encode([
+            $question->question_text,
+            $question->options,
+            $question->answer,
+            $question->metadata,
+        ], JSON_UNESCAPED_UNICODE);
+
+        return $materialId.'|'.$question->question_type.'|'.md5((string) $payload);
     }
 
     public static function chapterLabel(Collection $materials): string
