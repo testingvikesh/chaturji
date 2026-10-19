@@ -6,6 +6,7 @@
     @php
         $config = $exam->generation_config ?? [];
         $selectedTypeCounts = $config['type_counts'] ?? [];
+        $selectedOptionalCounts = $config['optional_counts'] ?? [];
         $selectedMarksPerType = $config['marks_per_type'] ?? [];
         $markChoices = [20, 30, 50, 70, 100];
         $savedTarget = (int) ($config['target_marks'] ?? 0);
@@ -76,6 +77,7 @@
                 'paperTypes' => $paperTypes,
                 'showMarks' => true,
                 'selectedTypeCounts' => $selectedTypeCounts,
+                'selectedOptionalCounts' => $selectedOptionalCounts,
                 'selectedMarksPerType' => $selectedMarksPerType,
             ])
         </div>

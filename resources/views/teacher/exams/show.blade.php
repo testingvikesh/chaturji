@@ -64,6 +64,10 @@
                     </div>
                     <span class="admin-badge-slate text-xs">({{ $typeQuestions->count() }})</span>
                 </div>
+                @include('teacher.partials.section-attempt-line', [
+                    'attempt' => (int) (($exam->generation_config['type_counts'] ?? [])[$type] ?? 0),
+                    'optional' => (int) (($exam->generation_config['optional_counts'] ?? [])[$type] ?? 0),
+                ])
                 <div class="divide-y divide-slate-100">
                     @foreach ($typeQuestions as $question)
                         @php $questionNumber++; @endphp

@@ -24,6 +24,15 @@ class PaperTypeHelper
         ];
     }
 
+    public static function attemptInstruction(int $attempt, int $optional): ?string
+    {
+        if ($optional < 1 || $attempt < 1) {
+            return null;
+        }
+
+        return 'Attempt any '.$attempt.' questions.';
+    }
+
     public static function label(string $type): string
     {
         return ChapterQuestion::labelForType($type);

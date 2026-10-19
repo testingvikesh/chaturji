@@ -1,6 +1,7 @@
 @php
     $showMarks = $showMarks ?? false;
     $oldCounts = old('type_counts', $selectedTypeCounts ?? []);
+    $oldOptional = old('optional_counts', $selectedOptionalCounts ?? []);
     $oldMarks = old('marks_per_type', $selectedMarksPerType ?? []);
 @endphp
 
@@ -41,12 +42,17 @@
                     <th class="py-2 px-2 font-semibold w-28">Available</th>
                     <th class="py-2 px-2 font-semibold w-28">Quantity *</th>
                     @if ($showMarks)
+                        <th class="py-2 px-2 font-semibold w-28">Optional</th>
                         <th class="py-2 pl-2 font-semibold w-28">Marks each</th>
                     @endif
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @foreach ($paperTypes as $type => $label)
+                    @php
+                        $isSubjective = \App\Support\SubjectiveQuestionTypes::isSubjective($type);
+                        $optionalValue = $oldOptional[$type] ?? ($isSubjective && (int) ($oldCounts[$type] ?? 0) > 0 ? 1 : 0);
+                    @endphp
                     <tr>
                         <td class="py-3 pr-4">
                             <span class="mr-2">{{ \App\Support\PaperTypeHelper::icon($type) }}</span>
@@ -63,6 +69,15 @@
                                 class="w-full rounded-lg border-slate-200 text-center">
                         </td>
                         @if ($showMarks)
+                            <td class="py-3 px-2">
+                                @if ($isSubjective)
+                                    <input type="number" name="optional_counts[{{ $type }}]" min="0" max="50"
+                                        value="{{ $optionalValue }}"
+                                        class="w-full rounded-lg border-slate-200 text-center">
+                                @else
+                                    <span class="block text-center text-slate-300">—</span>
+                                @endif
+                            </td>
                             <td class="py-3 pl-2">
                                 <input type="number" name="marks_per_type[{{ $type }}]" min="1" max="100"
                                     value="{{ $oldMarks[$type] ?? (\App\Support\ExamPaperWeightage::MARKS_PER_QUESTION[$type] ?? 1) }}"
@@ -78,6 +93,7 @@
 
     @if ($showMarks)
         <p class="text-sm font-semibold text-slate-800">Paper total: <span class="text-brand-green" x-text="paperTotal + ' marks'"></span></p>
-        <p class="text-xs text-slate-500">This updates when you change quantity or marks each. It is the sum of quantity × marks each.</p>
+        <p class="text-xs text-slate-500">This updates when you change quantity or marks each. It is the sum of quantity × marks each. Optional questions are extra on the paper and are not added to the total.</p>
+        <p class="text-xs text-slate-500">Written sections (1 mark, 2 marks, 3 marks, 5 marks, short answer, long answer) get 1 optional question. Quantity 5 and optional 1 prints 6 questions, and that section says “Attempt any 5 questions.”</p>
     @endif
 </div>

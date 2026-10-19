@@ -44,6 +44,10 @@
                     </div>
                     <span class="admin-badge-slate text-xs">({{ $typeQuestions->count() }})</span>
                 </div>
+                @include('teacher.partials.section-attempt-line', [
+                    'attempt' => (int) ($typeCounts[$type] ?? 0),
+                    'optional' => (int) (($optionalCounts ?? [])[$type] ?? 0),
+                ])
                 <div class="divide-y divide-slate-100">
                     @foreach ($typeQuestions as $question)
                         @php $questionNumber++; @endphp
@@ -69,6 +73,7 @@
                 @include('teacher.partials.paper-meta-inputs', ['meta' => $meta])
                 @foreach ($paperTypes as $type => $label)
                     <input type="hidden" name="type_counts[{{ $type }}]" value="{{ $typeCounts[$type] ?? 0 }}">
+                    <input type="hidden" name="optional_counts[{{ $type }}]" value="{{ ($optionalCounts ?? [])[$type] ?? 0 }}">
                     <input type="hidden" name="marks_per_type[{{ $type }}]" value="{{ $marksPerType[$type] ?? 1 }}">
                 @endforeach
                 <button type="submit" class="rounded-xl border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Regenerate Random Paper</button>

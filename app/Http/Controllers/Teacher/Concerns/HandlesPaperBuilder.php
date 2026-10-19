@@ -11,6 +11,7 @@ use App\Models\TeacherSubject;
 use Illuminate\Support\Carbon;
 use App\Support\MaterialPaperBank;
 use App\Support\PaperTypeHelper;
+use App\Support\SubjectiveQuestionTypes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -43,6 +44,8 @@ trait HandlesPaperBuilder
                 'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
                 'marks_per_type' => ['nullable', 'array'],
                 'marks_per_type.*' => ['nullable', 'integer', 'min:1', 'max:100'],
+                'optional_counts' => ['nullable', 'array'],
+                'optional_counts.*' => ['nullable', 'integer', 'min:0', 'max:50'],
             ];
         } else {
             $rules += [
@@ -220,16 +223,39 @@ trait HandlesPaperBuilder
         return compact('materials', 'topics');
     }
 
-    protected function generateFromMaterials(array $meta, array $typeCounts, array $marksPerType = []): array
+    protected function generateFromMaterials(array $meta, array $typeCounts, array $marksPerType = [], array $optionalCounts = []): array
     {
         $resolved = $this->resolvePaperMaterials($meta);
+        $displayCounts = $typeCounts;
 
-        return MaterialPaperBank::generate(
+        foreach ($optionalCounts as $type => $extra) {
+            $extra = max(0, (int) $extra);
+            if ($extra > 0 && isset($displayCounts[$type])) {
+                $displayCounts[$type] += $extra;
+            }
+        }
+
+        $generated = MaterialPaperBank::generate(
             $resolved['materials'],
             $resolved['topics']->isEmpty() ? null : $resolved['topics'],
-            $typeCounts,
+            $displayCounts,
             $marksPerType
         );
+
+        $marksPerType = PaperTypeHelper::normalizeMarksPerType($marksPerType, $typeCounts);
+        $breakdown = PaperTypeHelper::breakdown($typeCounts, $marksPerType);
+        foreach ($breakdown as $index => $row) {
+            $extra = (int) ($optionalCounts[$row['type']] ?? 0);
+            $breakdown[$index]['optional'] = $extra;
+            $breakdown[$index]['printed'] = $row['count'] + $extra;
+        }
+
+        $generated['breakdown'] = $breakdown;
+        $generated['total_marks'] = PaperTypeHelper::totalMarks($typeCounts, $marksPerType);
+        $generated['marks_per_type'] = $marksPerType;
+        $generated['optional_counts'] = $optionalCounts;
+
+        return $generated;
     }
 
     /**
@@ -250,6 +276,34 @@ trait HandlesPaperBuilder
     protected function extractTypeCounts(Request $request): array
     {
         return PaperTypeHelper::normalizeCounts($request->input('type_counts', []));
+    }
+
+    /**
+     * Extra questions printed above the number students must attempt.
+     *
+     * @param  array<string, int>  $typeCounts
+     * @return array<string, int>
+     */
+    protected function extractOptionalCounts(Request $request, array $typeCounts): array
+    {
+        $submitted = (array) $request->input('optional_counts', []);
+        $optional = [];
+
+        foreach (SubjectiveQuestionTypes::TYPES as $type) {
+            if (! isset($typeCounts[$type])) {
+                continue;
+            }
+
+            $value = array_key_exists($type, $submitted)
+                ? max(0, (int) $submitted[$type])
+                : 1;
+
+            if ($value > 0) {
+                $optional[$type] = $value;
+            }
+        }
+
+        return $optional;
     }
 
     protected function extractMarksPerType(Request $request, array $typeCounts): array

@@ -9,6 +9,8 @@
     'objectiveStats' => null,
     'subjectiveStats' => null,
     'paperHeader' => null,
+    'attemptCounts' => [],
+    'optionalCounts' => [],
 ])
 
 @php
@@ -101,6 +103,10 @@
                 @endif
             </div>
         </div>
+        @include('teacher.partials.section-attempt-line', [
+            'attempt' => (int) (($attemptCounts ?? [])[$type] ?? 0),
+            'optional' => (int) (($optionalCounts ?? [])[$type] ?? 0),
+        ])
         <div class="divide-y divide-slate-100">
             @foreach ($typeQuestions as $question)
                 @php $questionNumber++; @endphp

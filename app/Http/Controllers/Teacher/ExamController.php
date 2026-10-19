@@ -45,12 +45,14 @@ class ExamController extends Controller
         $request->validate($this->paperMetaRules(true));
         $meta = $this->extractPaperMeta($request, true);
         [$typeCounts, $marksPerType] = $this->countsForExam($request, $meta);
+        $optionalCounts = $this->extractOptionalCounts($request, $typeCounts);
 
-        $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType);
+        $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType, $optionalCounts);
 
         $payload = [
             'meta' => $meta,
             'type_counts' => $typeCounts,
+            'optional_counts' => $optionalCounts,
             'marks_per_type' => $generated['marks_per_type'],
             'questions' => $this->snapshotQuestions($generated['questions']),
             'breakdown' => $generated['breakdown'],
@@ -63,11 +65,12 @@ class ExamController extends Controller
         return view('teacher.exams.preview', [
             'meta' => $meta,
             'typeCounts' => $typeCounts,
+            'optionalCounts' => $optionalCounts,
             'marksPerType' => $generated['marks_per_type'],
             'breakdown' => $generated['breakdown'],
             'grouped' => $generated['grouped'],
             'totalMarks' => $generated['total_marks'],
-            'totalQuestions' => PaperTypeHelper::totalQuestions($typeCounts),
+            'totalQuestions' => $generated['questions']->count(),
             'paperTypes' => PaperTypeHelper::types(),
         ]);
     }
@@ -89,6 +92,7 @@ class ExamController extends Controller
             'total_marks' => $preview['total_marks'],
             'generation_config' => [
                 'type_counts' => $preview['type_counts'],
+                'optional_counts' => $preview['optional_counts'] ?? [],
                 'marks_per_type' => $preview['marks_per_type'],
                 'material_ids' => $materialIds,
                 'material_topic_ids' => $topicIds,
@@ -166,8 +170,9 @@ class ExamController extends Controller
         $request->validate($this->paperMetaRules(true));
         $meta = $this->extractPaperMeta($request, true);
         [$typeCounts, $marksPerType] = $this->countsForExam($request, $meta);
+        $optionalCounts = $this->extractOptionalCounts($request, $typeCounts);
 
-        $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType);
+        $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType, $optionalCounts);
         $preview = [
             'marks_per_type' => $generated['marks_per_type'],
             'questions' => $this->snapshotQuestions($generated['questions']),
@@ -180,6 +185,7 @@ class ExamController extends Controller
             'total_marks' => $generated['total_marks'],
             'generation_config' => [
                 'type_counts' => $typeCounts,
+                'optional_counts' => $optionalCounts,
                 'marks_per_type' => $generated['marks_per_type'],
                 'material_ids' => $materialIds,
                 'material_topic_ids' => $topicIds,

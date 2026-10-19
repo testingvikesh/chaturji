@@ -21,7 +21,10 @@
                     <span class="font-medium text-slate-800 truncate">{{ $row['label'] }}</span>
                 </div>
                 <div class="shrink-0 text-right">
-                    <span class="font-bold text-brand-green">{{ $row['count'] }} Q</span>
+                    <span class="font-bold text-brand-green">{{ ($row['optional'] ?? 0) > 0 ? $row['printed'].' Q' : $row['count'].' Q' }}</span>
+                    @if (($row['optional'] ?? 0) > 0)
+                        <span class="block text-xs font-semibold text-amber-800">Attempt any {{ $row['count'] }}</span>
+                    @endif
                     @if ($showMarks && ($row['subtotal'] ?? 0) > 0)
                         <span class="block text-xs font-semibold text-amber-700">{{ $row['marks'] }} × {{ $row['count'] }} = {{ $row['subtotal'] }} marks</span>
                     @endif

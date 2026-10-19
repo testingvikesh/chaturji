@@ -21,6 +21,8 @@
                 'totalMarks' => $exam->total_marks,
                 'totalQuestions' => $exam->questions->count(),
                 'showMarks' => true,
+                'attemptCounts' => $exam->generation_config['type_counts'] ?? [],
+                'optionalCounts' => $exam->generation_config['optional_counts'] ?? [],
                 'paperHeader' => [
                     'title' => $exam->title,
                     'className' => $user->standardLabel(),
