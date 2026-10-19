@@ -31,7 +31,7 @@
 
     <div>
         <h3 class="font-bold text-slate-900">Question Paper Builder</h3>
-        <p class="text-sm text-slate-500 mt-1">Quantities follow the total marks. You can still change a row before preview.</p>
+        <p class="text-sm text-slate-500 mt-1">Quantities follow the total marks. Questions are split evenly across the chapters you select, so 3 chapters and 30 marks takes about 10 marks from each chapter.</p>
     </div>
 
     <div class="overflow-x-auto">

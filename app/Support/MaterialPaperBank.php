@@ -303,6 +303,7 @@ class MaterialPaperBank
                 if (! array_key_exists((string) $question->question_type, PaperTypeHelper::types())) {
                     continue;
                 }
+                $question->setAttribute('source_material_id', (int) $materialTopic->material_id);
                 $pool->push($question);
             }
         }
@@ -361,8 +362,6 @@ class MaterialPaperBank
 
         $pool = self::questionPool($materials, $topics);
         $available = self::availableCounts($materials, $topics);
-        $selected = collect();
-        $usedKeys = [];
 
         foreach ($typeCounts as $type => $count) {
             if (! array_key_exists($type, PaperTypeHelper::types()) || $count <= 0) {
@@ -374,24 +373,9 @@ class MaterialPaperBank
                     "type_counts.{$type}" => PaperTypeHelper::label($type).' has only '.($available[$type] ?? 0).' question(s) available, but you requested '.$count.'.',
                 ]);
             }
-
-            $picked = $pool
-                ->where('question_type', $type)
-                ->filter(function (ChapterQuestion $question) use ($usedKeys) {
-                    $key = $question->question_type.'|'.md5((string) $question->question_text);
-
-                    return ! isset($usedKeys[$key]);
-                })
-                ->shuffle()
-                ->take($count)
-                ->values();
-
-            foreach ($picked as $question) {
-                $usedKeys[$question->question_type.'|'.md5((string) $question->question_text)] = true;
-            }
-
-            $selected = $selected->concat($picked);
         }
+
+        $selected = self::pickAcrossChapters($pool, $materials, $typeCounts, $marksPerType);
 
         $marksPerType = PaperTypeHelper::normalizeMarksPerType($marksPerType, $typeCounts);
 
@@ -402,6 +386,155 @@ class MaterialPaperBank
             'total_marks' => PaperTypeHelper::totalMarks($typeCounts, $marksPerType),
             'marks_per_type' => $marksPerType,
         ];
+    }
+
+    /**
+     * Give each selected chapter the same share of the paper marks.
+     * Three chapters and 30 marks means about 10 marks from each chapter.
+     *
+     * @param  Collection<int, ChapterQuestion>  $pool
+     * @param  Collection<int, Material>  $materials
+     * @param  array<string, int>  $typeCounts
+     * @param  array<string, int>  $marksPerType
+     * @return Collection<int, ChapterQuestion>
+     */
+    private static function pickAcrossChapters(Collection $pool, Collection $materials, array $typeCounts, array $marksPerType): Collection
+    {
+        $materialIds = $materials->pluck('id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $buckets = [];
+        foreach ($materialIds as $id) {
+            $buckets[$id] = [];
+        }
+
+        foreach ($pool as $question) {
+            if (! $question instanceof ChapterQuestion) {
+                continue;
+            }
+            $materialId = (int) ($question->getAttribute('source_material_id') ?? 0);
+            $type = (string) $question->question_type;
+            if ($materialId > 0 && array_key_exists($materialId, $buckets)) {
+                $buckets[$materialId][$type][] = $question;
+            }
+        }
+
+        foreach ($buckets as &$typeLists) {
+            foreach ($typeLists as &$list) {
+                shuffle($list);
+            }
+        }
+        unset($typeLists, $list);
+
+        $slots = [];
+        foreach (array_keys(PaperTypeHelper::types()) as $type) {
+            $count = (int) ($typeCounts[$type] ?? 0);
+            $each = max(1, (int) ($marksPerType[$type] ?? 1));
+            for ($i = 0; $i < $count; $i++) {
+                $slots[] = ['type' => $type, 'marks' => $each];
+            }
+        }
+        usort($slots, fn (array $a, array $b) => $b['marks'] <=> $a['marks']);
+
+        $chapterCount = count($materialIds);
+        $totalMarks = array_sum(array_column($slots, 'marks'));
+        $share = $chapterCount > 0 ? intdiv($totalMarks, $chapterCount) : 0;
+        $remainder = $chapterCount > 0 ? $totalMarks % $chapterCount : 0;
+        $target = [];
+        $scored = [];
+        foreach ($materialIds as $index => $id) {
+            $target[$id] = $share + ($index < $remainder ? 1 : 0);
+            $scored[$id] = 0;
+        }
+
+        $usedKeys = [];
+        $selected = collect();
+
+        foreach ($slots as $slot) {
+            $type = $slot['type'];
+            $chosenId = null;
+            $bestDeficit = null;
+
+            if ($chapterCount > 1) {
+                foreach ($materialIds as $id) {
+                    if (! self::hasUnusedQuestion($buckets[$id][$type] ?? [], $usedKeys)) {
+                        continue;
+                    }
+                    $deficit = $target[$id] - $scored[$id];
+                    if ($bestDeficit === null || $deficit > $bestDeficit) {
+                        $bestDeficit = $deficit;
+                        $chosenId = $id;
+                    }
+                }
+            }
+
+            $question = null;
+            if ($chosenId !== null) {
+                $question = self::takeUnusedQuestion($buckets[$chosenId][$type], $usedKeys);
+            }
+            if (! $question) {
+                foreach ($materialIds as $id) {
+                    if (! isset($buckets[$id][$type])) {
+                        continue;
+                    }
+                    $question = self::takeUnusedQuestion($buckets[$id][$type], $usedKeys);
+                    if ($question) {
+                        $chosenId = $id;
+                        break;
+                    }
+                }
+            }
+            if (! $question) {
+                throw ValidationException::withMessages([
+                    "type_counts.{$type}" => PaperTypeHelper::label($type).' does not have enough different questions for an even chapter split.',
+                ]);
+            }
+
+            if ($chosenId !== null) {
+                $scored[$chosenId] += $slot['marks'];
+            }
+            $selected->push($question);
+        }
+
+        return $selected;
+    }
+
+    /**
+     * @param  list<ChapterQuestion>  $list
+     * @param  array<string, bool>  $usedKeys
+     */
+    private static function hasUnusedQuestion(array $list, array $usedKeys): bool
+    {
+        foreach ($list as $question) {
+            if (! isset($usedKeys[self::questionKey($question)])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<ChapterQuestion>  $list
+     * @param  array<string, bool>  $usedKeys
+     */
+    private static function takeUnusedQuestion(array &$list, array &$usedKeys): ?ChapterQuestion
+    {
+        foreach ($list as $index => $question) {
+            $key = self::questionKey($question);
+            if (isset($usedKeys[$key])) {
+                continue;
+            }
+            $usedKeys[$key] = true;
+            array_splice($list, $index, 1);
+
+            return $question;
+        }
+
+        return null;
+    }
+
+    private static function questionKey(ChapterQuestion $question): string
+    {
+        return $question->question_type.'|'.md5((string) $question->question_text);
     }
 
     public static function chapterLabel(Collection $materials): string
