@@ -68,8 +68,14 @@
         padding: 10px 14px 18px;
     }
     .pdf-frame { display: none; }
-    .pdf-table { width: 100%; border-collapse: collapse; }
-    .pdf-table > tbody > tr > td { padding: 0; vertical-align: top; }
+    .pdf-brand-fixed { display: none; }
+    .pdf-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .pdf-table > thead { display: table-header-group; }
+    .pdf-table > tfoot { display: table-footer-group; }
+    .pdf-table > tbody > tr > td,
+    .pdf-table > thead > tr > td,
+    .pdf-table > tfoot > tr > td { padding: 0; vertical-align: top; }
+    .pdf-foot-space { height: 8mm; }
     .pdf-brand {
         display: flex;
         align-items: center;
@@ -78,6 +84,7 @@
         padding: 2px 4px 8px;
         border-bottom: 2px solid #1a4f8b;
         margin-bottom: 8px;
+        background: #fff;
     }
     .pdf-brand img { width: 54px; height: 54px; object-fit: contain; }
     .pdf-brand-name {
@@ -161,40 +168,39 @@
     }
     .pdf-match p { margin: 0 0 2px; font-weight: 700; font-size: 11px; }
     .pdf-match ol { margin: 0; padding-left: 18px; }
-    @page { size: A4; margin: 26mm 10mm 12mm 10mm; }
+    @page { size: A4; margin: 0; }
     @media print {
         .pdf-exam {
             max-width: none;
             margin: 0;
             border: none;
-            padding: 0;
+            padding: 0 8mm;
             box-shadow: none;
         }
-        .pdf-brand {
+        .pdf-brand-fixed {
+            display: flex;
             position: fixed;
-            top: -22mm;
-            left: 0;
-            right: 0;
-            height: 20mm;
-            margin: 0;
-            padding: 0 0 1mm;
-            background: #fff;
-            box-sizing: border-box;
-            z-index: 40;
+            top: 5mm;
+            left: 8mm;
+            right: 8mm;
+            margin: 0 0 0;
+            z-index: 30;
         }
-        .pdf-brand img { width: 46px; height: 46px; }
+        .pdf-brand-flow { visibility: hidden; margin-top: 4mm; }
+        .pdf-table > thead { display: table-header-group !important; }
+        .pdf-table > tfoot { display: table-footer-group !important; }
         .pdf-frame {
             display: block;
             position: fixed;
-            top: -24mm;
-            right: -6mm;
-            bottom: -8mm;
-            left: -6mm;
+            top: 3mm;
+            right: 3mm;
+            bottom: 3mm;
+            left: 3mm;
             border: 2.5px solid #1a4f8b;
             pointer-events: none;
             z-index: 1;
         }
-        .pdf-q, .pdf-table > tbody > tr { break-inside: avoid; page-break-inside: avoid; }
+        .pdf-keep { break-inside: avoid; page-break-inside: avoid; }
         .pdf-sec { break-after: avoid; page-break-after: avoid; }
         .pdf-brand, .pdf-banner, .pdf-break th {
             -webkit-print-color-adjust: exact;
@@ -204,16 +210,35 @@
 </style>
 
 <div class="pdf-frame" aria-hidden="true"></div>
-<div class="pdf-exam">
-    <div class="pdf-brand">
-        <img src="{{ $logoUrl }}" alt="{{ $schoolName }}">
-        <div>
-            <div class="pdf-brand-name">{{ $schoolName }}</div>
-            <div class="pdf-brand-sub">Schooling With Skills (Year: {{ $academicYear }})</div>
-            <div class="pdf-brand-sub">CBSE Curriculum | {{ $mediumLabel }} Medium</div>
-        </div>
+<div class="pdf-brand pdf-brand-fixed">
+    <img src="{{ $logoUrl }}" alt="{{ $schoolName }}">
+    <div>
+        <div class="pdf-brand-name">{{ $schoolName }}</div>
+        <div class="pdf-brand-sub">Schooling With Skills (Year: {{ $academicYear }})</div>
+        <div class="pdf-brand-sub">CBSE Curriculum | {{ $mediumLabel }} Medium</div>
     </div>
+</div>
+<div class="pdf-exam">
     <table class="pdf-table">
+        <thead>
+            <tr>
+                <td>
+                    <div class="pdf-brand pdf-brand-flow">
+                        <img src="{{ $logoUrl }}" alt="">
+                        <div>
+                            <div class="pdf-brand-name">{{ $schoolName }}</div>
+                            <div class="pdf-brand-sub">Schooling With Skills (Year: {{ $academicYear }})</div>
+                            <div class="pdf-brand-sub">CBSE Curriculum | {{ $mediumLabel }} Medium</div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </thead>
+        <tfoot>
+            <tr>
+                <td><div class="pdf-foot-space"></div></td>
+            </tr>
+        </tfoot>
         <tbody>
             <tr>
                 <td>
@@ -295,7 +320,7 @@
                         (int) (($optionalCounts ?? [])[$type] ?? 0)
                     );
                 @endphp
-                <tr>
+                <tr class="pdf-keep">
                     <td>
                         <div class="pdf-sec">
                             SECTION {{ $sectionLetter }} — {{ strtoupper(\App\Support\PaperTypeHelper::sectionLabel($type)) }}
@@ -320,7 +345,7 @@
                         $optionEntries = \App\Support\ObjectiveOptionHelper::entries($optionItems, $resolvedType);
                         $questionMarks = (int) ($question->marks ?? 1);
                     @endphp
-                    <tr>
+                    <tr class="pdf-keep">
                         <td>
                             <div class="pdf-q">
                                 <div class="pdf-q-line">
