@@ -69,8 +69,6 @@
     }
     .pdf-frame { display: none; }
     .pdf-table { width: 100%; border-collapse: collapse; }
-    .pdf-table > thead { display: table-header-group; }
-    .pdf-table > tfoot { display: table-footer-group; }
     .pdf-table > tbody > tr > td { padding: 0; vertical-align: top; }
     .pdf-brand {
         display: flex;
@@ -117,12 +115,7 @@
         vertical-align: bottom;
     }
     .pdf-blank.short { min-width: 80px; }
-    .pdf-note {
-        margin: 6px 0;
-        font-size: 12px;
-        font-family: "Nirmala UI", "Shruti", Arial, sans-serif;
-    }
-    .pdf-extra { margin: 0 0 6px; padding-left: 18px; }
+    .pdf-extra { margin: 6px 0; padding-left: 18px; }
     .pdf-extra li { margin: 1px 0; }
     .pdf-break-title {
         margin: 8px 0 4px;
@@ -168,27 +161,40 @@
     }
     .pdf-match p { margin: 0 0 2px; font-weight: 700; font-size: 11px; }
     .pdf-match ol { margin: 0; padding-left: 18px; }
-    .pdf-foot-space { height: 8mm; }
+    @page { size: A4; margin: 26mm 10mm 12mm 10mm; }
     @media print {
         .pdf-exam {
             max-width: none;
             margin: 0;
             border: none;
-            padding: 7mm 9mm 2mm;
+            padding: 0;
             box-shadow: none;
         }
+        .pdf-brand {
+            position: fixed;
+            top: -22mm;
+            left: 0;
+            right: 0;
+            height: 20mm;
+            margin: 0;
+            padding: 0 0 1mm;
+            background: #fff;
+            box-sizing: border-box;
+            z-index: 40;
+        }
+        .pdf-brand img { width: 46px; height: 46px; }
         .pdf-frame {
             display: block;
             position: fixed;
-            top: 4mm;
-            right: 4mm;
-            bottom: 4mm;
-            left: 4mm;
+            top: -24mm;
+            right: -6mm;
+            bottom: -8mm;
+            left: -6mm;
             border: 2.5px solid #1a4f8b;
             pointer-events: none;
-            z-index: 50;
+            z-index: 1;
         }
-        .pdf-q { break-inside: avoid; page-break-inside: avoid; }
+        .pdf-q, .pdf-table > tbody > tr { break-inside: avoid; page-break-inside: avoid; }
         .pdf-sec { break-after: avoid; page-break-after: avoid; }
         .pdf-brand, .pdf-banner, .pdf-break th {
             -webkit-print-color-adjust: exact;
@@ -199,26 +205,15 @@
 
 <div class="pdf-frame" aria-hidden="true"></div>
 <div class="pdf-exam">
+    <div class="pdf-brand">
+        <img src="{{ $logoUrl }}" alt="{{ $schoolName }}">
+        <div>
+            <div class="pdf-brand-name">{{ $schoolName }}</div>
+            <div class="pdf-brand-sub">Schooling With Skills (Year: {{ $academicYear }})</div>
+            <div class="pdf-brand-sub">CBSE Curriculum | {{ $mediumLabel }} Medium</div>
+        </div>
+    </div>
     <table class="pdf-table">
-        <thead>
-            <tr>
-                <td>
-                    <div class="pdf-brand">
-                        <img src="{{ $logoUrl }}" alt="{{ $schoolName }}">
-                        <div>
-                            <div class="pdf-brand-name">{{ $schoolName }}</div>
-                            <div class="pdf-brand-sub">Schooling With Skills (Year: {{ $academicYear }})</div>
-                            <div class="pdf-brand-sub">CBSE Curriculum | {{ $mediumLabel }} Medium</div>
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        </thead>
-        <tfoot>
-            <tr>
-                <td><div class="pdf-foot-space"></div></td>
-            </tr>
-        </tfoot>
         <tbody>
             <tr>
                 <td>
@@ -239,7 +234,6 @@
                             <td>Obtain Marks : <span class="pdf-blank short"></span></td>
                         </tr>
                     </table>
-                    <p class="pdf-note">જવાબ નામ પત્રી અનુસાર લખવા પડે. જો નહીં તો ગુણ નહીં.</p>
                     @if ($instructionGroups !== [])
                         <ol class="pdf-extra">
                             @foreach ($instructionGroups as $group)

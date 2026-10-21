@@ -9,7 +9,7 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css'])
     <style>
-        @page { size: A4; margin: 0; }
+        @page { size: A4; margin: 26mm 10mm 12mm 10mm; }
         @media print {
             .no-print { display: none !important; }
             body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
