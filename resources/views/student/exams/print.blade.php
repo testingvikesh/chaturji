@@ -17,29 +17,21 @@
             No questions in this exam yet.
         </div>
     @else
-        @include('student.partials.paper-view', [
-            'breakdown' => $breakdown,
-            'grouped' => $grouped,
+        @include('student.partials.pdf-exam-sheet', [
+            'title' => $exam->title,
+            'className' => $user->standardLabel(),
+            'subjectName' => $exam->subject?->name ?? 'General',
+            'standardSlug' => $exam->standard,
+            'config' => $exam->generation_config ?? [],
+            'chapterName' => $chapterName,
+            'topicName' => $topicName,
             'totalMarks' => $exam->total_marks,
             'totalQuestions' => $exam->questions->count(),
-            'showMarks' => true,
+            'breakdown' => $breakdown,
+            'grouped' => \App\Support\PaperTypeHelper::groupInPaperOrder($exam->questions),
             'attemptCounts' => $exam->generation_config['type_counts'] ?? [],
             'optionalCounts' => $exam->generation_config['optional_counts'] ?? [],
-            'interactiveAttempt' => false,
-            'paperHeader' => [
-                'title' => $exam->title,
-                'className' => $user->standardLabel(),
-                'subjectName' => $exam->subject?->name ?? 'General',
-                'teacherName' => $exam->teacher?->name ?? 'Teacher',
-                'durationMinutes' => $exam->duration_minutes,
-                'totalMarks' => $exam->total_marks,
-                'studentName' => $user->name,
-                'chapterNumber' => $chapterNumber,
-                'chapterName' => $chapterName,
-                'topicName' => $topicName,
-                'instructions' => $exam->instructions,
-                'blankStudentFields' => true,
-            ],
+            'instructions' => $exam->instructions,
         ])
     @endif
 </x-paper-print-layout>

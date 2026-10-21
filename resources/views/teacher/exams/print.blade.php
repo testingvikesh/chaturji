@@ -14,28 +14,21 @@
             No questions in this exam yet.
         </div>
     @else
-        @include('student.partials.paper-view', [
-            'breakdown' => $breakdown,
-            'grouped' => $grouped,
+        @include('student.partials.pdf-exam-sheet', [
+            'title' => $exam->title,
+            'className' => $standardName,
+            'subjectName' => $exam->subject?->name ?? 'General',
+            'standardSlug' => $exam->standard,
+            'config' => $exam->generation_config ?? [],
+            'chapterName' => $chapterName,
+            'topicName' => $topicName,
             'totalMarks' => $exam->total_marks,
             'totalQuestions' => $exam->questions->count(),
-            'showMarks' => true,
+            'breakdown' => $breakdown,
+            'grouped' => $grouped,
             'attemptCounts' => $exam->generation_config['type_counts'] ?? [],
             'optionalCounts' => $exam->generation_config['optional_counts'] ?? [],
-            'interactiveAttempt' => false,
-            'paperHeader' => [
-                'title' => $exam->title,
-                'className' => $standardName,
-                'subjectName' => $exam->subject?->name ?? 'General',
-                'teacherName' => auth()->user()->name,
-                'durationMinutes' => $exam->duration_minutes,
-                'totalMarks' => $exam->total_marks,
-                'chapterNumber' => $chapterNumber,
-                'chapterName' => $chapterName,
-                'topicName' => $topicName,
-                'instructions' => $exam->instructions,
-                'hideIdentityBoxes' => true,
-            ],
+            'instructions' => $exam->instructions,
         ])
     @endif
 

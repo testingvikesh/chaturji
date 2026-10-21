@@ -17,27 +17,21 @@
             No questions in this homework yet.
         </div>
     @else
-        @include('student.partials.paper-view', [
-            'breakdown' => $breakdown,
-            'grouped' => $grouped,
+        @include('student.partials.pdf-exam-sheet', [
+            'title' => $homework->title,
+            'className' => $user->standardLabel(),
+            'subjectName' => $homework->subject?->name ?? 'General',
+            'standardSlug' => $homework->standard,
+            'config' => $homework->generation_config ?? [],
+            'chapterName' => $chapterName,
+            'topicName' => $topicName,
             'totalMarks' => $homework->generation_config['total_marks'] ?? null,
             'totalQuestions' => $homework->questions->count(),
-            'showMarks' => true,
-            'interactiveAttempt' => false,
-            'paperHeader' => [
-                'title' => $homework->title,
-                'className' => $user->standardLabel(),
-                'subjectName' => $homework->subject?->name ?? 'General',
-                'teacherName' => $homework->teacher?->name ?? 'Teacher',
-                'durationMinutes' => null,
-                'totalMarks' => $homework->generation_config['total_marks'] ?? null,
-                'studentName' => $user->name,
-                'chapterNumber' => $chapterNumber,
-                'chapterName' => $chapterName,
-                'topicName' => $topicName,
-                'instructions' => $homework->description,
-                'blankStudentFields' => true,
-            ],
+            'breakdown' => $breakdown,
+            'grouped' => \App\Support\PaperTypeHelper::groupInPaperOrder($homework->questions),
+            'attemptCounts' => $homework->generation_config['type_counts'] ?? [],
+            'optionalCounts' => $homework->generation_config['optional_counts'] ?? [],
+            'instructions' => $homework->description,
         ])
     @endif
 </x-paper-print-layout>
