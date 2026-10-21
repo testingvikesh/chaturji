@@ -68,14 +68,13 @@
         padding: 10px 14px 18px;
     }
     .pdf-frame { display: none; }
-    .pdf-brand-fixed { display: none; }
     .pdf-table { width: 100%; border-collapse: separate; border-spacing: 0; }
     .pdf-table > thead { display: table-header-group; }
     .pdf-table > tfoot { display: table-footer-group; }
     .pdf-table > tbody > tr > td,
     .pdf-table > thead > tr > td,
     .pdf-table > tfoot > tr > td { padding: 0; vertical-align: top; }
-    .pdf-foot-space { height: 8mm; }
+    .pdf-foot-space { height: 0; }
     .pdf-brand {
         display: flex;
         align-items: center;
@@ -86,6 +85,7 @@
         margin-bottom: 8px;
         background: #fff;
     }
+    .pdf-brand.pdf-brand-fixed { display: none; }
     .pdf-brand img { width: 54px; height: 54px; object-fit: contain; }
     .pdf-brand-name {
         font-size: 18px;
@@ -177,7 +177,7 @@
             padding: 0 8mm;
             box-shadow: none;
         }
-        .pdf-brand-fixed {
+        .pdf-brand.pdf-brand-fixed {
             display: flex;
             position: fixed;
             top: 5mm;
@@ -187,6 +187,7 @@
             z-index: 30;
         }
         .pdf-brand-flow { visibility: hidden; margin-top: 4mm; }
+        .pdf-foot-space { height: 8mm; }
         .pdf-table > thead { display: table-header-group !important; }
         .pdf-table > tfoot { display: table-footer-group !important; }
         .pdf-frame {
