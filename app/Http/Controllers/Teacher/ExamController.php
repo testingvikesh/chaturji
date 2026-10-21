@@ -6,10 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Teacher\Concerns\HandlesPaperBuilder;
 use App\Models\Exam;
 use App\Models\ExamQuestion;
+use App\Models\MaterialTopic;
 use App\Models\Standard;
 use App\Services\SelfExamGeneratorService;
 use App\Services\StudentNotificationService;
 use App\Support\ActivityLogger;
+use App\Support\ChapterMaterialHelper;
+use App\Support\MaterialQuestionEditor;
+use App\Support\MaterialTopicReader;
 use App\Support\PaperTypeHelper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -132,6 +136,75 @@ class ExamController extends Controller
         );
 
         return view('teacher.exams.show', compact('exam', 'grouped', 'breakdown'));
+    }
+
+    public function editQuestion(Exam $exam, ExamQuestion $question): View
+    {
+        $this->authorizeExam($exam);
+        abort_unless((int) $question->exam_id === (int) $exam->id, 404);
+
+        return view('teacher.exams.question-edit', [
+            'exam' => $exam,
+            'question' => $question,
+            'optionsText' => $this->optionsText($question->options),
+            'isMatch' => $this->isMatchOptions($question->options),
+        ]);
+    }
+
+    public function updateQuestion(Request $request, Exam $exam, ExamQuestion $question): RedirectResponse
+    {
+        $this->authorizeExam($exam);
+        abort_unless((int) $question->exam_id === (int) $exam->id, 404);
+
+        $validated = $request->validate([
+            'question_text' => ['required', 'string'],
+            'answer' => ['nullable', 'string'],
+            'options_text' => ['nullable', 'string'],
+        ]);
+
+        $oldText = (string) $question->question_text;
+        $oldType = (string) $question->question_type;
+        $isMatch = $this->isMatchOptions($question->options);
+        $options = $question->options;
+
+        if (! $isMatch) {
+            $lines = array_values(array_filter(array_map(
+                'trim',
+                preg_split('/\r\n|\r|\n/', (string) ($validated['options_text'] ?? '')) ?: []
+            )));
+            $options = $lines !== [] ? $lines : null;
+        }
+
+        $located = $this->locateChapterQuestion($exam, $question);
+        if ($located) {
+            [$topic, $questionKey] = $located;
+            MaterialQuestionEditor::update(auth()->user(), $topic->fresh(), $questionKey, [
+                'question_text' => $validated['question_text'],
+                'answer' => $validated['answer'] ?? null,
+                'options' => $isMatch ? $question->options : $options,
+            ]);
+        }
+
+        ExamQuestion::query()
+            ->where('question_type', $oldType)
+            ->where('question_text', $oldText)
+            ->whereHas('exam', fn ($query) => $query->where('teacher_id', auth()->id()))
+            ->get()
+            ->each(function (ExamQuestion $row) use ($validated, $options, $isMatch) {
+                $row->update([
+                    'question_text' => $validated['question_text'],
+                    'answer' => $validated['answer'] ?? null,
+                    'options' => $isMatch ? $row->options : $options,
+                ]);
+            });
+
+        $message = $located
+            ? 'Question and answer updated on this paper and in the chapter.'
+            : 'Question and answer updated on this paper. The matching chapter question was not found.';
+
+        return redirect()
+            ->route('teacher.exams.show', $exam)
+            ->with($located ? 'success' : 'error', $message);
     }
 
     public function printPaper(Exam $exam): View
@@ -282,6 +355,75 @@ class ExamController extends Controller
                 'sort_order' => $sort++,
             ]);
         }
+    }
+
+    /**
+     * @return array{0: MaterialTopic, 1: string}|null
+     */
+    private function locateChapterQuestion(Exam $exam, ExamQuestion $question): ?array
+    {
+        $materialIds = array_values(array_filter(array_map(
+            'intval',
+            (array) ($exam->generation_config['material_ids'] ?? [])
+        )));
+
+        if ($materialIds === []) {
+            return null;
+        }
+
+        $needle = ChapterMaterialHelper::normalizeQuestionKey((string) $question->question_text);
+        $type = (string) $question->question_type;
+        $topics = MaterialTopic::query()
+            ->whereIn('material_id', $materialIds)
+            ->orderBy('topic_order')
+            ->get();
+
+        foreach ($topics as $topic) {
+            if (! $topic->hasContent()) {
+                continue;
+            }
+
+            $rawQuestions = MaterialTopicReader::rawUniqueQuestions($topic);
+            $edits = is_array($topic->question_edits) ? $topic->question_edits : [];
+
+            foreach ($rawQuestions as $rawQuestion) {
+                if ((string) $rawQuestion->question_type !== $type) {
+                    continue;
+                }
+
+                $key = MaterialQuestionEditor::questionKey($type, (string) $rawQuestion->question_text);
+                $shown = (string) ($edits[$key]['question_text'] ?? $rawQuestion->question_text);
+                if (ChapterMaterialHelper::normalizeQuestionKey($shown) !== $needle) {
+                    continue;
+                }
+
+                return [$topic, $key];
+            }
+        }
+
+        return null;
+    }
+
+    private function isMatchOptions(mixed $options): bool
+    {
+        return is_array($options) && (isset($options['column_a']) || isset($options['column_b']));
+    }
+
+    private function optionsText(mixed $options): string
+    {
+        if (is_string($options)) {
+            $decoded = json_decode($options, true);
+            $options = is_array($decoded) ? $decoded : null;
+        }
+
+        if (! is_array($options) || $this->isMatchOptions($options)) {
+            return '';
+        }
+
+        return implode("\n", array_map(
+            fn ($option) => is_array($option) ? (string) ($option['text'] ?? $option['label'] ?? '') : (string) $option,
+            $options
+        ));
     }
 
     private function standardOptions(): array

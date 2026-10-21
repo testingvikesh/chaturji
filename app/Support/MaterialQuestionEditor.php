@@ -88,7 +88,7 @@ class MaterialQuestionEditor
         $newText = MathMarkup::sanitize($payload['question_text']);
         $newAnswer = MathMarkup::sanitize($payload['answer'] ?? null);
         $newOptions = $payload['options'] ?? null;
-        if (is_array($newOptions)) {
+        if (is_array($newOptions) && array_is_list($newOptions)) {
             $newOptions = array_values(array_filter(array_map(
                 fn ($line) => MathMarkup::sanitize(is_string($line) ? $line : ''),
                 $newOptions

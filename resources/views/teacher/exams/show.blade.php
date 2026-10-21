@@ -71,7 +71,13 @@
                 <div class="divide-y divide-slate-100">
                     @foreach ($typeQuestions as $question)
                         @php $questionNumber++; @endphp
-                        @include('student.partials.question-card', ['question' => $question, 'number' => $questionNumber, 'showAnswer' => true, 'sectionType' => $type])
+                        @include('student.partials.question-card', [
+                            'question' => $question,
+                            'number' => $questionNumber,
+                            'showAnswer' => true,
+                            'sectionType' => $type,
+                            'questionEditUrl' => route('teacher.exams.questions.edit', [$exam, $question]),
+                        ])
                     @endforeach
                 </div>
             </div>
