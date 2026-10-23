@@ -26,12 +26,10 @@
                             <th>Time</th>
                             <th>Exam</th>
                             <th>Subject</th>
-                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($examTimetable as $exam)
-                            @php $phase = $exam->schedulePhase(); @endphp
                             <tr>
                                 <td class="whitespace-nowrap">{{ $exam->localStart()?->format('d M Y') }}</td>
                                 <td class="whitespace-nowrap">
@@ -42,19 +40,10 @@
                                 </td>
                                 <td class="font-semibold text-slate-900">{{ $exam->title }}</td>
                                 <td>{{ $exam->subject?->name ?? '—' }}</td>
-                                <td>
-                                    @if ($phase === 'live')
-                                        <a href="{{ route('student.exams.show', $exam) }}" class="text-xs font-semibold text-brand-green hover:underline">Open paper</a>
-                                    @elseif ($phase === 'upcoming')
-                                        <span class="text-xs font-semibold text-amber-700">Not started</span>
-                                    @else
-                                        <span class="text-xs font-semibold text-slate-500">Ended</span>
-                                    @endif
-                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center text-slate-500 py-8">No scheduled exams yet.</td>
+                                <td colspan="4" class="text-center text-slate-500 py-8">No scheduled exams yet.</td>
                             </tr>
                         @endforelse
                     </tbody>
