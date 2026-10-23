@@ -36,6 +36,10 @@
                     <p class="font-semibold text-slate-900 group-hover:text-brand-green">Books</p>
                     <p class="text-xs text-slate-500 mt-1">Open books for your allotted standards</p>
                 </a>
+                <a href="{{ route('principal.exams.index') }}" class="rounded-xl border border-slate-200 p-4 hover:border-brand-green-200 hover:bg-brand-green-50/50 transition group">
+                    <p class="font-semibold text-slate-900 group-hover:text-brand-green">Exam Papers</p>
+                    <p class="text-xs text-slate-500 mt-1">Teacher papers by standard, with edit and delete</p>
+                </a>
                 <a href="{{ route('principal.mentors.index') }}" class="rounded-xl border border-slate-200 p-4 hover:border-brand-green-200 hover:bg-brand-green-50/50 transition group">
                     <p class="font-semibold text-slate-900 group-hover:text-brand-green">Mentor</p>
                     <p class="text-xs text-slate-500 mt-1">Assign students to a teacher mentor</p>

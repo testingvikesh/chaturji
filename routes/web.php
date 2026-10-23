@@ -23,6 +23,7 @@ use App\Http\Controllers\Principal\DashboardController as PrincipalDashboardCont
 use App\Http\Controllers\Principal\ReportController as PrincipalReportController;
 use App\Http\Controllers\Principal\MentorController as PrincipalMentorController;
 use App\Http\Controllers\Principal\StudentController as PrincipalStudentController;
+use App\Http\Controllers\Principal\ExamController as PrincipalExamController;
 use App\Http\Controllers\Admin\TopicController;
 use App\Http\Controllers\ChapterOriginalPdfController;
 use App\Http\Controllers\MaterialPdfController;
@@ -139,6 +140,10 @@ Route::prefix('principal')->name('principal.')->group(function () {
         Route::post('/students', [PrincipalStudentController::class, 'store'])->name('students.store');
         Route::get('/students/{student}/edit', [PrincipalStudentController::class, 'edit'])->name('students.edit');
         Route::put('/students/{student}', [PrincipalStudentController::class, 'update'])->name('students.update');
+        Route::get('/exams', [PrincipalExamController::class, 'index'])->name('exams.index');
+        Route::get('/exams/{exam}/edit', [PrincipalExamController::class, 'edit'])->name('exams.edit');
+        Route::put('/exams/{exam}', [PrincipalExamController::class, 'update'])->name('exams.update');
+        Route::delete('/exams/{exam}', [PrincipalExamController::class, 'destroy'])->name('exams.destroy');
         Route::get('/mentors', [PrincipalMentorController::class, 'index'])->name('mentors.index');
         Route::get('/mentors/{teacher}', [PrincipalMentorController::class, 'show'])->name('mentors.show');
         Route::put('/mentors/{teacher}', [PrincipalMentorController::class, 'update'])->name('mentors.update');
