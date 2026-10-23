@@ -12,7 +12,7 @@
     <div class="admin-page">
         <div class="admin-card overflow-hidden">
             <div class="admin-table-wrap">
-            <table class="admin-table w-full min-w-[760px]">
+            <table class="admin-table w-full min-w-[920px]">
                 <thead>
                     <tr>
                         <th>Title</th>
@@ -21,6 +21,7 @@
                         <th>Questions</th>
                         <th>Marks</th>
                         <th>Status</th>
+                        <th>Regenerated</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -37,6 +38,7 @@
                                     {{ ucfirst($exam->status) }}
                                 </span>
                             </td>
+                            <td class="whitespace-nowrap text-xs text-slate-600">{{ $exam->regeneratedAt()?->format('d M Y, h:i A') ?? '—' }}</td>
                             <td class="space-x-2 whitespace-nowrap">
                                 <a href="{{ route('teacher.exams.show', $exam) }}" class="text-xs font-semibold text-brand-green hover:underline">View</a>
                                 <a href="{{ route('teacher.exams.print', $exam) }}" target="_blank" rel="noopener" class="text-xs font-semibold text-slate-700 hover:underline">Print</a>
@@ -52,7 +54,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center text-slate-500 py-8">No exams yet. Create your first exam.</td></tr>
+                        <tr><td colspan="8" class="text-center text-slate-500 py-8">No exams yet. Create your first exam.</td></tr>
                     @endforelse
                 </tbody>
             </table>

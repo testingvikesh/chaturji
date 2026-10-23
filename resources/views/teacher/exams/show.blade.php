@@ -40,6 +40,9 @@
             <span class="rounded-lg bg-slate-100 px-3 py-1.5 font-semibold">{{ ucfirst($exam->status) }}</span>
             <span class="rounded-lg bg-slate-100 px-3 py-1.5 font-semibold">{{ $exam->questions->count() }} Questions</span>
             <span class="rounded-lg bg-slate-100 px-3 py-1.5 font-semibold">{{ $exam->total_marks }} Marks</span>
+            @if ($exam->regeneratedAt())
+                <span class="rounded-lg bg-amber-50 px-3 py-1.5 font-semibold text-amber-800">Regenerated {{ $exam->regeneratedAt()->format('d M Y, h:i A') }}</span>
+            @endif
         </div>
 
         @if ($exam->description)

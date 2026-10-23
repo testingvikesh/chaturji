@@ -277,6 +277,7 @@ class ExamController extends Controller
                 'topic_name' => $meta['topic_name'] ?? null,
                 'target_marks' => (int) $request->input('target_marks'),
                 'generated_from' => 'teacher_exam_materials',
+                'regenerated_at' => $exam->generation_config['regenerated_at'] ?? null,
             ],
         ]);
 
@@ -325,6 +326,9 @@ class ExamController extends Controller
             'marks_per_type' => $generated['marks_per_type'],
             'questions' => $this->snapshotQuestions($generated['questions']),
         ]);
+
+        $config['regenerated_at'] = now()->toIso8601String();
+        $exam->update(['generation_config' => $config]);
 
         return redirect()
             ->route('teacher.exams.index')

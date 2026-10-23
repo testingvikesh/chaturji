@@ -212,4 +212,19 @@ class Exam extends Model
     {
         return $this->effectiveEndsAt()?->copy()->timezone(self::SCHOOL_TIMEZONE);
     }
+
+    public function regeneratedAt(): ?\Illuminate\Support\Carbon
+    {
+        $value = $this->generation_config['regenerated_at'] ?? null;
+
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($value)->timezone(self::SCHOOL_TIMEZONE);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
 }
