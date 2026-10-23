@@ -71,6 +71,25 @@
     if (is_array($sectionData) && \App\Support\SanskritTranslationStudy::isSanskrit($subjectName, $materialSubject, $materialTopic->title ?? '', $materialTopic->title_gu ?? '')) {
         $translationStudy = \App\Support\SanskritTranslationStudy::extract($sectionData);
         if (is_array($translationStudy)) {
+            $translateQuestions = $otherQuestionGroups['translate'] ?? collect();
+            if ($canEditQuestions && is_callable($questionEditUrlBuilder) && $translateQuestions->isNotEmpty()) {
+                foreach ($translationStudy['pairs'] as $index => $pair) {
+                    $source = trim((string) ($pair['source'] ?? ''));
+                    $needle = preg_replace('/\s+/u', ' ', $source) ?? $source;
+                    $match = $needle === '' ? null : $translateQuestions->first(function ($question) use ($needle) {
+                        $text = preg_replace('/\s+/u', ' ', (string) ($question->question_text ?? '')) ?? '';
+
+                        return $text !== '' && str_contains($text, $needle);
+                    });
+                    if (! $match && $translateQuestions->count() === count($translationStudy['pairs'])) {
+                        $match = $translateQuestions->values()->get($index);
+                    }
+                    $editUrl = $match ? $questionEditUrlBuilder($match) : null;
+                    if ($editUrl) {
+                        $translationStudy['pairs'][$index]['edit_url'] = $editUrl;
+                    }
+                }
+            }
             unset($otherQuestionGroups['translate']);
         }
     }
@@ -164,12 +183,29 @@
             'style' => 'content',
         ]);
     }
+    $summaryTranslate = null;
+    if (is_array($translationStudy ?? null)) {
+        $translateCount = count($translationStudy['pairs'] ?? []);
+        $summaryTranslate = [
+            'label' => 'Translate'.($translateCount > 0 ? ' ('.$translateCount.')' : ''),
+            'anchor' => 'sanskrit-translate',
+            'style' => 'content',
+        ];
+    }
+    $summaryTranslateAdded = false;
     foreach ($otherQuestionGroups as $type => $questions) {
         $summaryLinks->push([
             'label' => ($visibleQuestionLabels[$type] ?? $type).' ('.$questions->count().')',
             'anchor' => 'questions-'.$type,
             'style' => 'question',
         ]);
+        if ($type === 'five_marks' && $summaryTranslate) {
+            $summaryLinks->push($summaryTranslate);
+            $summaryTranslateAdded = true;
+        }
+    }
+    if ($summaryTranslate && ! $summaryTranslateAdded) {
+        $summaryLinks->push($summaryTranslate);
     }
     $hasSummaryLinks = $summaryLinks->isNotEmpty();
     $hideDetailsUntilEye = (bool) $hideDetailsUntilEye;
@@ -332,21 +368,32 @@
                 },
                 goToSummaryPoint(anchor) {
                     this.summaryOpen = false;
-                    if (this.sectionWise && anchor) {
-                        const gate = document.getElementById('gate-' + anchor);
-                        if (gate) {
-                            gate.open = true;
+                    if (!anchor) {
+                        return;
+                    }
+                    const gate = document.getElementById('gate-' + anchor);
+                    if (gate && gate.tagName === 'DETAILS') {
+                        if (this.sectionWise) {
+                            this.closeOtherSections(gate);
                         }
-                        if (window.history && window.history.replaceState) {
-                            window.history.replaceState(null, '', '#' + anchor);
-                        }
+                        gate.open = true;
                     }
                     this.$nextTick(() => {
-                        const el = document.getElementById(this.sectionWise ? ('gate-' + anchor) : anchor) || document.getElementById(anchor);
-                        if (!el) return;
-                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        el.classList.add('ring-2', 'ring-brand-green', 'bg-emerald-50');
-                        setTimeout(() => el.classList.remove('ring-2', 'ring-brand-green', 'bg-emerald-50'), 1800);
+                        setTimeout(() => {
+                            const el = document.getElementById(anchor) || gate;
+                            if (!el) {
+                                return;
+                            }
+                            const bar = document.querySelector('.subject-chapter-topic-sticky-wrap');
+                            const offset = (bar ? bar.getBoundingClientRect().height : 0) + 16;
+                            const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+                            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+                            if (window.history && window.history.replaceState) {
+                                window.history.replaceState(null, '', '#' + anchor);
+                            }
+                            el.classList.add('ring-2', 'ring-brand-green', 'bg-emerald-50');
+                            setTimeout(() => el.classList.remove('ring-2', 'ring-brand-green', 'bg-emerald-50'), 1800);
+                        }, 40);
                     });
                 }
             };
@@ -736,8 +783,8 @@
                  class="fixed inset-0 z-[80] flex items-center justify-end p-3 sm:p-6"
                  style="display: none;"
                  @keydown.escape.window="summaryOpen = false">
-                <div class="absolute inset-0 bg-slate-900/50" @click="summaryOpen = false"></div>
-                <div class="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                <div class="absolute inset-0 z-0 bg-slate-900/50" @click="summaryOpen = false"></div>
+                <div class="relative z-10 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
                      @click.stop>
                     <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
                         <div class="min-w-0">
@@ -755,7 +802,7 @@
                         <div class="flex flex-wrap gap-2">
                             @foreach ($summaryLinks as $link)
                                 <button type="button"
-                                        @click='goToSummaryPoint(@js($link['anchor']))'
+                                        @click.stop="goToSummaryPoint('{{ $link['anchor'] }}')"
                                         @if ($hideDetailsUntilEye) :class='isSectionOpen(@js($link['anchor'])) ? "is-open" : ""' @endif
                                         class="{{ ($link['style'] ?? 'content') === 'question' ? $tocPillQuestion : $tocPillContent }}">
                                     {{ $link['label'] }}

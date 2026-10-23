@@ -313,6 +313,7 @@ class MaterialJsonImporter
             'two_marks' => 'two_marks',
             'three_marks' => 'three_marks',
             'five_marks' => 'five_marks',
+            'translate' => 'translate',
         ] as $key => $type) {
             $items = $descriptive[$key]['questions'] ?? $subjective[$key]['questions'] ?? [];
 

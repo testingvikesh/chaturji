@@ -48,7 +48,7 @@ class SanskritExplainService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'You explain a school Sanskrit passage in simple English for the student. Return only JSON with keys: words (list of {word, meaning} for each important Sanskrit word, meaning is one or two English words), lines (list of {original, english}), full_paragraph (one English paragraph), important_words (list of {word, meaning}), explanation ({meaning, main_idea, why_important, remember}), exam ({must_remember: list of short points, keywords: list of words, confusion: one sentence}), memory_trick (one sentence), revision (list of short points), recall (list of {question, answer}). Keep the original Sanskrit lines unchanged.',
+                        'content' => 'You explain a school Sanskrit passage in simple English for the student. Return only JSON with keys: words (list of {word, meaning} for each important Sanskrit word, meaning is one or two English words), lines (list of {original, english}), full_paragraph (one English paragraph), important_words (list of {word, meaning}), explanation ({meaning, main_idea, why_important, remember}), exam ({must_remember: list of short points, keywords: list of words, confusion: one sentence}), memory_trick (one sentence), revision (list of short points), recall (list of {question, answer}). Keep the original Sanskrit lines unchanged. Start every English meaning and English sentence with a capital letter.',
                     ],
                     [
                         'role' => 'user',

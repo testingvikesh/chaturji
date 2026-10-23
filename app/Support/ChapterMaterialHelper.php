@@ -21,6 +21,7 @@ class ChapterMaterialHelper
         'two_marks',
         'three_marks',
         'five_marks',
+        'translate',
         'short_answer',
         'long_answer',
         'textbook',

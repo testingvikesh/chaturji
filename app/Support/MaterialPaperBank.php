@@ -261,7 +261,7 @@ class MaterialPaperBank
             $scopeByMaterial = $topics->groupBy('material_id');
             foreach ($materials as $material) {
                 $scoped = $scopeByMaterial->get($material->id, collect());
-                $pool = $pool->concat(self::topicQuestionPool($scoped));
+                $pool = $pool->concat(self::topicQuestionPool($scoped, self::materialIsSanskrit($material)));
             }
 
             return $pool->values();
@@ -271,7 +271,7 @@ class MaterialPaperBank
             $allTopics = $material->relationLoaded('topics')
                 ? $material->topics
                 : $material->topics()->orderBy('topic_order')->get();
-            $pool = $pool->concat(self::topicQuestionPool($allTopics));
+            $pool = $pool->concat(self::topicQuestionPool($allTopics, self::materialIsSanskrit($material)));
         }
 
         return $pool->values();
@@ -281,7 +281,7 @@ class MaterialPaperBank
      * @param  Collection<int, MaterialTopic>  $topics
      * @return Collection<int, ChapterQuestion>
      */
-    private static function topicQuestionPool(Collection $topics): Collection
+    private static function topicQuestionPool(Collection $topics, bool $sanskrit = false): Collection
     {
         $pool = collect();
 
@@ -300,6 +300,10 @@ class MaterialPaperBank
                 if (! $question instanceof ChapterQuestion) {
                     continue;
                 }
+                if ($sanskrit && (string) $question->question_type === 'translate') {
+                    $question = clone $question;
+                    $question->question_type = 'three_marks';
+                }
                 if (! array_key_exists((string) $question->question_type, PaperTypeHelper::types())) {
                     continue;
                 }
@@ -309,6 +313,14 @@ class MaterialPaperBank
         }
 
         return $pool;
+    }
+
+    private static function materialIsSanskrit(Material $material): bool
+    {
+        return SanskritTranslationStudy::isSanskrit(
+            (string) ($material->subject ?? ''),
+            (string) ($material->name ?? '')
+        );
     }
 
     /**
