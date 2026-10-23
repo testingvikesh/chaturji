@@ -713,9 +713,6 @@
                 @if ($introduction)
                     <a href="#section-{{ $introduction->id }}" {!! $tocToggleAttrs('section-'.$introduction->id) !!} class="{{ $tocPillContent }}">Introduction</a>
                 @endif
-                @if (is_array($translationStudy ?? null) && ($translationStudy['original'] ?? []) !== [])
-                    <a href="#sanskrit-explain" {!! $tocToggleAttrs('sanskrit-explain') !!} class="{{ $tocPillContent }}">Explain</a>
-                @endif
                 @if ($trailer)
                     <a href="#section-{{ $trailer->id }}" {!! $tocToggleAttrs('section-'.$trailer->id) !!} class="{{ $tocPillContent }}">Trailer</a>
                 @endif

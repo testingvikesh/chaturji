@@ -5,10 +5,10 @@
     <section id="sanskrit-translate" class="admin-card mb-6 overflow-hidden">
         <div class="admin-card-top"></div>
         @if (($study['pairs'] ?? []) !== [] || ($study['original'] ?? []) !== [])
-            <header class="material-question-group-header">
-                <h3 class="font-bold text-slate-900 text-lg">{{ $study['title'] ?? 'Translate' }}@if (($study['pairs'] ?? []) !== []) ({{ count($study['pairs']) }})@endif</h3>
-                @if (($study['original'] ?? []) !== [] || ($study['lines'] ?? []) !== [])
-                    <button type="button" data-explain-open aria-expanded="false" aria-controls="sanskrit-explain" class="inline-flex h-9 shrink-0 items-center rounded-full bg-sky-600 px-4 text-sm font-bold text-white shadow-sm hover:bg-sky-700">Explain</button>
+            <header class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
+                <h3 class="min-w-0 font-bold text-slate-900 text-lg">{{ $study['title'] ?? 'Translate' }}@if (($study['pairs'] ?? []) !== []) ({{ count($study['pairs']) }})@endif</h3>
+                @if (($study['original'] ?? []) !== [] || ($study['lines'] ?? []) !== [] || ($study['pairs'] ?? []) !== [])
+                    <button type="button" data-explain-open aria-expanded="false" aria-controls="sanskrit-explain" class="ml-auto inline-flex h-9 shrink-0 items-center rounded-full border border-brand-green bg-brand-green px-4 text-sm font-bold text-white shadow-sm hover:bg-brand-green-dark">Explain</button>
                 @endif
             </header>
             <ol class="divide-y divide-amber-100">
