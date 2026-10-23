@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Principal;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Teacher\Concerns\HandlesPaperBuilder;
 use App\Models\Exam;
+use App\Models\ExamQuestion;
 use App\Models\Material;
 use App\Models\Standard;
 use App\Models\User;
@@ -17,6 +19,8 @@ use Illuminate\View\View;
 
 class ExamController extends Controller
 {
+    use HandlesPaperBuilder;
+
     public function index(Request $request): View
     {
         $principal = auth()->user();
@@ -149,6 +153,51 @@ class ExamController extends Controller
             ->with('success', 'Exam name and date updated. Questions are unchanged.');
     }
 
+    public function regenerate(Exam $exam): RedirectResponse
+    {
+        $this->assertAllottedExam(auth()->user(), $exam);
+
+        $config = is_array($exam->generation_config) ? $exam->generation_config : [];
+        $typeCounts = PaperTypeHelper::normalizeCounts($config['type_counts'] ?? []);
+        $marksPerType = PaperTypeHelper::normalizeMarksPerType($config['marks_per_type'] ?? [], $typeCounts);
+        $optionalCounts = is_array($config['optional_counts'] ?? null) ? $config['optional_counts'] : [];
+        $materialIds = array_values(array_filter(array_map('intval', (array) ($config['material_ids'] ?? []))));
+
+        if ($typeCounts === [] || $materialIds === []) {
+            return back()->with('error', 'This exam has no saved question plan to regenerate.');
+        }
+
+        try {
+            $generated = $this->generateFromMaterials([
+                'material_ids' => $materialIds,
+                'material_topic_ids' => array_values(array_filter(array_map(
+                    'intval',
+                    (array) ($config['material_topic_ids'] ?? [])
+                ))),
+            ], $typeCounts, $marksPerType, $optionalCounts);
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            $message = collect($exception->errors())->flatten()->first();
+
+            return back()->with('error', $message ?: 'Could not regenerate the questions.');
+        }
+
+        $this->syncGeneratedQuestions($exam, [
+            'marks_per_type' => $generated['marks_per_type'],
+            'questions' => $this->snapshotQuestions($generated['questions']),
+        ]);
+
+        $config['regenerated_at'] = now()->toIso8601String();
+        $exam->update(['generation_config' => $config]);
+
+        ActivityLogger::log(
+            'principal.exams.regenerate',
+            'Principal regenerated questions for exam '.$exam->title,
+            $exam
+        );
+
+        return back()->with('success', 'Questions and answers regenerated. The exam name, date, and marks are unchanged.');
+    }
+
     public function destroy(Exam $exam): RedirectResponse
     {
         $this->assertAllottedExam(auth()->user(), $exam);
@@ -166,6 +215,26 @@ class ExamController extends Controller
         return redirect()
             ->route('principal.exams.index', ['standard' => $standard])
             ->with('success', 'Exam deleted.');
+    }
+
+    private function syncGeneratedQuestions(Exam $exam, array $preview): void
+    {
+        $rows = $preview['questions'] ?? [];
+        $exam->questions()->delete();
+
+        $sort = 0;
+        foreach ($rows as $question) {
+            ExamQuestion::create([
+                'exam_id' => $exam->id,
+                'chapter_question_id' => $question['id'] ?? null,
+                'question_type' => $question['question_type'],
+                'question_text' => $question['question_text'],
+                'options' => $question['options'] ?? null,
+                'answer' => $question['answer'] ?? null,
+                'marks' => $preview['marks_per_type'][$question['question_type']] ?? 1,
+                'sort_order' => $sort++,
+            ]);
+        }
     }
 
     /**

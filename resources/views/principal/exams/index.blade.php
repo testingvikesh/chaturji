@@ -10,6 +10,9 @@
         @if (session('success'))
             <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
         @endif
+        @if (session('error'))
+            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
+        @endif
 
         @if ($standards->isEmpty())
             <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -64,6 +67,7 @@
                                             <th>Marks</th>
                                             <th>Starts</th>
                                             <th>Status</th>
+                                            <th>Regenerated</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -81,10 +85,15 @@
                                                         {{ ucfirst($exam->status) }}
                                                     </span>
                                                 </td>
+                                                <td class="whitespace-nowrap text-xs text-slate-600">{{ $exam->regeneratedAt()?->format('d M Y, h:i A') ?? '—' }}</td>
                                                 <td class="whitespace-nowrap">
                                                     <a href="{{ route('principal.exams.preview', $exam) }}" target="_blank" rel="noopener" class="text-xs font-semibold text-slate-700 hover:underline">Preview</a>
                                                     <a href="{{ route('principal.exams.print', $exam) }}" target="_blank" rel="noopener" class="ml-2 text-xs font-semibold text-slate-700 hover:underline">Print</a>
                                                     <a href="{{ route('principal.exams.edit', $exam) }}" class="ml-2 text-xs font-semibold text-brand-green hover:underline">Edit</a>
+                                                    <form method="POST" action="{{ route('principal.exams.regenerate', $exam) }}" class="inline" onsubmit="return confirm('Regenerate only the questions and answers? The exam name, date, and marks stay the same.')">
+                                                        @csrf
+                                                        <button type="submit" class="ml-2 text-xs font-semibold text-amber-700 hover:underline">Regenerate</button>
+                                                    </form>
                                                     <form method="POST" action="{{ route('principal.exams.destroy', $exam) }}" class="inline" onsubmit="return confirm('Delete this exam paper?')">
                                                         @csrf
                                                         @method('DELETE')
@@ -94,7 +103,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="8" class="text-center text-slate-500 py-6">No {{ $block['label'] }} papers for this standard.</td>
+                                                <td colspan="9" class="text-center text-slate-500 py-6">No {{ $block['label'] }} papers for this standard.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>

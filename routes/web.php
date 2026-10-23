@@ -146,6 +146,7 @@ Route::prefix('principal')->name('principal.')->group(function () {
         Route::get('/exams/{exam}/print', [PrincipalExamController::class, 'printPaper'])->name('exams.print');
         Route::get('/exams/{exam}/edit', [PrincipalExamController::class, 'edit'])->name('exams.edit');
         Route::put('/exams/{exam}', [PrincipalExamController::class, 'update'])->name('exams.update');
+        Route::post('/exams/{exam}/regenerate', [PrincipalExamController::class, 'regenerate'])->name('exams.regenerate');
         Route::delete('/exams/{exam}', [PrincipalExamController::class, 'destroy'])->name('exams.destroy');
         Route::get('/mentors', [PrincipalMentorController::class, 'index'])->name('mentors.index');
         Route::get('/mentors/{teacher}', [PrincipalMentorController::class, 'show'])->name('mentors.show');
