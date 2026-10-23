@@ -65,13 +65,6 @@
             <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
             Tickets
         </a>
-        <a href="{{ route('teacher.notifications.index') }}" class="{{ request()->routeIs('teacher.notifications.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/80 hover:!bg-white/10 hover:!text-white' }}">
-            <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-            <span class="flex-1">Notifications</span>
-            @if ($unreadNotifications > 0)
-                <span class="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>
-            @endif
-        </a>
     </nav>
 
     <div class="border-t border-white/15 p-4 mt-auto">
@@ -154,12 +147,6 @@
             <a href="{{ route('teacher.profile.edit') }}" @click="open = false" class="{{ request()->routeIs('teacher.profile.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Edit Profile</a>
             <a href="{{ route('teacher.change-password') }}" @click="open = false" class="{{ request()->routeIs('teacher.change-password') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Change Password</a>
             <a href="{{ route('teacher.tickets.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.tickets.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">Tickets</a>
-            <a href="{{ route('teacher.notifications.index') }}" @click="open = false" class="{{ request()->routeIs('teacher.notifications.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive !text-white/90 hover:!bg-white/10 hover:!text-white' }}">
-                <span class="flex-1">Notifications</span>
-                @if ($unreadNotifications > 0)
-                    <span class="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>
-                @endif
-            </a>
         </div>
         <div class="border-t border-white/15 p-4 mt-2">
             <p class="px-2 text-sm font-semibold truncate">{{ Auth::user()->name }}</p>
