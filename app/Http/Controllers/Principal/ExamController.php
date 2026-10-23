@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Principal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
+use App\Models\Material;
 use App\Models\Standard;
 use App\Models\User;
 use App\Support\ActivityLogger;
@@ -20,40 +21,77 @@ class ExamController extends Controller
     {
         $principal = auth()->user();
         $standards = $this->allottedStandards($principal);
-        $selected = (string) $request->query('standard', '');
-        $slugs = $standards->pluck('slug')->filter()->unique()->values();
-
-        if ($selected !== '' && ! $slugs->contains($selected)) {
-            $selected = '';
+        $selectedNumber = preg_replace('/\D+/', '', (string) $request->query('standard', '')) ?: '';
+        $mediumFilter = Material::normalizeMedium((string) $request->query('medium', '')) ?: '';
+        if (! in_array($mediumFilter, ['english', 'gujarati'], true)) {
+            $mediumFilter = '';
         }
 
+        $knownNumbers = $standards
+            ->map(fn (Standard $standard) => Material::standardNumber($standard))
+            ->filter()
+            ->unique()
+            ->values();
+        if ($selectedNumber !== '' && ! $knownNumbers->contains($selectedNumber)) {
+            $selectedNumber = '';
+        }
+
+        $slugs = $standards->pluck('slug')->filter()->unique()->values();
         $exams = collect();
         if ($slugs->isNotEmpty()) {
             $exams = Exam::query()
                 ->excludeSelfExams()
-                ->whereIn('standard', $selected !== '' ? [$selected] : $slugs->all())
-                ->with(['teacher:id,name', 'subject:id,name'])
+                ->whereIn('standard', $slugs->all())
+                ->with(['teacher:id,name', 'subject:id,name', 'subject.standard:id,name,slug,medium'])
                 ->withCount('questions')
                 ->orderByDesc('id')
                 ->get();
+            $this->attachPaperMedium($exams, $standards);
         }
 
         $groups = $standards
-            ->when($selected !== '', fn (Collection $rows) => $rows->where('slug', $selected))
-            ->map(function (Standard $standard) use ($exams) {
+            ->groupBy(fn (Standard $standard) => Material::standardNumber($standard) ?: (string) $standard->slug)
+            ->map(function (Collection $rows, string $number) use ($exams, $selectedNumber, $mediumFilter) {
+                if ($selectedNumber !== '' && $number !== $selectedNumber) {
+                    return null;
+                }
+
+                $slugs = $rows->pluck('slug')->filter()->all();
+                $matched = $exams->filter(function (Exam $exam) use ($slugs, $number) {
+                    $examNumber = preg_replace('/\D+/', '', (string) $exam->standard) ?: '';
+
+                    return in_array((string) $exam->standard, $slugs, true) || $examNumber === $number;
+                })->unique('id')->values();
+
+                $blocks = collect(['english', 'gujarati'])
+                    ->filter(fn (string $medium) => $mediumFilter === '' || $mediumFilter === $medium)
+                    ->map(fn (string $medium) => [
+                        'medium' => $medium,
+                        'label' => Standard::MEDIUMS[$medium],
+                        'exams' => $matched->filter(fn (Exam $exam) => $exam->getAttribute('paper_medium') === $medium)->values(),
+                    ])
+                    ->values();
+
                 return [
-                    'standard' => $standard,
-                    'exams' => $exams->where('standard', $standard->slug)->values(),
+                    'name' => $rows->first()->name,
+                    'number' => $number,
+                    'blocks' => $blocks,
+                    'count' => $blocks->sum(fn (array $block) => $block['exams']->count()),
                 ];
             })
-            ->filter(fn (array $group) => $selected !== '' || $group['exams']->isNotEmpty())
+            ->filter()
+            ->filter(fn (array $group) => $selectedNumber !== '' || $group['count'] > 0)
             ->values();
 
         return view('principal.exams.index', [
-            'standards' => $standards,
+            'standards' => $standards
+                ->unique(fn (Standard $standard) => Material::standardNumber($standard) ?: $standard->slug)
+                ->values(),
             'groups' => $groups,
-            'selected' => $selected,
-            'examCount' => $exams->count(),
+            'selected' => $selectedNumber,
+            'medium' => $mediumFilter,
+            'mediums' => Standard::MEDIUMS,
+            'examCount' => $groups->sum('count'),
         ]);
     }
 
@@ -153,6 +191,44 @@ class ExamController extends Controller
         );
 
         return compact('exam', 'grouped', 'breakdown');
+    }
+
+    private function attachPaperMedium(Collection $exams, Collection $standards): void
+    {
+        $standardsBySlug = $standards->keyBy('slug');
+        $materialIds = $exams
+            ->flatMap(fn (Exam $exam) => (array) ($exam->generation_config['material_ids'] ?? []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $mediumByMaterial = $materialIds->isEmpty()
+            ? collect()
+            : Material::query()->whereIn('id', $materialIds)->pluck('medium', 'id');
+
+        foreach ($exams as $exam) {
+            $counts = [];
+            foreach ((array) ($exam->generation_config['material_ids'] ?? []) as $id) {
+                $medium = Material::normalizeMedium((string) ($mediumByMaterial[(int) $id] ?? ''));
+                if (in_array($medium, ['english', 'gujarati'], true)) {
+                    $counts[$medium] = ($counts[$medium] ?? 0) + 1;
+                }
+            }
+
+            if ($counts !== []) {
+                arsort($counts);
+                $exam->setAttribute('paper_medium', array_key_first($counts));
+                continue;
+            }
+
+            $fromSubject = Material::normalizeMedium($exam->subject?->standard?->medium);
+            $fromSlug = Material::normalizeMedium($standardsBySlug->get($exam->standard)?->medium);
+            $medium = in_array($fromSubject, ['english', 'gujarati'], true)
+                ? $fromSubject
+                : (in_array($fromSlug, ['english', 'gujarati'], true) ? $fromSlug : 'english');
+            $exam->setAttribute('paper_medium', $medium);
+        }
     }
 
     private function allottedStandards(?User $principal): Collection
