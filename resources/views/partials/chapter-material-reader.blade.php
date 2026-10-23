@@ -666,16 +666,8 @@
                 @if ($introduction)
                     <a href="#section-{{ $introduction->id }}" {!! $tocToggleAttrs('section-'.$introduction->id) !!} class="{{ $tocPillContent }}">Introduction</a>
                 @endif
-                @if (is_array($translationStudy ?? null))
-                    <a href="#sanskrit-translate" {!! $tocToggleAttrs('sanskrit-translate') !!} class="{{ $tocPillContent }}">
-                        Translate
-                        @if (count($translationStudy['pairs'] ?? []) > 0)
-                            <span class="opacity-70">({{ count($translationStudy['pairs']) }})</span>
-                        @endif
-                    </a>
-                    @if (($translationStudy['original'] ?? []) !== [])
-                        <a href="#sanskrit-explain" {!! $tocToggleAttrs('sanskrit-explain') !!} class="{{ $tocPillContent }}">Explain</a>
-                    @endif
+                @if (is_array($translationStudy ?? null) && ($translationStudy['original'] ?? []) !== [])
+                    <a href="#sanskrit-explain" {!! $tocToggleAttrs('sanskrit-explain') !!} class="{{ $tocPillContent }}">Explain</a>
                 @endif
                 @if ($trailer)
                     <a href="#section-{{ $trailer->id }}" {!! $tocToggleAttrs('section-'.$trailer->id) !!} class="{{ $tocPillContent }}">Trailer</a>
@@ -710,12 +702,30 @@
                         <span class="opacity-70">({{ $workedExamples->count() }})</span>
                     </a>
                 @endif
+                @php $translatePillShown = false; @endphp
                 @foreach ($otherQuestionGroups as $type => $questions)
                     <a href="#questions-{{ $type }}" {!! $tocToggleAttrs('questions-'.$type) !!} class="{{ $tocPillQuestion }}">
                         {{ $visibleQuestionLabels[$type] }}
                         <span>({{ $questions->count() }})</span>
                     </a>
+                    @if ($type === 'five_marks' && is_array($translationStudy ?? null))
+                        <a href="#sanskrit-translate" {!! $tocToggleAttrs('sanskrit-translate') !!} class="{{ $tocPillContent }}">
+                            Translate
+                            @if (count($translationStudy['pairs'] ?? []) > 0)
+                                <span class="opacity-70">({{ count($translationStudy['pairs']) }})</span>
+                            @endif
+                        </a>
+                        @php $translatePillShown = true; @endphp
+                    @endif
                 @endforeach
+                @if (! $translatePillShown && is_array($translationStudy ?? null))
+                    <a href="#sanskrit-translate" {!! $tocToggleAttrs('sanskrit-translate') !!} class="{{ $tocPillContent }}">
+                        Translate
+                        @if (count($translationStudy['pairs'] ?? []) > 0)
+                            <span class="opacity-70">({{ count($translationStudy['pairs']) }})</span>
+                        @endif
+                    </a>
+                @endif
                 </div>
             </div>
         </nav>
