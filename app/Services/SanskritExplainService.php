@@ -18,7 +18,7 @@ class SanskritExplainService
             return null;
         }
 
-        $key = 'sanskrit-explain:v1:'.sha1($text);
+        $key = 'sanskrit-explain:v2:'.sha1($text);
 
         $cached = Cache::get($key);
         if (is_array($cached)) {
@@ -48,7 +48,7 @@ class SanskritExplainService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'You explain a school Sanskrit passage in simple English for the student. Return only JSON with keys: words (list of {word, meaning} for each important Sanskrit word, meaning is one or two English words), lines (list of {original, english}), full_paragraph (one English paragraph), important_words (list of {word, meaning}), explanation ({meaning, main_idea, why_important, remember}), exam ({must_remember: list of short points, keywords: list of words, confusion: one sentence}), memory_trick (one sentence), revision (list of short points), recall (list of {question, answer}). Keep the original Sanskrit lines unchanged. Start every English meaning and English sentence with a capital letter.',
+                        'content' => 'You explain a school Sanskrit passage in simple English for the student. Return only JSON with keys: words (list of {word, meaning} for each important Sanskrit word, meaning is one or two English words), lines (list of {original, english}), full_paragraph (one English paragraph), important_words (list of {word, meaning}), explanation ({meaning, main_idea, why_important, remember}), exam ({must_remember: list of short points, keywords: list of words, confusion: one sentence}), memory_trick (one sentence), revision (list of short points), recall (list of {question, answer}). The lines array must have one object for every numbered line in the user text. Copy that Sanskrit line into original unchanged. english is the translation of only that line, not the whole passage. If one numbered line still contains more than one danda (। or ॥), split it into separate line objects first. Start every English meaning and English sentence with a capital letter.',
                     ],
                     [
                         'role' => 'user',

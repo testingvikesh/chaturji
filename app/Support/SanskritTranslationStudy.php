@@ -57,6 +57,10 @@ class SanskritTranslationStudy
             );
         }
 
+        $paragraph = self::paragraph($lines);
+        $lines = self::expandVerseLines($lines);
+        $original = self::expandVerseList($original);
+
         $source = implode("\n", array_map(
             fn (string $line, int $index) => ($index + 1).'. '.$line,
             $original,
@@ -74,7 +78,7 @@ class SanskritTranslationStudy
             'original' => $original,
             'words' => $words,
             'lines' => $lines,
-            'paragraph' => self::paragraph($lines),
+            'paragraph' => $paragraph,
             'source' => $source,
         ];
     }
@@ -301,6 +305,102 @@ class SanskritTranslationStudy
         }
 
         return trim(implode(' ', $parts));
+    }
+
+    /**
+     * @param  list<string>  $lines
+     * @return list<string>
+     */
+    private static function expandVerseList(array $lines): array
+    {
+        $expanded = [];
+        foreach ($lines as $line) {
+            foreach (self::splitVerse((string) $line) as $part) {
+                $expanded[] = $part;
+            }
+        }
+
+        return $expanded;
+    }
+
+    /**
+     * @param  list<array{original: string, translation: string}>  $lines
+     * @return list<array{original: string, translation: string}>
+     */
+    private static function expandVerseLines(array $lines): array
+    {
+        $expanded = [];
+        foreach ($lines as $line) {
+            $parts = self::splitVerse((string) ($line['original'] ?? ''));
+            $translation = trim((string) ($line['translation'] ?? ''));
+            if (count($parts) <= 1) {
+                $expanded[] = [
+                    'original' => $parts[0] ?? trim((string) ($line['original'] ?? '')),
+                    'translation' => $translation,
+                ];
+                continue;
+            }
+
+            $english = self::splitSentences($translation);
+            $paired = $english !== [] && count($english) === count($parts);
+            foreach ($parts as $index => $part) {
+                $expanded[] = [
+                    'original' => $part,
+                    'translation' => $paired ? $english[$index] : '',
+                ];
+            }
+        }
+
+        return array_values(array_filter(
+            $expanded,
+            fn (array $line) => $line['original'] !== '' || $line['translation'] !== ''
+        ));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function splitVerse(string $text): array
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return [];
+        }
+
+        $lines = [];
+        foreach (preg_split('/\R/u', $text) ?: [] as $row) {
+            $row = trim((string) $row);
+            if ($row === '') {
+                continue;
+            }
+            $parts = preg_split('/(?<=[।॥])\s*/u', $row, -1, PREG_SPLIT_NO_EMPTY) ?: [$row];
+            foreach ($parts as $part) {
+                $part = trim((string) $part);
+                if ($part !== '' && $part !== '।' && $part !== '॥') {
+                    $lines[] = $part;
+                }
+            }
+        }
+
+        return $lines === [] ? [$text] : $lines;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function splitSentences(string $text): array
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return [];
+        }
+
+        $parts = preg_split('/(?<=[.!?])\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [$text];
+
+        return array_values(array_filter(array_map(
+            fn ($part) => trim((string) $part),
+            $parts
+        ), fn (string $part) => $part !== ''));
     }
 
     /**
