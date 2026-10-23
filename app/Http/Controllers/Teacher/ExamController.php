@@ -289,6 +289,48 @@ class ExamController extends Controller
         return redirect()->route('teacher.exams.show', $exam)->with('success', 'Exam updated successfully.');
     }
 
+    public function regenerate(Exam $exam): RedirectResponse
+    {
+        $this->authorizeExam($exam);
+
+        $config = is_array($exam->generation_config) ? $exam->generation_config : [];
+        $typeCounts = PaperTypeHelper::normalizeCounts($config['type_counts'] ?? []);
+        $marksPerType = PaperTypeHelper::normalizeMarksPerType($config['marks_per_type'] ?? [], $typeCounts);
+        $optionalCounts = is_array($config['optional_counts'] ?? null) ? $config['optional_counts'] : [];
+        $materialIds = array_values(array_filter(array_map('intval', (array) ($config['material_ids'] ?? []))));
+
+        if ($typeCounts === [] || $materialIds === []) {
+            return redirect()
+                ->route('teacher.exams.index')
+                ->with('error', 'This exam has no saved question plan to regenerate.');
+        }
+
+        try {
+            $generated = $this->generateFromMaterials([
+                'material_ids' => $materialIds,
+                'material_topic_ids' => array_values(array_filter(array_map(
+                    'intval',
+                    (array) ($config['material_topic_ids'] ?? [])
+                ))),
+            ], $typeCounts, $marksPerType, $optionalCounts);
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            $message = collect($exception->errors())->flatten()->first();
+
+            return redirect()
+                ->route('teacher.exams.index')
+                ->with('error', $message ?: 'Could not regenerate the questions.');
+        }
+
+        $this->syncGeneratedQuestions($exam, [
+            'marks_per_type' => $generated['marks_per_type'],
+            'questions' => $this->snapshotQuestions($generated['questions']),
+        ]);
+
+        return redirect()
+            ->route('teacher.exams.index')
+            ->with('success', 'Questions and answers regenerated. The exam name, date, and marks are unchanged.');
+    }
+
     public function destroy(Exam $exam): RedirectResponse
     {
         $this->authorizeExam($exam);

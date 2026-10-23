@@ -11,7 +11,8 @@
 
     <div class="admin-page">
         <div class="admin-card overflow-hidden">
-            <table class="admin-table w-full">
+            <div class="admin-table-wrap">
+            <table class="admin-table w-full min-w-[760px]">
                 <thead>
                     <tr>
                         <th>Title</th>
@@ -40,6 +41,10 @@
                                 <a href="{{ route('teacher.exams.show', $exam) }}" class="text-xs font-semibold text-brand-green hover:underline">View</a>
                                 <a href="{{ route('teacher.exams.print', $exam) }}" target="_blank" rel="noopener" class="text-xs font-semibold text-slate-700 hover:underline">Print</a>
                                 <a href="{{ route('teacher.exams.edit', $exam) }}" class="text-xs font-semibold text-slate-600 hover:underline">Edit</a>
+                                <form method="POST" action="{{ route('teacher.exams.regenerate', $exam) }}" class="inline" onsubmit="return confirm('Regenerate only the questions and answers? The exam name, date, and marks stay the same.')">
+                                    @csrf
+                                    <button type="submit" class="text-xs font-semibold text-amber-700 hover:underline">Regenerate</button>
+                                </form>
                                 <form method="POST" action="{{ route('teacher.exams.destroy', $exam) }}" class="inline" onsubmit="return confirm('Delete this exam?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-xs font-semibold text-red-500 hover:underline">Delete</button>
@@ -51,6 +56,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </x-teacher-layout>
