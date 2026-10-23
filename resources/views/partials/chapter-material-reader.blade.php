@@ -673,6 +673,9 @@
                             <span class="opacity-70">({{ count($translationStudy['pairs']) }})</span>
                         @endif
                     </a>
+                    @if (($translationStudy['original'] ?? []) !== [])
+                        <a href="#sanskrit-explain" {!! $tocToggleAttrs('sanskrit-explain') !!} class="{{ $tocPillContent }}">Explain</a>
+                    @endif
                 @endif
                 @if ($trailer)
                     <a href="#section-{{ $trailer->id }}" {!! $tocToggleAttrs('section-'.$trailer->id) !!} class="{{ $tocPillContent }}">Trailer</a>

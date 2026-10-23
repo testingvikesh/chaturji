@@ -28,7 +28,9 @@ class SanskritTranslationStudy
      *     pairs: list<array{source: string, translation: string}>,
      *     original: list<string>,
      *     words: list<array{word: string, meaning: string}>,
-     *     lines: list<array{original: string, translation: string}>
+     *     lines: list<array{original: string, translation: string}>,
+     *     paragraph: string,
+     *     source: string
      * }|null
      */
     public static function extract(array $section): ?array
@@ -51,9 +53,15 @@ class SanskritTranslationStudy
         if ($lines === []) {
             $lines = array_map(
                 fn (array $pair) => ['original' => $pair['source'], 'translation' => $pair['translation']],
-                array_values(array_filter($pairs, fn (array $pair) => $pair['translation'] !== ''))
+                array_values(array_filter($pairs, fn (array $pair) => $pair['source'] !== ''))
             );
         }
+
+        $source = implode("\n", array_map(
+            fn (string $line, int $index) => ($index + 1).'. '.$line,
+            $original,
+            array_keys($original)
+        ));
 
         if ($pairs === [] && $original === [] && $words === [] && $lines === []) {
             return null;
@@ -61,11 +69,13 @@ class SanskritTranslationStudy
 
         return [
             'title' => self::label($translate, 'Translate'),
-            'language' => self::label($explain, 'English'),
+            'language' => 'Explain',
             'pairs' => $pairs,
             'original' => $original,
             'words' => $words,
             'lines' => $lines,
+            'paragraph' => self::paragraph($lines),
+            'source' => $source,
         ];
     }
 
@@ -123,8 +133,12 @@ class SanskritTranslationStudy
                 continue;
             }
 
-            $source = self::firstString($item, ['source', 'original', 'text', 'question', 'line', 'sanskrit', 'gujarati']);
-            $translation = self::firstString($item, ['translation', 'english', 'answer', 'meaning', 'explain']);
+            $source = self::firstString($item, ['shloka', 'source', 'original', 'line', 'sanskrit', 'gujarati']);
+            if ($source === '') {
+                $source = self::plainText($item['question'] ?? $item['text'] ?? '');
+                $source = trim((string) preg_replace('/^translate this shloka\s*/iu', '', $source));
+            }
+            $translation = self::plainText($item['translation'] ?? $item['english'] ?? $item['answer'] ?? $item['meaning'] ?? '');
             if ($source === '' && $translation === '') {
                 continue;
             }
@@ -268,6 +282,41 @@ class SanskritTranslationStudy
         }
 
         return '';
+    }
+
+    private static function plainText(mixed $value): string
+    {
+        if (is_string($value)) {
+            return trim($value);
+        }
+        if (! is_array($value)) {
+            return '';
+        }
+
+        $parts = [];
+        foreach ($value as $part) {
+            if (is_string($part) && trim($part) !== '') {
+                $parts[] = trim($part);
+            }
+        }
+
+        return trim(implode(' ', $parts));
+    }
+
+    /**
+     * @param  list<array{original: string, translation: string}>  $lines
+     */
+    private static function paragraph(array $lines): string
+    {
+        $parts = [];
+        foreach ($lines as $line) {
+            $text = trim((string) ($line['translation'] ?? ''));
+            if ($text !== '') {
+                $parts[] = $text;
+            }
+        }
+
+        return implode(' ', $parts);
     }
 
     private static function label(mixed $block, string $fallback): string

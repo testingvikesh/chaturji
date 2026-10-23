@@ -60,6 +60,7 @@ use App\Http\Controllers\Teacher\ProfileController as TeacherProfileController;
 use App\Http\Controllers\UserTicketController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\PublicStorageController;
+use App\Http\Controllers\SanskritExplainController;
 use App\Http\Controllers\Cron\TeacherOtpCronController;
 use Illuminate\Support\Facades\Route;
 
@@ -163,6 +164,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/materials/{material}/textbook-page/{page}', [MaterialPdfController::class, 'page'])
         ->where('page', '[A-Za-z0-9._-]+')
         ->name('materials.textbook-page');
+    Route::post('/sanskrit-explain', SanskritExplainController::class)->name('sanskrit-explain');
 });
 
 Route::middleware(['auth', 'student'])->prefix('student')->name('student.')->group(function () {
