@@ -244,14 +244,25 @@ class ExamController extends Controller
         $meta = $this->extractPaperMeta($request, true);
         [$typeCounts, $marksPerType] = $this->countsForExam($request, $meta);
         $optionalCounts = $this->extractOptionalCounts($request, $typeCounts);
+        [$materialIds, $topicIds] = $this->generationScope($meta);
+
+        if ($this->paperSelectionUnchanged($exam, $meta, $typeCounts, $marksPerType, $optionalCounts, $materialIds, $topicIds)) {
+            $exam->update($this->persistablePaperMeta($meta));
+
+            if ($exam->isPublished()) {
+                StudentNotificationService::examPublished($exam, $wasPublished ? 'updated' : 'created');
+            }
+
+            return redirect()
+                ->route('teacher.exams.show', $exam)
+                ->with('success', 'Exam name and date updated. Questions are unchanged.');
+        }
 
         $generated = $this->generateFromMaterials($meta, $typeCounts, $marksPerType, $optionalCounts);
         $preview = [
             'marks_per_type' => $generated['marks_per_type'],
             'questions' => $this->snapshotQuestions($generated['questions']),
         ];
-
-        [$materialIds, $topicIds] = $this->generationScope($meta);
 
         $exam->update([
             ...$this->persistablePaperMeta($meta),
@@ -313,6 +324,77 @@ class ExamController extends Controller
         );
 
         return [$plan['type_counts'], $plan['marks_per_type']];
+    }
+
+    /**
+     * @param  array<string, int>  $typeCounts
+     * @param  array<string, int>  $marksPerType
+     * @param  array<string, int>  $optionalCounts
+     * @param  list<int>  $materialIds
+     * @param  list<int>  $topicIds
+     */
+    private function paperSelectionUnchanged(
+        Exam $exam,
+        array $meta,
+        array $typeCounts,
+        array $marksPerType,
+        array $optionalCounts,
+        array $materialIds,
+        array $topicIds
+    ): bool {
+        $config = $exam->generation_config ?? [];
+        $savedCounts = PaperTypeHelper::normalizeCounts($config['type_counts'] ?? []);
+        $savedMarksInput = (array) ($config['marks_per_type'] ?? []);
+        foreach ($savedCounts as $type => $count) {
+            if (! array_key_exists($type, $savedMarksInput)) {
+                $savedMarksInput[$type] = \App\Support\ExamPaperWeightage::MARKS_PER_QUESTION[$type] ?? 1;
+            }
+        }
+        $savedMarks = PaperTypeHelper::normalizeMarksPerType($savedMarksInput, $savedCounts);
+        $savedOptional = $this->storedOptionalCounts($config['optional_counts'] ?? null, $savedCounts);
+
+        return (string) $exam->standard === (string) ($meta['standard'] ?? '')
+            && (int) $exam->subject_id === (int) ($meta['subject_id'] ?? 0)
+            && $this->sortedIds($config['material_ids'] ?? []) === $this->sortedIds($materialIds)
+            && $this->sortedIds($config['material_topic_ids'] ?? []) === $this->sortedIds($topicIds)
+            && $savedCounts === $typeCounts
+            && $savedMarks === $marksPerType
+            && $savedOptional === $optionalCounts;
+    }
+
+    /**
+     * @param  array<string, int>|null  $stored
+     * @param  array<string, int>  $typeCounts
+     * @return array<string, int>
+     */
+    private function storedOptionalCounts(?array $stored, array $typeCounts): array
+    {
+        $optional = [];
+        foreach (\App\Support\SubjectiveQuestionTypes::TYPES as $type) {
+            if (! isset($typeCounts[$type])) {
+                continue;
+            }
+            $value = is_array($stored) && array_key_exists($type, $stored)
+                ? max(0, (int) $stored[$type])
+                : 1;
+            if ($value > 0) {
+                $optional[$type] = $value;
+            }
+        }
+
+        return $optional;
+    }
+
+    /**
+     * @param  array<int, mixed>  $ids
+     * @return list<int>
+     */
+    private function sortedIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        sort($ids);
+
+        return $ids;
     }
 
     private function authorizeExam(Exam $exam): void

@@ -28,6 +28,7 @@
             'selectedChapterIds' => array_values(array_filter((array) ($config['material_ids'] ?? []))),
             'selectedTopicIds' => array_values(array_filter((array) ($config['material_topic_ids'] ?? []))),
             'selectedTargetMarks' => (int) old('target_marks', $selectedTargetMarks),
+            'holdCounts' => true,
         ])
 
         <div class="admin-card p-6 space-y-4">
@@ -72,7 +73,7 @@
         </div>
 
         <div class="admin-card p-6">
-            <p class="text-sm text-amber-700 mb-4">Saving will regenerate questions randomly from the question bank using the quantities below.</p>
+            <p class="text-sm text-amber-700 mb-4">Changing the name or date keeps these questions. Changing chapters, marks, or quantities builds a new paper.</p>
             @include('teacher.partials.paper-type-builder', [
                 'paperTypes' => $paperTypes,
                 'showMarks' => true,
@@ -83,7 +84,7 @@
         </div>
 
         <div class="flex gap-3">
-            <button type="submit" class="rounded-xl bg-brand-green text-white px-6 py-2.5 text-sm font-semibold hover:bg-brand-green-dark transition">Update &amp; Regenerate</button>
+            <button type="submit" class="rounded-xl bg-brand-green text-white px-6 py-2.5 text-sm font-semibold hover:bg-brand-green-dark transition">Save exam</button>
             <a href="{{ route('teacher.exams.show', $exam) }}" class="rounded-xl border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Cancel</a>
         </div>
         @include('teacher.partials.paper-builder-alpine-close')

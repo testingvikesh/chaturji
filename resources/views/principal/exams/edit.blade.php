@@ -27,30 +27,15 @@
                 @csrf
                 @method('PUT')
 
+                <p class="text-sm text-slate-600">Only the exam name and date can be changed. The questions stay the same.</p>
+
                 <div>
-                    <label class="admin-label">Title *</label>
+                    <label class="admin-label">Name *</label>
                     <input type="text" name="title" value="{{ old('title', $exam->title) }}" required class="admin-input">
                     @error('title')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 
-                <div>
-                    <label class="admin-label">Description</label>
-                    <textarea name="description" rows="2" class="admin-input">{{ old('description', $exam->description) }}</textarea>
-                    @error('description')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
-                </div>
-
-                <div>
-                    <label class="admin-label">Instructions</label>
-                    <textarea name="instructions" rows="3" class="admin-input" placeholder="One instruction per line">{{ old('instructions', $exam->instructions) }}</textarea>
-                    @error('instructions')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
-                </div>
-
-                <div class="grid sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="admin-label">Duration (minutes)</label>
-                        <input type="number" name="duration_minutes" value="{{ old('duration_minutes', $exam->duration_minutes) }}" min="1" max="300" class="admin-input">
-                        @error('duration_minutes')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
-                    </div>
+                <div class="grid sm:grid-cols-2 gap-4">
                     <div>
                         <label class="admin-label">Starts At</label>
                         <input type="datetime-local" name="starts_at" value="{{ old('starts_at', $exam->localStart()?->format('Y-m-d\TH:i')) }}" class="admin-input">
@@ -63,17 +48,8 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="admin-label">Status *</label>
-                    <select name="status" class="admin-select" required>
-                        <option value="draft" @selected(old('status', $exam->status) === 'draft')>Draft</option>
-                        <option value="published" @selected(old('status', $exam->status) === 'published')>Published</option>
-                    </select>
-                    @error('status')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
-                </div>
-
                 <div class="flex items-center gap-3 pt-2">
-                    <button type="submit" class="admin-btn-primary">Save details</button>
+                    <button type="submit" class="admin-btn-primary">Save name and date</button>
                     <a href="{{ route('principal.exams.index', ['standard' => $exam->standard]) }}" class="admin-btn-ghost">Cancel</a>
                 </div>
             </form>

@@ -128,22 +128,14 @@ class ExamController extends Controller
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:2000'],
-            'instructions' => ['nullable', 'string', 'max:5000'],
-            'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:300'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
-            'status' => ['required', 'in:draft,published'],
         ]);
 
         $exam->update([
             'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'instructions' => $validated['instructions'] ?? null,
-            'duration_minutes' => $validated['duration_minutes'] ?? null,
             'starts_at' => $this->schoolTime($validated['starts_at'] ?? null),
             'ends_at' => $this->schoolTime($validated['ends_at'] ?? null),
-            'status' => $validated['status'],
         ]);
 
         ActivityLogger::log(
@@ -154,7 +146,7 @@ class ExamController extends Controller
 
         return redirect()
             ->route('principal.exams.index', ['standard' => $exam->standard])
-            ->with('success', 'Exam details updated.');
+            ->with('success', 'Exam name and date updated. Questions are unchanged.');
     }
 
     public function destroy(Exam $exam): RedirectResponse
