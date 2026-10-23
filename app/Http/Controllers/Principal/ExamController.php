@@ -7,6 +7,7 @@ use App\Models\Exam;
 use App\Models\Standard;
 use App\Models\User;
 use App\Support\ActivityLogger;
+use App\Support\PaperTypeHelper;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +54,22 @@ class ExamController extends Controller
             'groups' => $groups,
             'selected' => $selected,
             'examCount' => $exams->count(),
+        ]);
+    }
+
+    public function preview(Exam $exam): View
+    {
+        return view('teacher.exams.print', [
+            ...$this->paperViewData($exam),
+            'autoPrint' => false,
+        ]);
+    }
+
+    public function printPaper(Exam $exam): View
+    {
+        return view('teacher.exams.print', [
+            ...$this->paperViewData($exam),
+            'autoPrint' => true,
         ]);
     }
 
@@ -119,6 +136,23 @@ class ExamController extends Controller
         return redirect()
             ->route('principal.exams.index', ['standard' => $standard])
             ->with('success', 'Exam deleted.');
+    }
+
+    /**
+     * @return array{exam: Exam, grouped: \Illuminate\Support\Collection, breakdown: array<int, array<string, mixed>>}
+     */
+    private function paperViewData(Exam $exam): array
+    {
+        $this->assertAllottedExam(auth()->user(), $exam);
+
+        $exam->load(['subject', 'chapter:id,name,sort_order', 'topic:id,name', 'questions']);
+        $grouped = PaperTypeHelper::groupInPaperOrder($exam->questions);
+        $breakdown = PaperTypeHelper::breakdown(
+            $exam->generation_config['type_counts'] ?? $grouped->map->count()->all(),
+            $exam->generation_config['marks_per_type'] ?? []
+        );
+
+        return compact('exam', 'grouped', 'breakdown');
     }
 
     private function allottedStandards(?User $principal): Collection

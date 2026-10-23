@@ -141,6 +141,8 @@ Route::prefix('principal')->name('principal.')->group(function () {
         Route::get('/students/{student}/edit', [PrincipalStudentController::class, 'edit'])->name('students.edit');
         Route::put('/students/{student}', [PrincipalStudentController::class, 'update'])->name('students.update');
         Route::get('/exams', [PrincipalExamController::class, 'index'])->name('exams.index');
+        Route::get('/exams/{exam}/preview', [PrincipalExamController::class, 'preview'])->name('exams.preview');
+        Route::get('/exams/{exam}/print', [PrincipalExamController::class, 'printPaper'])->name('exams.print');
         Route::get('/exams/{exam}/edit', [PrincipalExamController::class, 'edit'])->name('exams.edit');
         Route::put('/exams/{exam}', [PrincipalExamController::class, 'update'])->name('exams.update');
         Route::delete('/exams/{exam}', [PrincipalExamController::class, 'destroy'])->name('exams.destroy');

@@ -67,7 +67,9 @@
                                             </span>
                                         </td>
                                         <td class="whitespace-nowrap">
-                                            <a href="{{ route('principal.exams.edit', $exam) }}" class="text-xs font-semibold text-brand-green hover:underline">Edit</a>
+                                            <a href="{{ route('principal.exams.preview', $exam) }}" target="_blank" rel="noopener" class="text-xs font-semibold text-slate-700 hover:underline">Preview</a>
+                                            <a href="{{ route('principal.exams.print', $exam) }}" target="_blank" rel="noopener" class="ml-2 text-xs font-semibold text-slate-700 hover:underline">Print</a>
+                                            <a href="{{ route('principal.exams.edit', $exam) }}" class="ml-2 text-xs font-semibold text-brand-green hover:underline">Edit</a>
                                             <form method="POST" action="{{ route('principal.exams.destroy', $exam) }}" class="inline" onsubmit="return confirm('Delete this exam paper?')">
                                                 @csrf
                                                 @method('DELETE')

@@ -32,9 +32,11 @@
         ])
     @endif
 
-    <script>
-        window.addEventListener('load', function () {
-            setTimeout(function () { window.print(); }, 400);
-        });
-    </script>
+    @if ($autoPrint ?? true)
+        <script>
+            window.addEventListener('load', function () {
+                setTimeout(function () { window.print(); }, 400);
+            });
+        </script>
+    @endif
 </x-paper-print-layout>
