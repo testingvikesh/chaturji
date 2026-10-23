@@ -64,6 +64,17 @@
     [$knowledgeLadderQuestions, $otherQuestionGroups] = ChapterMaterialHelper::splitKnowledgeLadder($orderedQuestionGroups);
     [$lineToLineQuestions, $otherQuestionGroups] = ChapterMaterialHelper::splitQuestionGroup($otherQuestionGroups, 'line_to_line');
 
+    $translationStudy = null;
+    $sectionData = ($materialTopic && method_exists($materialTopic, 'sectionData')) ? $materialTopic->sectionData() : null;
+    $subjectName = is_object($subject) ? ($subject->name ?? '') : '';
+    $materialSubject = is_object($material) ? ($material->subject ?? '') : '';
+    if (is_array($sectionData) && \App\Support\SanskritTranslationStudy::isSanskrit($subjectName, $materialSubject, $materialTopic->title ?? '', $materialTopic->title_gu ?? '')) {
+        $translationStudy = \App\Support\SanskritTranslationStudy::extract($sectionData);
+        if (is_array($translationStudy)) {
+            unset($otherQuestionGroups['translate']);
+        }
+    }
+
     $visibleQuestionLabels = collect($orderedQuestionGroups)->mapWithKeys(fn ($questions, $type) => [
         $type => $questionGroupLabels[$type] ?? \App\Models\ChapterQuestion::labelForType($type),
     ]);
@@ -552,7 +563,7 @@
         </div>
     @endif
 
-    @if ($introduction || $trailer || $importance || $knowledgeLadderQuestions || $lineToLineQuestions || $bodySections->isNotEmpty() || ! empty($otherQuestionGroups) || $workedExamples->isNotEmpty())
+    @if ($introduction || $trailer || $importance || $knowledgeLadderQuestions || $lineToLineQuestions || $bodySections->isNotEmpty() || ! empty($otherQuestionGroups) || $workedExamples->isNotEmpty() || is_array($translationStudy ?? null))
         <div class="admin-card subject-chapter-topic-sticky-wrap sticky top-14 lg:top-0 z-40 overflow-hidden mb-4 shadow-lg">
             <div class="admin-card-top"></div>
             @include('partials.subject-chapter-topic-row', [
@@ -655,6 +666,14 @@
                 @if ($introduction)
                     <a href="#section-{{ $introduction->id }}" {!! $tocToggleAttrs('section-'.$introduction->id) !!} class="{{ $tocPillContent }}">Introduction</a>
                 @endif
+                @if (is_array($translationStudy ?? null))
+                    <a href="#sanskrit-translate" {!! $tocToggleAttrs('sanskrit-translate') !!} class="{{ $tocPillContent }}">
+                        Translate
+                        @if (count($translationStudy['pairs'] ?? []) > 0)
+                            <span class="opacity-70">({{ count($translationStudy['pairs']) }})</span>
+                        @endif
+                    </a>
+                @endif
                 @if ($trailer)
                     <a href="#section-{{ $trailer->id }}" {!! $tocToggleAttrs('section-'.$trailer->id) !!} class="{{ $tocPillContent }}">Trailer</a>
                 @endif
@@ -747,6 +766,14 @@
     @endphp
 
     <div>
+    @if (is_array($translationStudy ?? null))
+        <x-material-detail-gate anchor="sanskrit-translate" :gated="$hideDetailsUntilEye" label="Translate">
+            @include('partials.sanskrit-translation-study', [
+                'translationStudy' => $translationStudy,
+            ])
+        </x-material-detail-gate>
+    @endif
+
     @if ($introduction)
         <x-material-detail-gate :anchor="'section-'.$introduction->id" :gated="$hideDetailsUntilEye" :label="$sectionLabels['section-'.$introduction->id] ?? 'Introduction'">
             @include('partials.material-sections.introduction', [
@@ -862,7 +889,7 @@
         </x-material-detail-gate>
     @endif
 
-    @if (! $introduction && ! $trailer && ! $importance && ! $knowledgeLadderQuestions && ! $lineToLineQuestions && $bodySections->isEmpty() && empty($otherQuestionGroups) && $workedExamples->isEmpty())
+    @if (! $introduction && ! $trailer && ! $importance && ! $knowledgeLadderQuestions && ! $lineToLineQuestions && $bodySections->isEmpty() && empty($otherQuestionGroups) && $workedExamples->isEmpty() && ! is_array($translationStudy ?? null))
         <div class="admin-card p-10 text-center text-slate-400">
             No study material available for this topic yet.
         </div>
