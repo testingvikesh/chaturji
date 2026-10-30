@@ -10,6 +10,60 @@
     }
 @endphp
 
+@php
+    $multiple = $multiple ?? false;
+    $selectedStandardIds = array_map('strval', (array) old('standard_ids', $selectedStandard ? [$selectedStandard] : []));
+    $selectedSubjectIds = array_map('strval', (array) old('subject_ids', $selectedSubject ? [$selectedSubject] : []));
+@endphp
+
+@if ($multiple)
+    <div class="grid gap-4 lg:grid-cols-2">
+        <div>
+            <p class="admin-label">Standards</p>
+            <div class="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3">
+                <label class="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <input type="checkbox" id="standards-all" class="rounded border-slate-300 text-brand-green focus:ring-brand-green">
+                    All standards
+                </label>
+                @foreach ($standards as $standard)
+                    <label class="flex items-center gap-2 text-sm text-slate-800">
+                        <input type="checkbox" name="standard_ids[]" value="{{ $standard->id }}" class="js-standard rounded border-slate-300 text-brand-green focus:ring-brand-green" @checked(in_array((string) $standard->id, $selectedStandardIds, true))>
+                        {{ $standard->name }}
+                    </label>
+                @endforeach
+            </div>
+            @error('standard_ids')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <p class="admin-label">Subjects</p>
+            <div class="max-h-72 space-y-3 overflow-y-auto rounded-xl border border-slate-200 p-3">
+                <label class="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <input type="checkbox" id="subjects-all" class="rounded border-slate-300 text-brand-green focus:ring-brand-green">
+                    All shown subjects
+                </label>
+                @foreach ($standards as $standard)
+                    @php $standardSubjects = $subjects->where('standard_id', $standard->id); @endphp
+                    @if ($standardSubjects->isNotEmpty())
+                        <div class="js-subject-group space-y-2" data-standard="{{ $standard->id }}" hidden>
+                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $standard->name }}</p>
+                            @foreach ($standardSubjects as $subject)
+                                <label class="flex items-center gap-2 text-sm text-slate-800">
+                                    <input type="checkbox" name="subject_ids[]" value="{{ $subject->id }}" class="js-subject rounded border-slate-300 text-brand-green focus:ring-brand-green" @checked(in_array((string) $subject->id, $selectedSubjectIds, true))>
+                                    {{ $subject->name }}
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+            @error('subject_ids')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+@else
 <div class="grid gap-4 sm:grid-cols-2">
     <div>
         <label class="admin-label" for="standard_id">Standard</label>
@@ -30,6 +84,7 @@
         </select>
     </div>
 </div>
+@endif
 
 @error('subject_id')
     <p class="text-sm text-red-600">{{ $message }}</p>
@@ -67,6 +122,46 @@
 
 <script>
     (function () {
+        const standardBoxes = Array.from(document.querySelectorAll('.js-standard'));
+        if (standardBoxes.length) {
+            const groups = Array.from(document.querySelectorAll('.js-subject-group'));
+            const allStandards = document.getElementById('standards-all');
+            const allSubjects = document.getElementById('subjects-all');
+            function selectedStandards() {
+                return standardBoxes.filter(function (box) { return box.checked; }).map(function (box) { return box.value; });
+            }
+            function syncGroups() {
+                const chosen = selectedStandards();
+                groups.forEach(function (group) {
+                    const show = chosen.indexOf(group.getAttribute('data-standard')) !== -1;
+                    group.hidden = !show;
+                    if (!show) {
+                        group.querySelectorAll('.js-subject').forEach(function (box) { box.checked = false; });
+                    }
+                });
+                if (allStandards) {
+                    allStandards.checked = standardBoxes.length > 0 && standardBoxes.every(function (box) { return box.checked; });
+                }
+            }
+            standardBoxes.forEach(function (box) { box.addEventListener('change', syncGroups); });
+            if (allStandards) {
+                allStandards.addEventListener('change', function () {
+                    standardBoxes.forEach(function (box) { box.checked = allStandards.checked; });
+                    syncGroups();
+                });
+            }
+            if (allSubjects) {
+                allSubjects.addEventListener('change', function () {
+                    groups.forEach(function (group) {
+                        if (group.hidden) return;
+                        group.querySelectorAll('.js-subject').forEach(function (box) { box.checked = allSubjects.checked; });
+                    });
+                });
+            }
+            syncGroups();
+            return;
+        }
+
         const standard = document.getElementById('standard_id');
         const subject = document.getElementById('subject_id');
         if (!standard || !subject) {

@@ -34,21 +34,49 @@ class PaperStyleController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $this->validateStyle($request);
+        $validated = $request->validate([
+            'standard_ids' => ['required', 'array', 'min:1'],
+            'standard_ids.*' => ['integer', 'exists:standards,id'],
+            'subject_ids' => ['required', 'array', 'min:1'],
+            'subject_ids.*' => ['integer', 'exists:subjects,id'],
+            'type_counts' => ['required', 'array'],
+            'type_counts.*' => ['nullable', 'integer', 'min:0', 'max:200'],
+        ], [
+            'standard_ids.required' => 'Select at least one standard.',
+            'subject_ids.required' => 'Select at least one subject.',
+        ]);
+
         $counts = $this->countsOrFail($request);
         if ($counts instanceof RedirectResponse) {
             return $counts;
         }
 
-        PaperStyle::query()->create([
-            'standard_id' => $validated['standard_id'],
-            'subject_id' => $validated['subject_id'],
-            'type_counts' => $counts,
-        ]);
+        $subjects = Subject::query()
+            ->whereIn('id', $validated['subject_ids'])
+            ->whereIn('standard_id', $validated['standard_ids'])
+            ->get(['id', 'standard_id']);
+
+        if ($subjects->isEmpty()) {
+            return back()
+                ->withErrors(['subject_ids' => 'Choose subjects from the selected standards.'])
+                ->withInput();
+        }
+
+        foreach ($subjects as $subject) {
+            PaperStyle::query()->updateOrCreate(
+                [
+                    'standard_id' => $subject->standard_id,
+                    'subject_id' => $subject->id,
+                ],
+                ['type_counts' => $counts]
+            );
+        }
+
+        $saved = $subjects->count();
 
         return redirect()
             ->route('admin.paper-styles.index')
-            ->with('success', 'Paper style saved.');
+            ->with('success', 'Paper style saved for '.$saved.' '.str('subject')->plural($saved).'.');
     }
 
     public function edit(PaperStyle $paperStyle): View
