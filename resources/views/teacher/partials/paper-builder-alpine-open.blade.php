@@ -185,7 +185,7 @@ function teacherPaperBuilder(cfg) {
                     input.value = marks[type];
                 }
             });
-            const subjective = ['one_mark', 'two_marks', 'three_marks', 'five_marks', 'short_answer', 'long_answer'];
+            const subjective = ['one_mark', 'two_marks', 'three_marks', 'four_marks', 'five_marks', 'short_answer', 'long_answer'];
             form.querySelectorAll('[name^="optional_counts["]').forEach(function (input) {
                 const match = input.name.match(/optional_counts\[(.+)\]/);
                 const type = match ? match[1] : '';

@@ -18,6 +18,7 @@ class PaperTypeHelper
             'one_mark' => '1 Mark Question',
             'two_marks' => '2 Marks Question',
             'three_marks' => '3 Marks Question',
+            'four_marks' => '4 Marks Question',
             'five_marks' => '5 Marks Question',
             'short_answer' => 'Short Answer',
             'long_answer' => 'Long Answer',

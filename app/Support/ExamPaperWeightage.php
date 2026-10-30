@@ -38,6 +38,7 @@ class ExamPaperWeightage
         'one_mark' => 1,
         'two_marks' => 2,
         'three_marks' => 3,
+        'four_marks' => 4,
         'five_marks' => 5,
         'short_answer' => 3,
         'long_answer' => 4,

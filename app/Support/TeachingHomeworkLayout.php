@@ -16,6 +16,7 @@ class TeachingHomeworkLayout
             'one_mark' => ['label' => '1 Mark', 'marks' => 1, 'group' => 'subjective'],
             'two_marks' => ['label' => '2 Marks', 'marks' => 2, 'group' => 'subjective'],
             'three_marks' => ['label' => '3 Marks', 'marks' => 3, 'group' => 'subjective'],
+            'four_marks' => ['label' => '4 Marks', 'marks' => 4, 'group' => 'subjective'],
             'five_marks' => ['label' => '5 Marks', 'marks' => 5, 'group' => 'subjective'],
         ];
     }

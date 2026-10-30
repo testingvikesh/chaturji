@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ExamPaperWeightage;
 use App\Support\PaperTypeHelper;
 use App\Support\SubjectiveQuestionTypes;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +37,9 @@ class PaperStyle extends Model
     {
         $rows = [];
         foreach (PaperTypeHelper::types() as $type => $label) {
+            if (in_array($type, ['short_answer', 'long_answer'], true)) {
+                continue;
+            }
             if (SubjectiveQuestionTypes::isSubjective($type) !== $subjective) {
                 continue;
             }
@@ -46,5 +50,19 @@ class PaperStyle extends Model
         }
 
         return $rows;
+    }
+
+    public function totalMarks(): int
+    {
+        $total = 0;
+        foreach ((array) $this->type_counts as $type => $count) {
+            if (in_array($type, ['short_answer', 'long_answer'], true)) {
+                continue;
+            }
+            $each = (int) (ExamPaperWeightage::MARKS_PER_QUESTION[$type] ?? 1);
+            $total += max(0, (int) $count) * max(1, $each);
+        }
+
+        return $total;
     }
 }

@@ -9,6 +9,7 @@ class SubjectiveQuestionTypes
         'one_mark',
         'two_marks',
         'three_marks',
+        'four_marks',
         'five_marks',
         'short_answer',
         'long_answer',

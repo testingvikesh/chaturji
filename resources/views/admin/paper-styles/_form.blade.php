@@ -2,6 +2,9 @@
     $objective = [];
     $subjective = [];
     foreach ($paperTypes as $type => $label) {
+        if (in_array($type, ['short_answer', 'long_answer'], true)) {
+            continue;
+        }
         if (\App\Support\SubjectiveQuestionTypes::isSubjective($type)) {
             $subjective[$type] = $label;
         } else {
@@ -93,35 +96,83 @@
     <p class="text-sm text-red-600">{{ $message }}</p>
 @enderror
 
+@php
+    $marksEach = \App\Support\ExamPaperWeightage::MARKS_PER_QUESTION;
+@endphp
+
 <div class="grid gap-6 lg:grid-cols-2">
-    @foreach (['Objective' => $objective, 'Subjective' => $subjective] as $heading => $types)
+    @foreach (['objective' => $objective, 'subjective' => $subjective] as $group => $types)
         <div class="rounded-2xl border border-slate-200">
-            <div class="border-b border-slate-100 px-4 py-3">
-                <h3 class="font-bold text-slate-900">{{ $heading }} quantity</h3>
+            <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+                <h3 class="font-bold text-slate-900">{{ ucfirst($group) }} quantity</h3>
+                <p class="text-sm font-semibold text-brand-green"><span data-group-marks="{{ $group }}">0</span> marks</p>
             </div>
             <div class="divide-y divide-slate-100">
                 @foreach ($types as $type => $label)
+                    @php $each = (int) ($marksEach[$type] ?? 1); @endphp
                     <label class="flex items-center justify-between gap-3 px-4 py-3">
-                        <span class="text-sm font-medium text-slate-800">
+                        <span class="min-w-0 text-sm font-medium text-slate-800">
                             <span class="mr-1">{{ \App\Support\PaperTypeHelper::icon($type) }}</span>{{ $label }}
+                            <span class="block text-xs font-normal text-slate-500">{{ $each }} mark{{ $each === 1 ? '' : 's' }} each</span>
                         </span>
-                        <input
-                            type="number"
-                            name="type_counts[{{ $type }}]"
-                            min="0"
-                            max="200"
-                            value="{{ (int) ($counts[$type] ?? 0) }}"
-                            class="w-24 rounded-lg border-slate-200 text-center"
-                        >
+                        <span class="flex shrink-0 items-center gap-3">
+                            <input
+                                type="number"
+                                name="type_counts[{{ $type }}]"
+                                min="0"
+                                max="200"
+                                value="{{ (int) ($counts[$type] ?? 0) }}"
+                                data-type-count
+                                data-group="{{ $group }}"
+                                data-each="{{ $each }}"
+                                class="w-24 rounded-lg border-slate-200 text-center"
+                            >
+                            <span class="w-16 text-right text-sm font-semibold text-slate-700" data-row-marks>0</span>
+                        </span>
                     </label>
                 @endforeach
             </div>
         </div>
     @endforeach
 </div>
+<p class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
+    Paper total: <span class="text-base font-bold" data-paper-marks>0</span> marks
+</p>
 
 <script>
     (function () {
+        const countInputs = Array.from(document.querySelectorAll('[data-type-count]'));
+        function refreshMarks() {
+            const groups = { objective: 0, subjective: 0 };
+            countInputs.forEach(function (input) {
+                const count = Math.max(0, parseInt(input.value, 10) || 0);
+                const each = Math.max(1, parseInt(input.getAttribute('data-each'), 10) || 1);
+                const marks = count * each;
+                const row = input.parentElement ? input.parentElement.querySelector('[data-row-marks]') : null;
+                if (row) {
+                    row.textContent = String(marks);
+                }
+                const group = input.getAttribute('data-group');
+                if (groups[group] !== undefined) {
+                    groups[group] += marks;
+                }
+            });
+            Object.keys(groups).forEach(function (group) {
+                const node = document.querySelector('[data-group-marks="' + group + '"]');
+                if (node) {
+                    node.textContent = String(groups[group]);
+                }
+            });
+            const total = document.querySelector('[data-paper-marks]');
+            if (total) {
+                total.textContent = String(groups.objective + groups.subjective);
+            }
+        }
+        countInputs.forEach(function (input) {
+            input.addEventListener('input', refreshMarks);
+        });
+        refreshMarks();
+
         const standardBoxes = Array.from(document.querySelectorAll('.js-standard'));
         if (standardBoxes.length) {
             const groups = Array.from(document.querySelectorAll('.js-subject-group'));

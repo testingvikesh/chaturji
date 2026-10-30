@@ -20,6 +20,7 @@
                             <th>Subject</th>
                             <th>Objective</th>
                             <th>Subjective</th>
+                            <th>Marks</th>
                             <th class="text-right">Actions</th>
                         </tr>
                     </thead>
@@ -42,6 +43,7 @@
                                         —
                                     @endforelse
                                 </td>
+                                <td class="font-semibold text-slate-900">{{ $style->totalMarks() }}</td>
                                 <td class="whitespace-nowrap text-right">
                                     <a href="{{ route('admin.paper-styles.edit', $style) }}" class="text-xs font-semibold text-brand-green hover:underline">Edit</a>
                                     <form method="POST" action="{{ route('admin.paper-styles.destroy', $style) }}" class="inline" onsubmit="return confirm('Delete this paper style?')">
@@ -53,7 +55,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="py-8 text-center text-slate-500">No paper styles yet.</td>
+                                <td colspan="6" class="py-8 text-center text-slate-500">No paper styles yet.</td>
                             </tr>
                         @endforelse
                     </tbody>

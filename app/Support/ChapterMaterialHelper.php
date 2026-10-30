@@ -20,6 +20,7 @@ class ChapterMaterialHelper
         'one_mark',
         'two_marks',
         'three_marks',
+        'four_marks',
         'five_marks',
         'translate',
         'short_answer',

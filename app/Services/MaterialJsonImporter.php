@@ -312,6 +312,8 @@ class MaterialJsonImporter
             'one_mark' => 'one_mark',
             'two_marks' => 'two_marks',
             'three_marks' => 'three_marks',
+            'four_marks' => 'four_marks',
+            '4_marks' => 'four_marks',
             'five_marks' => 'five_marks',
             'translate' => 'translate',
         ] as $key => $type) {
