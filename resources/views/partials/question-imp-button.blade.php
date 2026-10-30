@@ -36,6 +36,34 @@
             background: #c49e2a;
             color: #1a367c;
         }
+        .js-imp-message {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            z-index: 80;
+            transform: translateX(-50%);
+            max-width: calc(100% - 2rem);
+            border-radius: 0.9rem;
+            padding: 0.7rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+        }
+        .js-imp-message[data-kind="on"] {
+            background: #fff6d8;
+            border: 1px solid #d4af37;
+            color: #6d5210;
+        }
+        .js-imp-message[data-kind="off"] {
+            background: #f0f3fa;
+            border: 1px solid #a8b8dc;
+            color: #1a367c;
+        }
+        .js-imp-message[data-kind="error"] {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+        }
         .js-question-imp.is-imp-pulse {
             animation: imp-pop 0.28s ease;
         }
@@ -53,6 +81,23 @@
             button.classList.remove('is-imp-pulse');
             void button.offsetWidth;
             button.classList.add('is-imp-pulse');
+        }
+        function showQuestionImpMessage(kind, text) {
+            let note = document.querySelector('.js-imp-message');
+            if (!note) {
+                note = document.createElement('div');
+                note.className = 'js-imp-message';
+                note.setAttribute('role', 'status');
+                document.body.appendChild(note);
+            }
+            note.setAttribute('data-kind', kind);
+            note.textContent = text;
+            clearTimeout(showQuestionImpMessage.timer);
+            showQuestionImpMessage.timer = setTimeout(function () {
+                if (note.parentNode) {
+                    note.parentNode.removeChild(note);
+                }
+            }, 2200);
         }
         document.addEventListener('click', function (event) {
             const button = event.target.closest('.js-question-imp');
@@ -83,9 +128,12 @@
                 }
                 return res.json();
             }).then(function (data) {
-                paintQuestionImp(button, !!(data && data.important));
+                const on = !!(data && data.important);
+                paintQuestionImp(button, on);
+                showQuestionImpMessage(on ? 'on' : 'off', on ? 'Question marked important.' : 'Important mark removed.');
             }).catch(function () {
                 paintQuestionImp(button, wasOn);
+                showQuestionImpMessage('error', 'Could not update this question.');
             }).finally(function () {
                 button.dataset.loading = '0';
             });
