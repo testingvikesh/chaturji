@@ -32,7 +32,7 @@
                         <select id="standard_id" name="standard_id" class="admin-select w-full" required>
                             <option value="">Select standard</option>
                             @foreach ($standards as $standard)
-                                <option value="{{ $standard->id }}" data-medium="{{ \App\Models\Material::normalizeMedium($standard->medium) }}" @selected((string) old('standard_id') === (string) $standard->id)>{{ $standard->name }}</option>
+                                <option value="{{ $standard->id }}" @selected((string) old('standard_id') === (string) $standard->id)>{{ $standard->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -132,7 +132,6 @@
             const oldChapters = @json(array_map('strval', (array) old('chapter_ids', [])));
             const countInputs = Array.from(document.querySelectorAll('[data-type-count]'));
             const subjectOptions = subject ? Array.from(subject.options) : [];
-            const standardOptions = standard ? Array.from(standard.options) : [];
             let availableCounts = {};
             let availableTimer = null;
 
@@ -180,19 +179,6 @@
                     params.append('chapter_ids[]', id);
                 });
                 return url + '?' + params.toString();
-            }
-
-            function filterStandards() {
-                const selected = medium ? medium.value : '';
-                let keep = false;
-                standardOptions.forEach(function (option, index) {
-                    if (index === 0) return;
-                    const show = selected !== '' && option.getAttribute('data-medium') === selected;
-                    option.hidden = !show;
-                    option.disabled = !show;
-                    if (show && option.value === standard.value) keep = true;
-                });
-                if (!keep) standard.value = '';
             }
 
             function filterSubjects() {
@@ -275,9 +261,6 @@
             countInputs.forEach(function (input) { input.addEventListener('input', refreshMarks); });
             if (medium) {
                 medium.addEventListener('change', function () {
-                    filterStandards();
-                    filterSubjects();
-                    applyStyle();
                     loadChapters();
                 });
             }
@@ -290,7 +273,6 @@
                 applyStyle();
                 loadChapters();
             });
-            filterStandards();
             filterSubjects();
             if (!@json(old('type_counts') !== null)) applyStyle();
             else refreshMarks();

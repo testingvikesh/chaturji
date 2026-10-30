@@ -102,11 +102,6 @@ class PaperGenerateController extends Controller
 
         $subject = Subject::query()->with('standard')->findOrFail($validated['subject_id']);
         $medium = Material::normalizeMedium($validated['medium']) ?: 'english';
-        if ($subject->standard && Material::normalizeMedium($subject->standard->medium) !== $medium) {
-            throw ValidationException::withMessages([
-                'medium' => 'Choose a standard that belongs to this medium.',
-            ]);
-        }
         $materials = Material::forStudentSubject($subject, $medium);
         $chapterIds = array_values(array_filter(array_map('intval', (array) ($validated['chapter_ids'] ?? []))));
         if ($chapterIds !== []) {
