@@ -52,6 +52,26 @@
         }
         : null;
 
+    $questionImportantUrlBuilder = $canEditQuestions
+        ? function ($question) use ($subject, $materialTopic, $questionEditMedium) {
+            $key = (string) ($question->edit_key ?? '');
+            if ($key === '') {
+                return null;
+            }
+
+            $params = [
+                'subject' => $subject,
+                'materialTopic' => $materialTopic,
+                'questionKey' => $key,
+            ];
+            if ($questionEditMedium) {
+                $params['medium'] = $questionEditMedium;
+            }
+
+            return route('teacher.books.questions.important', $params);
+        }
+        : null;
+
     $partition = ChapterMaterialHelper::partitionSections($sections);
     $introduction = $partition['introduction'];
     $trailer = $partition['trailer'];
@@ -87,6 +107,13 @@
                     $editUrl = $match ? $questionEditUrlBuilder($match) : null;
                     if ($editUrl) {
                         $translationStudy['pairs'][$index]['edit_url'] = $editUrl;
+                    }
+                    $importantUrl = $match && is_callable($questionImportantUrlBuilder)
+                        ? $questionImportantUrlBuilder($match)
+                        : null;
+                    if ($importantUrl) {
+                        $translationStudy['pairs'][$index]['important_url'] = $importantUrl;
+                        $translationStudy['pairs'][$index]['is_important'] = (bool) ($match->is_important ?? false);
                     }
                 }
             }
@@ -867,6 +894,7 @@
                 'sectionId' => 'questions-knowledge_ladder',
                 'blockClass' => $nextBlockClass(),
                 'questionEditUrlBuilder' => $questionEditUrlBuilder,
+                'questionImportantUrlBuilder' => $questionImportantUrlBuilder,
             ])
         </x-material-detail-gate>
     @endif
@@ -884,6 +912,7 @@
                 'sectionId' => 'questions-line_to_line',
                 'blockClass' => $nextBlockClass(),
                 'questionEditUrlBuilder' => $questionEditUrlBuilder,
+                'questionImportantUrlBuilder' => $questionImportantUrlBuilder,
             ])
         </x-material-detail-gate>
     @endif
@@ -929,6 +958,7 @@
                 'toggleAnswer' => $practiceMode,
                 'blockClass' => $nextBlockClass(),
                 'questionEditUrlBuilder' => $questionEditUrlBuilder,
+                'questionImportantUrlBuilder' => $questionImportantUrlBuilder,
             ])
         </x-material-detail-gate>
     @endforeach

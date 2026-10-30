@@ -28,6 +28,7 @@ class MaterialQuestionEditor
                 $type = (string) ($question->question_type ?? '');
                 $text = (string) ($question->question_text ?? '');
                 $question->setAttribute('edit_key', self::questionKey($type, $text));
+                $question->setAttribute('is_important', false);
 
                 return $question;
             });
@@ -40,6 +41,7 @@ class MaterialQuestionEditor
             $question->setAttribute('edit_key', $key);
 
             $edit = $edits[$key] ?? null;
+            $question->setAttribute('is_important', is_array($edit) && ! empty($edit['important']));
             if (! is_array($edit)) {
                 return $question;
             }
@@ -111,7 +113,7 @@ class MaterialQuestionEditor
             $edits = is_array($materialTopic->question_edits) ? $materialTopic->question_edits : [];
             $previous = is_array($edits[$questionKey] ?? null) ? $edits[$questionKey] : null;
 
-            $edits[$questionKey] = [
+            $saved = [
                 'question_text' => $newText,
                 'answer' => $newAnswer,
                 'options' => $newOptions,
@@ -119,6 +121,12 @@ class MaterialQuestionEditor
                 'updated_at' => now()->toIso8601String(),
                 'updated_by' => $teacher->id,
             ];
+            if (is_array($previous) && ! empty($previous['important'])) {
+                $saved['important'] = true;
+                $saved['important_by'] = $previous['important_by'] ?? null;
+                $saved['important_at'] = $previous['important_at'] ?? null;
+            }
+            $edits[$questionKey] = $saved;
 
             $materialTopic->forceFill([
                 'question_edits' => $edits,
@@ -157,6 +165,65 @@ class MaterialQuestionEditor
         );
 
         self::forgetReaderCache($materialTopic);
+    }
+
+    public static function setImportant(
+        User $teacher,
+        MaterialTopic $materialTopic,
+        string $questionKey,
+        bool $important
+    ): bool {
+        $rawQuestions = MaterialTopicReader::rawUniqueQuestions($materialTopic);
+        $match = $rawQuestions->first(function ($question) use ($questionKey) {
+            return self::questionKey((string) $question->question_type, (string) $question->question_text) === $questionKey;
+        });
+
+        abort_unless($match, 404, 'Question not found in this material.');
+
+        $type = (string) ($match->question_type ?? 'short_answer');
+
+        DB::transaction(function () use ($teacher, $materialTopic, $questionKey, $important, $type) {
+            $topic = MaterialTopic::query()->lockForUpdate()->findOrFail($materialTopic->id);
+            $edits = is_array($topic->question_edits) ? $topic->question_edits : [];
+            $previous = is_array($edits[$questionKey] ?? null) ? $edits[$questionKey] : [];
+
+            if ($important) {
+                $previous['important'] = true;
+                $previous['important_by'] = $teacher->id;
+                $previous['important_at'] = now()->toIso8601String();
+                $previous['question_type'] = $previous['question_type'] ?? $type;
+                $edits[$questionKey] = $previous;
+            } else {
+                unset($previous['important'], $previous['important_by'], $previous['important_at']);
+                $hasEdit = array_key_exists('question_text', $previous)
+                    || array_key_exists('answer', $previous)
+                    || array_key_exists('options', $previous);
+                if ($hasEdit) {
+                    $edits[$questionKey] = $previous;
+                } else {
+                    unset($edits[$questionKey]);
+                }
+            }
+
+            $topic->forceFill([
+                'question_edits' => $edits === [] ? null : $edits,
+                'updated_at' => now(),
+            ])->save();
+        });
+
+        ActivityLogger::log(
+            'teacher.question.important',
+            ($important ? 'Marked important: ' : 'Cleared important: ').$type.' on '.$materialTopic->displayName(),
+            $materialTopic,
+            [
+                'question_key' => $questionKey,
+                'question_type' => $type,
+                'important' => $important,
+            ],
+            $teacher
+        );
+
+        return $important;
     }
 
     public static function forgetReaderCache(MaterialTopic $materialTopic): void

@@ -6,6 +6,7 @@
         'sectionId' => 'questions-'.$type,
         'blockClass' => $blockClass ?? '',
         'questionEditUrlBuilder' => $questionEditUrlBuilder ?? null,
+        'questionImportantUrlBuilder' => $questionImportantUrlBuilder ?? null,
     ])
 @else
     <section id="questions-{{ $type }}" class="material-question-group admin-card mb-6 {{ $blockClass ?? '' }}">
@@ -29,6 +30,9 @@
                     'questionEditUrl' => is_callable($questionEditUrlBuilder ?? null)
                         ? ($questionEditUrlBuilder)($question)
                         : ($questionEditUrl ?? null),
+                    'questionImportantUrl' => is_callable($questionImportantUrlBuilder ?? null)
+                        ? ($questionImportantUrlBuilder)($question)
+                        : null,
                 ])
             @endforeach
         </div>

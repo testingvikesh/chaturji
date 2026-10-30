@@ -235,6 +235,7 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/click-report', [TeacherClickReportController::class, 'index'])->name('click-report');
     Route::get('/books/{subject}/topics/{materialTopic}/questions/{questionKey}/edit', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'edit'])->name('books.questions.edit');
     Route::put('/books/{subject}/topics/{materialTopic}/questions/{questionKey}', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'update'])->name('books.questions.update');
+    Route::post('/books/{subject}/topics/{materialTopic}/questions/{questionKey}/important', [\App\Http\Controllers\Teacher\MaterialQuestionController::class, 'important'])->name('books.questions.important');
     Route::get('/books/{subject}/topics/{materialTopic}/examples/{exampleKey}/edit', [\App\Http\Controllers\Teacher\MaterialExampleController::class, 'edit'])
         ->where('exampleKey', '[a-f0-9]{64}')
         ->name('books.examples.edit');

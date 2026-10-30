@@ -10,6 +10,7 @@
     'blockClass' => '',
     'variant' => 'ladder',
     'questionEditUrlBuilder' => null,
+    'questionImportantUrlBuilder' => null,
 ])
 
 @php
@@ -101,11 +102,26 @@
                             ? $questionEditUrlBuilder($question)
                             : null;
                     @endphp
+                    @php
+                        $ladderImportantUrl = is_callable($questionImportantUrlBuilder)
+                            ? $questionImportantUrlBuilder($question)
+                            : null;
+                    @endphp
+                    @if ($ladderImportantUrl || $ladderEditUrl)
+                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                            @include('partials.question-imp-button', [
+                                'url' => $ladderImportantUrl,
+                                'important' => (bool) ($question->is_important ?? false),
+                            ])
+                    @endif
                     @if ($ladderEditUrl)
                         <a href="{{ $ladderEditUrl }}"
-                           class="mt-2 inline-flex items-center gap-1 rounded-lg border border-brand-green-100 bg-brand-green-50 px-2.5 py-1 text-xs font-semibold text-brand-green hover:bg-brand-green hover:text-white transition">
+                           class="inline-flex h-9 items-center gap-1 rounded-lg border border-brand-green-100 bg-brand-green-50 px-2.5 text-xs font-semibold text-brand-green hover:bg-brand-green hover:text-white transition">
                             Edit
                         </a>
+                    @endif
+                    @if ($ladderImportantUrl || $ladderEditUrl)
+                        </div>
                     @endif
 
                     @if ($question->answer)

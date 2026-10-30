@@ -9,6 +9,7 @@ use App\Models\Subject;
 use App\Models\TeacherSubject;
 use App\Support\MaterialQuestionEditor;
 use App\Support\MaterialTopicReader;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -97,6 +98,24 @@ class MaterialQuestionController extends Controller
                 'medium' => $medium,
             ])
             ->with('success', 'Question updated. Admin log saved.');
+    }
+
+    public function important(Request $request, Subject $subject, MaterialTopic $materialTopic, string $questionKey): JsonResponse
+    {
+        $this->authorizeTopic($request, $subject, $materialTopic);
+
+        $validated = $request->validate([
+            'important' => ['required', 'boolean'],
+        ]);
+
+        $important = MaterialQuestionEditor::setImportant(
+            auth()->user(),
+            $materialTopic,
+            $questionKey,
+            (bool) $validated['important']
+        );
+
+        return response()->json(['important' => $important]);
     }
 
     private function authorizeTopic(Request $request, Subject $subject, MaterialTopic $materialTopic): Material

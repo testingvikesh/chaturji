@@ -8,6 +8,7 @@
     'interactiveAttempt' => false,
     'sectionType' => null,
     'questionEditUrl' => null,
+    'questionImportantUrl' => null,
 ])
 
 @php
@@ -88,6 +89,10 @@
                             </svg>
                         </button>
                     @endif
+                    @include('partials.question-imp-button', [
+                        'url' => $questionImportantUrl ?? null,
+                        'important' => (bool) ($question->is_important ?? false),
+                    ])
                     @if (! empty($questionEditUrl))
                         <a href="{{ $questionEditUrl }}"
                            class="shrink-0 inline-flex h-9 items-center gap-1 rounded-lg border border-brand-green-100 bg-brand-green-50 px-2.5 text-xs font-semibold text-brand-green hover:bg-brand-green hover:text-white transition"

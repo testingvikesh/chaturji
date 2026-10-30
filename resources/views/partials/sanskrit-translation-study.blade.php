@@ -20,8 +20,16 @@
                                 <p class="mt-1 pl-4 text-sm text-slate-700">• {{ $pair['translation'] }}</p>
                             @endif
                         </div>
-                        @if (! empty($pair['edit_url']))
-                            <a href="{{ $pair['edit_url'] }}" class="inline-flex h-9 shrink-0 items-center rounded-lg border border-brand-green-100 bg-brand-green-50 px-2.5 text-xs font-semibold text-brand-green transition hover:bg-brand-green hover:text-white">Edit</a>
+                        @if (! empty($pair['edit_url']) || ! empty($pair['important_url']))
+                            <div class="flex shrink-0 items-center gap-2">
+                                @include('partials.question-imp-button', [
+                                    'url' => $pair['important_url'] ?? null,
+                                    'important' => (bool) ($pair['is_important'] ?? false),
+                                ])
+                                @if (! empty($pair['edit_url']))
+                                    <a href="{{ $pair['edit_url'] }}" class="inline-flex h-9 shrink-0 items-center rounded-lg border border-brand-green-100 bg-brand-green-50 px-2.5 text-xs font-semibold text-brand-green transition hover:bg-brand-green hover:text-white">Edit</a>
+                                @endif
+                            </div>
                         @endif
                     </li>
                 @endforeach
