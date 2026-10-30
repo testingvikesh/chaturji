@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ChapterController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmailLogController;
 use App\Http\Controllers\Admin\DataUploadController;
+use App\Http\Controllers\Admin\PaperStyleController;
 use App\Http\Controllers\Admin\PromptController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingController;
@@ -391,6 +392,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('/timetable/teachers/{teacher}/{timetable}', [TeacherTimetableController::class, 'destroy'])->name('timetable.destroy');
 
         Route::resource('standards', StandardController::class)->except(['show']);
+        Route::resource('paper-styles', PaperStyleController::class)->except(['show']);
         Route::get('/subjects', [SubjectController::class, 'manage'])->name('subjects.manage');
         Route::get('/standards/{standard}/subjects', [SubjectController::class, 'index'])->name('standards.subjects.index');
         Route::put('/standards/{standard}/subjects', [SubjectController::class, 'bulkUpdate'])->name('standards.subjects.bulk');
