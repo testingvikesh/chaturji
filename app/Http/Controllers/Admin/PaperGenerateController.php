@@ -53,6 +53,26 @@ class PaperGenerateController extends Controller
         ]);
     }
 
+    public function available(Request $request): JsonResponse
+    {
+        $subject = Subject::query()->with('standard')->find($request->integer('subject_id'));
+        if (! $subject) {
+            return response()->json(['available' => []]);
+        }
+
+        $materials = Material::forStudentSubject($subject, $subject->standard?->medium);
+        $chapterIds = array_values(array_filter(array_map('intval', (array) $request->input('chapter_ids', []))));
+        if ($chapterIds !== []) {
+            $materials = $materials->whereIn('id', $chapterIds)->values();
+        }
+
+        $available = $materials->isEmpty()
+            ? []
+            : MaterialPaperBank::availableCounts($materials, null, true);
+
+        return response()->json(['available' => $available]);
+    }
+
     public function store(Request $request): View
     {
         $validated = $request->validate([

@@ -87,7 +87,7 @@
                                     <label class="flex items-center justify-between gap-3 px-4 py-3">
                                         <span class="min-w-0 text-sm font-medium text-slate-800">
                                             <span class="mr-1">{{ \App\Support\PaperTypeHelper::icon($type) }}</span>{{ $label }}
-                                            <span class="block text-xs font-normal text-slate-500">{{ $each }} mark{{ $each === 1 ? '' : 's' }} each</span>
+                                            <span class="block text-xs font-normal text-slate-500">{{ $each }} mark{{ $each === 1 ? '' : 's' }} each · Available <span data-available>0</span></span>
                                         </span>
                                         <span class="flex shrink-0 items-center gap-3">
                                             <input type="number" name="type_counts[{{ $type }}]" min="0" max="200" value="{{ (int) ($oldCounts[$type] ?? 0) }}" data-type-count data-type="{{ $type }}" data-group="{{ $group }}" data-each="{{ $each }}" class="w-24 rounded-lg border-slate-200 text-center">
@@ -118,9 +118,12 @@
             const note = document.getElementById('style-note');
             const chapterList = document.getElementById('chapter-list');
             const chaptersUrl = @json(route('admin.paper-generate.chapters'));
+            const availableUrl = @json(route('admin.paper-generate.available'));
             const oldChapters = @json(array_map('strval', (array) old('chapter_ids', [])));
             const countInputs = Array.from(document.querySelectorAll('[data-type-count]'));
             const subjectOptions = subject ? Array.from(subject.options) : [];
+            let availableCounts = {};
+            let availableTimer = null;
 
             function refreshMarks() {
                 const groups = { objective: 0, subjective: 0 };
@@ -132,6 +135,13 @@
                     if (row) row.textContent = String(marks);
                     const group = input.getAttribute('data-group');
                     if (groups[group] !== undefined) groups[group] += marks;
+                    const availableNode = input.closest('label') ? input.closest('label').querySelector('[data-available]') : null;
+                    if (availableNode) {
+                        const available = parseInt(availableCounts[input.getAttribute('data-type')] || 0, 10) || 0;
+                        availableNode.textContent = String(available);
+                        availableNode.style.color = count > available ? '#b91c1c' : '';
+                        availableNode.style.fontWeight = count > available ? '700' : '';
+                    }
                 });
                 Object.keys(groups).forEach(function (group) {
                     const node = document.querySelector('[data-group-marks="' + group + '"]');
@@ -166,7 +176,10 @@
 
             function loadChapters() {
                 chapterList.textContent = subject.value ? 'Loading chapters…' : 'Select a subject to load chapters.';
-                if (!subject.value) return;
+                if (!subject.value) {
+                    scheduleAvailable();
+                    return;
+                }
                 fetch(chaptersUrl + '?subject_id=' + encodeURIComponent(subject.value), { headers: { 'Accept': 'application/json' } })
                     .then(function (res) { return res.json(); })
                     .then(function (data) {
@@ -183,7 +196,8 @@
                             box.type = 'checkbox';
                             box.name = 'chapter_ids[]';
                             box.value = String(chapter.id);
-                            box.className = 'rounded border-slate-300 text-brand-green focus:ring-brand-green';
+                            box.className = 'js-chapter rounded border-slate-300 text-brand-green focus:ring-brand-green';
+                            box.addEventListener('change', scheduleAvailable);
                             if (oldChapters.indexOf(String(chapter.id)) !== -1) box.checked = true;
                             const text = document.createElement('span');
                             text.textContent = chapter.name || ('Chapter ' + chapter.id);
@@ -192,9 +206,41 @@
                             chapterList.appendChild(label);
                         });
                     })
+                    .then(function () { scheduleAvailable(); })
                     .catch(function () {
                         chapterList.textContent = 'Could not load chapters.';
                     });
+            }
+
+            function selectedChapterIds() {
+                return Array.from(document.querySelectorAll('.js-chapter:checked')).map(function (box) {
+                    return box.value;
+                });
+            }
+
+            function scheduleAvailable() {
+                clearTimeout(availableTimer);
+                availableTimer = setTimeout(loadAvailable, 250);
+            }
+
+            function loadAvailable() {
+                if (!subject.value) {
+                    availableCounts = {};
+                    refreshMarks();
+                    return;
+                }
+                const params = new URLSearchParams();
+                params.set('subject_id', subject.value);
+                selectedChapterIds().forEach(function (id) {
+                    params.append('chapter_ids[]', id);
+                });
+                fetch(availableUrl + '?' + params.toString(), { headers: { 'Accept': 'application/json' } })
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        availableCounts = data && data.available ? data.available : {};
+                        refreshMarks();
+                    })
+                    .catch(function () {});
             }
 
             countInputs.forEach(function (input) { input.addEventListener('input', refreshMarks); });

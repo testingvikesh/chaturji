@@ -396,6 +396,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('paper-styles', PaperStyleController::class)->except(['show']);
         Route::get('/paper-generate', [PaperGenerateController::class, 'create'])->name('paper-generate.create');
         Route::get('/paper-generate/chapters', [PaperGenerateController::class, 'chapters'])->name('paper-generate.chapters');
+        Route::get('/paper-generate/available', [PaperGenerateController::class, 'available'])->name('paper-generate.available');
         Route::post('/paper-generate', [PaperGenerateController::class, 'store'])->name('paper-generate.store');
         Route::get('/subjects', [SubjectController::class, 'manage'])->name('subjects.manage');
         Route::get('/standards/{standard}/subjects', [SubjectController::class, 'index'])->name('standards.subjects.index');
