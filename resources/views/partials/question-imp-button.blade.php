@@ -17,26 +17,43 @@
 @once
     <style>
         .js-question-imp {
-            border-color: #d4af37;
-            background: #fff6d8;
-            color: #7a5b10;
+            border-color: #c4a030;
+            background: #ffffff;
+            color: #8a6a12;
+            box-shadow: inset 0 0 0 1px #f3e2a4;
         }
         .js-question-imp:hover {
-            background: #d4af37;
-            border-color: #b8962e;
-            color: #1a367c;
+            background: #fff6d8;
+            color: #6d5210;
         }
         .js-question-imp[data-important="1"] {
             background: #d4af37;
-            border-color: #b8962e;
+            border-color: #a68520;
             color: #1a367c;
+            box-shadow: 0 1px 3px rgba(166, 133, 32, 0.45);
         }
         .js-question-imp[data-important="1"]:hover {
-            background: #c4a030;
-            color: #ffffff;
+            background: #c49e2a;
+            color: #1a367c;
+        }
+        .js-question-imp.is-imp-pulse {
+            animation: imp-pop 0.28s ease;
+        }
+        @keyframes imp-pop {
+            0% { transform: scale(0.92); }
+            60% { transform: scale(1.08); }
+            100% { transform: scale(1); }
         }
     </style>
     <script>
+        function paintQuestionImp(button, on) {
+            button.setAttribute('data-important', on ? '1' : '0');
+            button.setAttribute('aria-pressed', on ? 'true' : 'false');
+            button.title = on ? 'Important' : 'Mark important';
+            button.classList.remove('is-imp-pulse');
+            void button.offsetWidth;
+            button.classList.add('is-imp-pulse');
+        }
         document.addEventListener('click', function (event) {
             const button = event.target.closest('.js-question-imp');
             if (!button || button.dataset.loading === '1') {
@@ -46,7 +63,9 @@
             if (!url) {
                 return;
             }
-            const next = button.getAttribute('data-important') !== '1';
+            const wasOn = button.getAttribute('data-important') === '1';
+            const next = !wasOn;
+            paintQuestionImp(button, next);
             button.dataset.loading = '1';
             const token = document.querySelector('meta[name="csrf-token"]');
             fetch(url, {
@@ -64,11 +83,9 @@
                 }
                 return res.json();
             }).then(function (data) {
-                const on = !!(data && data.important);
-                button.setAttribute('data-important', on ? '1' : '0');
-                button.setAttribute('aria-pressed', on ? 'true' : 'false');
-                button.title = on ? 'Important' : 'Mark important';
+                paintQuestionImp(button, !!(data && data.important));
             }).catch(function () {
+                paintQuestionImp(button, wasOn);
             }).finally(function () {
                 button.dataset.loading = '0';
             });
