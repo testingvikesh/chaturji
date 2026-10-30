@@ -258,7 +258,7 @@ class MaterialPaperBank
         $pool = collect();
 
         if ($topics->isNotEmpty()) {
-            $scopeByMaterial = $topics->groupBy('material_id');
+            $scopeByMaterial = self::topicsWithQuestionData($topics)->groupBy('material_id');
             foreach ($materials as $material) {
                 $scoped = $scopeByMaterial->get($material->id, collect());
                 $pool = $pool->concat(self::topicQuestionPool($scoped, self::materialIsSanskrit($material)));
@@ -268,7 +268,10 @@ class MaterialPaperBank
                 $allTopics = $material->relationLoaded('topics')
                     ? $material->topics
                     : $material->topics()->orderBy('topic_order')->get();
-                $pool = $pool->concat(self::topicQuestionPool($allTopics, self::materialIsSanskrit($material)));
+                $pool = $pool->concat(self::topicQuestionPool(
+                    self::topicsWithQuestionData($allTopics),
+                    self::materialIsSanskrit($material)
+                ));
             }
         }
 
@@ -280,6 +283,36 @@ class MaterialPaperBank
         }
 
         return $pool;
+    }
+
+    /**
+     * Chapter lists load topics without section JSON or saved edits.
+     * Question counts need both, including the important flag.
+     *
+     * @param  Collection<int, MaterialTopic>  $topics
+     * @return Collection<int, MaterialTopic>
+     */
+    private static function topicsWithQuestionData(Collection $topics): Collection
+    {
+        $first = $topics->first();
+        if (! $first instanceof MaterialTopic) {
+            return $topics;
+        }
+
+        $attributes = $first->getAttributes();
+        if (array_key_exists('section_json', $attributes) && array_key_exists('question_edits', $attributes)) {
+            return $topics;
+        }
+
+        $ids = $topics->pluck('id')->filter()->values();
+        if ($ids->isEmpty()) {
+            return $topics;
+        }
+
+        return MaterialTopic::query()
+            ->whereIn('id', $ids->all())
+            ->orderBy('topic_order')
+            ->get();
     }
 
     /**
