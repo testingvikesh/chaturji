@@ -394,10 +394,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::resource('standards', StandardController::class)->except(['show']);
         Route::resource('paper-styles', PaperStyleController::class)->except(['show']);
-        Route::get('/paper-generate', [PaperGenerateController::class, 'create'])->name('paper-generate.create');
+        Route::get('/paper-generate', [PaperGenerateController::class, 'index'])->name('paper-generate.index');
+        Route::get('/paper-generate/create', [PaperGenerateController::class, 'create'])->name('paper-generate.create');
         Route::get('/paper-generate/chapters', [PaperGenerateController::class, 'chapters'])->name('paper-generate.chapters');
         Route::get('/paper-generate/available', [PaperGenerateController::class, 'available'])->name('paper-generate.available');
         Route::post('/paper-generate', [PaperGenerateController::class, 'store'])->name('paper-generate.store');
+        Route::get('/paper-generate/{generatedPaper}/print', [PaperGenerateController::class, 'print'])->name('paper-generate.print');
+        Route::get('/paper-generate/{generatedPaper}', [PaperGenerateController::class, 'show'])->name('paper-generate.show');
+        Route::delete('/paper-generate/{generatedPaper}', [PaperGenerateController::class, 'destroy'])->name('paper-generate.destroy');
         Route::get('/subjects', [SubjectController::class, 'manage'])->name('subjects.manage');
         Route::get('/standards/{standard}/subjects', [SubjectController::class, 'index'])->name('standards.subjects.index');
         Route::put('/standards/{standard}/subjects', [SubjectController::class, 'bulkUpdate'])->name('standards.subjects.bulk');

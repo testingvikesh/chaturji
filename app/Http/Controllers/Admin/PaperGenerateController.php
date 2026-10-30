@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\GeneratedPaper;
 use App\Models\Material;
 use App\Models\PaperStyle;
 use App\Models\Standard;
@@ -11,6 +12,7 @@ use App\Support\ExamPaperWeightage;
 use App\Support\MaterialPaperBank;
 use App\Support\PaperTypeHelper;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +20,28 @@ use Illuminate\View\View;
 
 class PaperGenerateController extends Controller
 {
+    public function index(): View
+    {
+        $papers = GeneratedPaper::query()
+            ->with(['standard:id,name', 'subject:id,name'])
+            ->select([
+                'id',
+                'standard_id',
+                'subject_id',
+                'medium',
+                'title',
+                'total_marks',
+                'total_questions',
+                'created_at',
+            ])
+            ->latest()
+            ->paginate(20);
+
+        return view('admin.paper-generate.index', [
+            'papers' => $papers,
+        ]);
+    }
+
     public function create(): View
     {
         $styles = PaperStyle::query()->get()->mapWithKeys(
@@ -74,7 +98,7 @@ class PaperGenerateController extends Controller
         return response()->json(['available' => $available]);
     }
 
-    public function store(Request $request): View
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'medium' => ['required', 'string', Rule::in(array_keys(Standard::MEDIUMS))],
@@ -115,17 +139,72 @@ class PaperGenerateController extends Controller
 
         $generated = MaterialPaperBank::generate($materials, null, $counts, $marks, true);
 
-        return view('admin.paper-generate.show', [
+        $questions = $generated['questions']->map(function ($question) use ($marks) {
+            $type = (string) $question->question_type;
+
+            return [
+                'question_type' => $type,
+                'question_text' => (string) $question->question_text,
+                'options' => $question->options,
+                'answer' => is_array($question->answer)
+                    ? json_encode($question->answer, JSON_UNESCAPED_UNICODE)
+                    : $question->answer,
+                'marks' => (int) ($marks[$type] ?? 1),
+            ];
+        })->values()->all();
+
+        $paper = GeneratedPaper::query()->create([
+            'user_id' => $request->user()?->id,
+            'standard_id' => $subject->standard_id,
+            'subject_id' => $subject->id,
+            'medium' => $medium,
             'title' => $validated['title'],
             'instructions' => $validated['instructions'] ?? null,
-            'durationMinutes' => $validated['duration_minutes'] ?? null,
-            'standardName' => trim(($subject->standard?->name ?? '').' · '.(Standard::MEDIUMS[$medium] ?? '')),
-            'subjectName' => $subject->name,
-            'grouped' => $generated['grouped'],
-            'breakdown' => $generated['breakdown'],
-            'totalMarks' => $generated['total_marks'],
-            'totalQuestions' => $generated['questions']->count(),
+            'duration_minutes' => $validated['duration_minutes'] ?? null,
+            'chapter_label' => $materials->map(fn (Material $material) => $material->displayChapterName())->implode(', '),
+            'chapter_ids' => $materials->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+            'type_counts' => $counts,
+            'questions' => $questions,
+            'total_marks' => $generated['total_marks'],
+            'total_questions' => count($questions),
         ]);
+
+        return redirect()
+            ->route('admin.paper-generate.show', $paper)
+            ->with('success', 'Paper generated from important questions.');
+    }
+
+    public function show(GeneratedPaper $generatedPaper): View
+    {
+        $generatedPaper->load(['standard:id,name', 'subject:id,name']);
+
+        return view('admin.paper-generate.show', [
+            'paper' => $generatedPaper,
+            'grouped' => $generatedPaper->groupedQuestions(),
+            'breakdown' => $generatedPaper->breakdown(),
+        ]);
+    }
+
+    public function print(GeneratedPaper $generatedPaper, Request $request): View
+    {
+        $generatedPaper->load(['standard:id,name,slug', 'subject:id,name']);
+        $withAnswers = $request->boolean('answers');
+
+        return view('admin.paper-generate.print', [
+            'paper' => $generatedPaper,
+            'withAnswers' => $withAnswers,
+            'grouped' => $generatedPaper->groupedQuestions(),
+            'breakdown' => $generatedPaper->breakdown(),
+        ]);
+    }
+
+    public function destroy(GeneratedPaper $generatedPaper): RedirectResponse
+    {
+        $generatedPaper->delete();
+
+        return redirect()
+            ->route('admin.paper-generate.index')
+            ->with('success', 'Generated paper deleted.');
     }
 
     private function mediumFrom(Request $request, ?Subject $subject): string

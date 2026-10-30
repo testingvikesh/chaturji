@@ -13,6 +13,8 @@
     'attemptCounts' => [],
     'optionalCounts' => [],
     'instructions' => null,
+    'showAnswers' => false,
+    'mediumLabel' => null,
 ])
 
 @php
@@ -30,7 +32,9 @@
     $standardModel = filled($standardSlug)
         ? \App\Models\Standard::query()->where('slug', $standardSlug)->first(['name', 'medium'])
         : null;
-    $mediumLabel = $standardModel?->mediumLabel() ?? 'Gujarati';
+    if (! filled($mediumLabel)) {
+        $mediumLabel = $standardModel?->mediumLabel() ?? 'Gujarati';
+    }
 
     $stdShort = trim((string) ($className !== '' ? $className : ($standardModel->name ?? '')));
     if (preg_match('/(\d+)/', $stdShort, $stdMatch)) {
@@ -50,6 +54,9 @@
     }
 
     $banner = strtoupper((string) $title).' • STD. '.$stdShort.' • '.strtoupper((string) $subjectName);
+    if ($showAnswers) {
+        $banner .= ' • WITH ANSWERS';
+    }
     $instructionGroups = \App\Support\ExamPaperHelper::instructionGroups($instructions);
     $questionNumber = 0;
     $sectionIndex = 0;
@@ -154,6 +161,8 @@
     .pdf-q-text { flex: 1; min-width: 0; }
     .pdf-q-text p { margin: 0; }
     .pdf-q-marks { white-space: nowrap; font-size: 11px; padding-top: 1px; }
+    .pdf-ans { margin: 4px 0 2px 34px; padding-top: 3px; border-top: 1px dashed #b7d7c5; font-size: 11px; color: #14532d; }
+    .pdf-ans ol { margin: 2px 0 0 16px; padding: 0; }
     .pdf-opts {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -381,6 +390,36 @@
                                             </ol>
                                         </div>
                                     </div>
+                                @endif
+                                @if ($showAnswers)
+                                    @php
+                                        $resolvedAnswer = \App\Support\ObjectiveQuestionResolver::answer($question);
+                                        $answerPoints = \App\Models\ChapterQuestion::usesPointwiseAnswer($resolvedType)
+                                            ? \App\Models\ChapterQuestion::answerPoints($resolvedAnswer)
+                                            : [];
+                                        foreach ($optionEntries as $entry) {
+                                            $answerText = trim((string) $resolvedAnswer);
+                                            if ($answerText !== '' && (strcasecmp($entry['key'], $answerText) === 0 || strcasecmp($entry['text'], $answerText) === 0)) {
+                                                $resolvedAnswer = strtoupper($entry['key']).'. '.$entry['text'];
+                                                $answerPoints = [];
+                                                break;
+                                            }
+                                        }
+                                    @endphp
+                                    @if (filled($resolvedAnswer))
+                                        <div class="pdf-ans">
+                                            <strong>Answer:</strong>
+                                            @if (count($answerPoints) > 1)
+                                                <ol>
+                                                    @foreach ($answerPoints as $point)
+                                                        <li>{!! \App\Support\MathMarkup::render($point) !!}</li>
+                                                    @endforeach
+                                                </ol>
+                                            @else
+                                                {!! \App\Support\MathMarkup::render($resolvedAnswer) !!}
+                                            @endif
+                                        </div>
+                                    @endif
                                 @endif
                             </div>
                         </td>

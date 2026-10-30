@@ -1,6 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
-        <x-admin.partials.page-header title="Paper Generate" subtitle="Quantities follow the paper style. Only important questions are used." />
+        <x-admin.partials.page-header title="Paper Generate" subtitle="Quantities follow the paper style. Only important questions are used.">
+            <x-slot name="actions">
+                <a href="{{ route('admin.paper-generate.index') }}" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">All papers</a>
+            </x-slot>
+        </x-admin.partials.page-header>
     </x-slot>
 
     <div class="admin-page">
