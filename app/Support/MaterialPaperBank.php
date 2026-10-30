@@ -252,7 +252,7 @@ class MaterialPaperBank
      * @param  Collection<int, MaterialTopic>|null  $topics  Empty = all topics in materials
      * @return Collection<int, ChapterQuestion>
      */
-    public static function questionPool(Collection $materials, ?Collection $topics = null): Collection
+    public static function questionPool(Collection $materials, ?Collection $topics = null, bool $importantOnly = false): Collection
     {
         $topics = $topics ?? collect();
         $pool = collect();
@@ -263,18 +263,23 @@ class MaterialPaperBank
                 $scoped = $scopeByMaterial->get($material->id, collect());
                 $pool = $pool->concat(self::topicQuestionPool($scoped, self::materialIsSanskrit($material)));
             }
-
-            return $pool->values();
+        } else {
+            foreach ($materials as $material) {
+                $allTopics = $material->relationLoaded('topics')
+                    ? $material->topics
+                    : $material->topics()->orderBy('topic_order')->get();
+                $pool = $pool->concat(self::topicQuestionPool($allTopics, self::materialIsSanskrit($material)));
+            }
         }
 
-        foreach ($materials as $material) {
-            $allTopics = $material->relationLoaded('topics')
-                ? $material->topics
-                : $material->topics()->orderBy('topic_order')->get();
-            $pool = $pool->concat(self::topicQuestionPool($allTopics, self::materialIsSanskrit($material)));
+        $pool = $pool->values();
+        if ($importantOnly) {
+            $pool = $pool->filter(
+                fn ($question) => $question instanceof ChapterQuestion && (bool) $question->is_important
+            )->values();
         }
 
-        return $pool->values();
+        return $pool;
     }
 
     /**
@@ -328,12 +333,12 @@ class MaterialPaperBank
      * @param  Collection<int, MaterialTopic>|null  $topics
      * @return array<string, int>
      */
-    public static function availableCounts(Collection $materials, ?Collection $topics = null): array
+    public static function availableCounts(Collection $materials, ?Collection $topics = null, bool $importantOnly = false): array
     {
         $counts = array_fill_keys(array_keys(PaperTypeHelper::types()), 0);
         $seen = [];
 
-        foreach (self::questionPool($materials, $topics) as $question) {
+        foreach (self::questionPool($materials, $topics, $importantOnly) as $question) {
             if (! $question instanceof ChapterQuestion) {
                 continue;
             }
@@ -369,7 +374,8 @@ class MaterialPaperBank
         Collection $materials,
         ?Collection $topics,
         array $typeCounts,
-        array $marksPerType = []
+        array $marksPerType = [],
+        bool $importantOnly = false
     ): array {
         if ($materials->isEmpty()) {
             throw ValidationException::withMessages([
@@ -383,8 +389,9 @@ class MaterialPaperBank
             ]);
         }
 
-        $pool = self::questionPool($materials, $topics);
-        $available = self::availableCounts($materials, $topics);
+        $pool = self::questionPool($materials, $topics, $importantOnly);
+        $available = self::availableCounts($materials, $topics, $importantOnly);
+        $availableWord = $importantOnly ? 'important question(s)' : 'question(s)';
 
         foreach ($typeCounts as $type => $count) {
             if (! array_key_exists($type, PaperTypeHelper::types()) || $count <= 0) {
@@ -393,7 +400,7 @@ class MaterialPaperBank
 
             if ($count > ($available[$type] ?? 0)) {
                 throw ValidationException::withMessages([
-                    "type_counts.{$type}" => PaperTypeHelper::label($type).' has only '.($available[$type] ?? 0).' question(s) available, but you requested '.$count.'.',
+                    "type_counts.{$type}" => PaperTypeHelper::label($type).' has only '.($available[$type] ?? 0).' '.$availableWord.' available, but you requested '.$count.'.',
                 ]);
             }
         }

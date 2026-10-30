@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ChapterController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EmailLogController;
 use App\Http\Controllers\Admin\DataUploadController;
+use App\Http\Controllers\Admin\PaperGenerateController;
 use App\Http\Controllers\Admin\PaperStyleController;
 use App\Http\Controllers\Admin\PromptController;
 use App\Http\Controllers\Admin\ReportController;
@@ -393,6 +394,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::resource('standards', StandardController::class)->except(['show']);
         Route::resource('paper-styles', PaperStyleController::class)->except(['show']);
+        Route::get('/paper-generate', [PaperGenerateController::class, 'create'])->name('paper-generate.create');
+        Route::get('/paper-generate/chapters', [PaperGenerateController::class, 'chapters'])->name('paper-generate.chapters');
+        Route::post('/paper-generate', [PaperGenerateController::class, 'store'])->name('paper-generate.store');
         Route::get('/subjects', [SubjectController::class, 'manage'])->name('subjects.manage');
         Route::get('/standards/{standard}/subjects', [SubjectController::class, 'index'])->name('standards.subjects.index');
         Route::put('/standards/{standard}/subjects', [SubjectController::class, 'bulkUpdate'])->name('standards.subjects.bulk');

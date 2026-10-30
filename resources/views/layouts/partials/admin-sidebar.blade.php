@@ -57,6 +57,10 @@
             <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M7 4h7l5 5v11a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
             Paper Styles
         </a>
+        <a href="{{ route('admin.paper-generate.create') }}" class="{{ request()->routeIs('admin.paper-generate.*') ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive' }}">
+            <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Paper Generate
+        </a>
 
         <p class="admin-sidebar-section">Reports</p>
         <a href="{{ route('admin.reports.index') }}" class="{{ \App\Support\AdminReportCatalog::isReportsSidebarActive() ? 'admin-sidebar-link-active' : 'admin-sidebar-link-inactive' }}">
