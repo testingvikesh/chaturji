@@ -30,6 +30,7 @@ class PaperGenerateController extends Controller
         return view('admin.paper-generate.create', [
             'standards' => Standard::query()->where('is_active', true)->orderedByNumber()->get(),
             'subjects' => Subject::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'standard_id', 'name']),
+            'mediums' => Standard::MEDIUMS,
             'paperTypes' => $types,
             'styleCounts' => $styles,
             'marksEach' => ExamPaperWeightage::MARKS_PER_QUESTION,
@@ -43,7 +44,7 @@ class PaperGenerateController extends Controller
             return response()->json(['chapters' => []]);
         }
 
-        $materials = Material::forStudentSubject($subject, $subject->standard?->medium);
+        $materials = Material::forStudentSubject($subject, $this->mediumFrom($request, $subject));
 
         return response()->json([
             'chapters' => $materials->map(fn (Material $material) => [
@@ -60,7 +61,7 @@ class PaperGenerateController extends Controller
             return response()->json(['available' => []]);
         }
 
-        $materials = Material::forStudentSubject($subject, $subject->standard?->medium);
+        $materials = Material::forStudentSubject($subject, $this->mediumFrom($request, $subject));
         $chapterIds = array_values(array_filter(array_map('intval', (array) $request->input('chapter_ids', []))));
         if ($chapterIds !== []) {
             $materials = $materials->whereIn('id', $chapterIds)->values();
@@ -76,6 +77,7 @@ class PaperGenerateController extends Controller
     public function store(Request $request): View
     {
         $validated = $request->validate([
+            'medium' => ['required', 'string', Rule::in(array_keys(Standard::MEDIUMS))],
             'standard_id' => ['required', 'integer', 'exists:standards,id'],
             'subject_id' => [
                 'required',
@@ -99,7 +101,13 @@ class PaperGenerateController extends Controller
         }
 
         $subject = Subject::query()->with('standard')->findOrFail($validated['subject_id']);
-        $materials = Material::forStudentSubject($subject, $subject->standard?->medium);
+        $medium = Material::normalizeMedium($validated['medium']) ?: 'english';
+        if ($subject->standard && Material::normalizeMedium($subject->standard->medium) !== $medium) {
+            throw ValidationException::withMessages([
+                'medium' => 'Choose a standard that belongs to this medium.',
+            ]);
+        }
+        $materials = Material::forStudentSubject($subject, $medium);
         $chapterIds = array_values(array_filter(array_map('intval', (array) ($validated['chapter_ids'] ?? []))));
         if ($chapterIds !== []) {
             $materials = $materials->whereIn('id', $chapterIds)->values();
@@ -116,12 +124,22 @@ class PaperGenerateController extends Controller
             'title' => $validated['title'],
             'instructions' => $validated['instructions'] ?? null,
             'durationMinutes' => $validated['duration_minutes'] ?? null,
-            'standardName' => $subject->standard?->name ?? '',
+            'standardName' => trim(($subject->standard?->name ?? '').' · '.(Standard::MEDIUMS[$medium] ?? '')),
             'subjectName' => $subject->name,
             'grouped' => $generated['grouped'],
             'breakdown' => $generated['breakdown'],
             'totalMarks' => $generated['total_marks'],
             'totalQuestions' => $generated['questions']->count(),
         ]);
+    }
+
+    private function mediumFrom(Request $request, ?Subject $subject): string
+    {
+        $medium = Material::normalizeMedium((string) $request->input('medium', ''));
+        if (in_array($medium, array_keys(Standard::MEDIUMS), true)) {
+            return $medium;
+        }
+
+        return Material::normalizeMedium($subject?->standard?->medium) ?: 'english';
     }
 }

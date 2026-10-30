@@ -17,13 +17,22 @@
         <form method="POST" action="{{ route('admin.paper-generate.store') }}" class="space-y-6">
             @csrf
             <div class="admin-card space-y-4 p-5 sm:p-6">
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <div>
+                        <label class="admin-label" for="medium">Medium</label>
+                        <select id="medium" name="medium" class="admin-select w-full" required>
+                            <option value="">Select medium</option>
+                            @foreach ($mediums as $value => $label)
+                                <option value="{{ $value }}" @selected(old('medium') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div>
                         <label class="admin-label" for="standard_id">Standard</label>
                         <select id="standard_id" name="standard_id" class="admin-select w-full" required>
                             <option value="">Select standard</option>
                             @foreach ($standards as $standard)
-                                <option value="{{ $standard->id }}" @selected((string) old('standard_id') === (string) $standard->id)>{{ $standard->name }}</option>
+                                <option value="{{ $standard->id }}" data-medium="{{ \App\Models\Material::normalizeMedium($standard->medium) }}" @selected((string) old('standard_id') === (string) $standard->id)>{{ $standard->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -56,7 +65,7 @@
 
                 <div>
                     <p class="admin-label">Chapters</p>
-                    <div id="chapter-list" class="max-h-52 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3 text-sm text-slate-500">Select a subject to load chapters.</div>
+                    <div id="chapter-list" class="max-h-52 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3 text-sm text-slate-500">Select a medium and subject to load chapters.</div>
                     <p class="mt-1 text-xs text-slate-500">Leave every chapter unticked to use all chapters. The paper uses only questions marked IMP.</p>
                 </div>
             </div>
@@ -113,6 +122,7 @@
     <script>
         (function () {
             const styles = @json($styleCounts);
+            const medium = document.getElementById('medium');
             const standard = document.getElementById('standard_id');
             const subject = document.getElementById('subject_id');
             const note = document.getElementById('style-note');
@@ -122,6 +132,7 @@
             const oldChapters = @json(array_map('strval', (array) old('chapter_ids', [])));
             const countInputs = Array.from(document.querySelectorAll('[data-type-count]'));
             const subjectOptions = subject ? Array.from(subject.options) : [];
+            const standardOptions = standard ? Array.from(standard.options) : [];
             let availableCounts = {};
             let availableTimer = null;
 
@@ -161,6 +172,29 @@
                 refreshMarks();
             }
 
+            function queryWithMedium(url, extra) {
+                const params = new URLSearchParams();
+                params.set('subject_id', subject.value);
+                if (medium && medium.value) params.set('medium', medium.value);
+                (extra || []).forEach(function (id) {
+                    params.append('chapter_ids[]', id);
+                });
+                return url + '?' + params.toString();
+            }
+
+            function filterStandards() {
+                const selected = medium ? medium.value : '';
+                let keep = false;
+                standardOptions.forEach(function (option, index) {
+                    if (index === 0) return;
+                    const show = selected !== '' && option.getAttribute('data-medium') === selected;
+                    option.hidden = !show;
+                    option.disabled = !show;
+                    if (show && option.value === standard.value) keep = true;
+                });
+                if (!keep) standard.value = '';
+            }
+
             function filterSubjects() {
                 const selected = standard.value;
                 let keep = false;
@@ -175,12 +209,12 @@
             }
 
             function loadChapters() {
-                chapterList.textContent = subject.value ? 'Loading chapters…' : 'Select a subject to load chapters.';
+                chapterList.textContent = subject.value ? 'Loading chapters…' : 'Select a medium and subject to load chapters.';
                 if (!subject.value) {
                     scheduleAvailable();
                     return;
                 }
-                fetch(chaptersUrl + '?subject_id=' + encodeURIComponent(subject.value), { headers: { 'Accept': 'application/json' } })
+                fetch(queryWithMedium(chaptersUrl), { headers: { 'Accept': 'application/json' } })
                     .then(function (res) { return res.json(); })
                     .then(function (data) {
                         const chapters = Array.isArray(data.chapters) ? data.chapters : [];
@@ -229,12 +263,7 @@
                     refreshMarks();
                     return;
                 }
-                const params = new URLSearchParams();
-                params.set('subject_id', subject.value);
-                selectedChapterIds().forEach(function (id) {
-                    params.append('chapter_ids[]', id);
-                });
-                fetch(availableUrl + '?' + params.toString(), { headers: { 'Accept': 'application/json' } })
+                fetch(queryWithMedium(availableUrl, selectedChapterIds()), { headers: { 'Accept': 'application/json' } })
                     .then(function (res) { return res.json(); })
                     .then(function (data) {
                         availableCounts = data && data.available ? data.available : {};
@@ -244,6 +273,14 @@
             }
 
             countInputs.forEach(function (input) { input.addEventListener('input', refreshMarks); });
+            if (medium) {
+                medium.addEventListener('change', function () {
+                    filterStandards();
+                    filterSubjects();
+                    applyStyle();
+                    loadChapters();
+                });
+            }
             standard.addEventListener('change', function () {
                 filterSubjects();
                 applyStyle();
@@ -253,6 +290,7 @@
                 applyStyle();
                 loadChapters();
             });
+            filterStandards();
             filterSubjects();
             if (!@json(old('type_counts') !== null)) applyStyle();
             else refreshMarks();
