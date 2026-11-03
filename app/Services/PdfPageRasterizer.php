@@ -223,6 +223,10 @@ class PdfPageRasterizer
      */
     private function rasterizeWithPdftoppm(string $pdfPath, int $dpi): array
     {
+        if (! function_exists('exec')) {
+            return [];
+        }
+
         $outputDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'pdf_ocr_'.uniqid();
 
         if (! @mkdir($outputDir) && ! is_dir($outputDir)) {

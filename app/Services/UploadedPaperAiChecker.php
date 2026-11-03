@@ -7,6 +7,7 @@ use App\Models\ExamPaperUpload;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Throwable;
 
 class UploadedPaperAiChecker
 {
@@ -34,16 +35,11 @@ class UploadedPaperAiChecker
         }
 
         $cleanup = [];
-        $paperImages = $this->pageImages($paperPath, 4, $cleanup);
-        $sheetImages = $this->pageImages($sheetPath, 6, $cleanup);
-
-        if ($paperImages === [] || $sheetImages === []) {
-            $this->cleanup($cleanup);
-            throw new RuntimeException('Could not read the question paper or the answer sheet as images.');
-        }
 
         try {
-            $result = $this->requestCheck($key, $paper, $paperImages, $sheetImages);
+            $paperParts = $this->documentParts($paperPath, 'QUESTION PAPER', 4, $cleanup);
+            $sheetParts = $this->documentParts($sheetPath, 'STUDENT ANSWER SHEET', 6, $cleanup);
+            $result = $this->requestCheck($key, $paper, $paperParts, $sheetParts);
         } finally {
             $this->cleanup($cleanup);
         }
@@ -75,28 +71,64 @@ class UploadedPaperAiChecker
     }
 
     /**
-     * @param  array<int, string>  $paperImages
-     * @param  array<int, string>  $sheetImages
+     * Page images when the server can make them. A PDF is sent as-is when exec() or Imagick is unavailable.
+     *
+     * @param  array<int, string>  $cleanup
+     * @return array<int, array<string, mixed>>
+     */
+    private function documentParts(string $path, string $label, int $limit, array &$cleanup): array
+    {
+        try {
+            $images = $this->pageImages($path, $limit, $cleanup);
+        } catch (Throwable) {
+            $images = [];
+        }
+
+        if ($images !== []) {
+            $parts = [];
+            foreach ($images as $index => $image) {
+                $parts[] = ['type' => 'text', 'text' => $label.' page '.($index + 1).'.'];
+                $parts[] = $this->imagePart($image);
+            }
+
+            return $parts;
+        }
+
+        if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) !== 'pdf') {
+            throw new RuntimeException('Could not read the '.$label.' file.');
+        }
+
+        $bytes = file_get_contents($path);
+        if ($bytes === false || $bytes === '') {
+            throw new RuntimeException('Could not read the '.$label.' file.');
+        }
+
+        return [
+            ['type' => 'text', 'text' => $label.' PDF. Read every page.'],
+            [
+                'type' => 'file',
+                'file' => [
+                    'filename' => $label.'.pdf',
+                    'file_data' => 'data:application/pdf;base64,'.base64_encode($bytes),
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $paperParts
+     * @param  array<int, array<string, mixed>>  $sheetParts
      * @return array<string, mixed>
      */
-    private function requestCheck(string $key, ExamPaperUpload $paper, array $paperImages, array $sheetImages): array
+    private function requestCheck(string $key, ExamPaperUpload $paper, array $paperParts, array $sheetParts): array
     {
-        $standard = $paper->standard;
-        $language = $standard?->mediumLabel() ?: 'English';
+        $language = $paper->standard?->mediumLabel() ?: 'English';
         $content = [[
             'type' => 'text',
-            'text' => $this->prompt($paper, $language, count($paperImages), count($sheetImages)),
+            'text' => $this->prompt($paper, $language),
         ]];
 
-        foreach ($paperImages as $index => $path) {
-            $content[] = ['type' => 'text', 'text' => 'QUESTION PAPER page '.($index + 1).'.'];
-            $content[] = $this->imagePart($path);
-        }
-
-        foreach ($sheetImages as $index => $path) {
-            $content[] = ['type' => 'text', 'text' => 'STUDENT ANSWER SHEET page '.($index + 1).'.'];
-            $content[] = $this->imagePart($path);
-        }
+        array_push($content, ...$paperParts, ...$sheetParts);
 
         $response = Http::withToken($key)
             ->timeout(120)
@@ -133,12 +165,12 @@ class UploadedPaperAiChecker
         return $payload;
     }
 
-    private function prompt(ExamPaperUpload $paper, string $language, int $paperPages, int $sheetPages): string
+    private function prompt(ExamPaperUpload $paper, string $language): string
     {
         $standard = trim(($paper->standard?->name ?: '').' '.$language);
 
         return <<<PROMPT
-You are a school exam checker. The first {$paperPages} image(s) are the question paper. The next {$sheetPages} image(s) are one student's handwritten answer sheet.
+You are a school exam checker. The question paper comes first. One student's handwritten answer sheet comes after it. Each may be page images or a PDF.
 
 Paper: {$paper->title}
 Class: {$standard}
