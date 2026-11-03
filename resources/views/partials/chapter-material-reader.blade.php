@@ -236,6 +236,23 @@
     }
     $hasSummaryLinks = $summaryLinks->isNotEmpty();
     $hideDetailsUntilEye = (bool) $hideDetailsUntilEye;
+
+    $studyNoteBlocks = collect();
+    foreach (collect([$introduction, $trailer, $importance])->filter()->merge($bodySections) as $noteSection) {
+        $notePoints = $noteSection->contentPoints();
+        $noteText = trim((string) ($noteSection->content ?? ''));
+        if ($notePoints === [] && $noteText !== '') {
+            $notePoints = [$noteText];
+        }
+        if ($notePoints === []) {
+            continue;
+        }
+        $studyNoteBlocks->push([
+            'title' => $noteSection->displayTitle(),
+            'points' => $notePoints,
+        ]);
+    }
+    $studyFillBlanks = collect($otherQuestionGroups['fill_blank'] ?? []);
     $sectionLabels = $summaryLinks->mapWithKeys(fn ($link) => [$link['anchor'] => $link['label']])->all();
     $tocToggleAttrs = function (string $anchor) use ($hideDetailsUntilEye): string {
         if (! $hideDetailsUntilEye) {
@@ -255,6 +272,7 @@
                 textbookOpen: false,
                 textbookLoading: false,
                 textbookTimer: null,
+                studyPanel: null,
                 summaryOpen: false,
                 sectionWise: !!config.sectionWise,
                 clickUrl: config.clickUrl || '',
@@ -391,7 +409,19 @@
                     this.textbookOpen = false;
                     this.textbookLoading = false;
                     clearTimeout(this.textbookTimer);
-                    document.body.classList.remove('overflow-hidden');
+                    if (!this.studyPanel && !this.summaryOpen && !this.pdfOpen) {
+                        document.body.classList.remove('overflow-hidden');
+                    }
+                },
+                openStudy(kind) {
+                    this.studyPanel = kind;
+                    document.body.classList.add('overflow-hidden');
+                },
+                closeStudy() {
+                    this.studyPanel = null;
+                    if (!this.textbookOpen && !this.summaryOpen && !this.pdfOpen) {
+                        document.body.classList.remove('overflow-hidden');
+                    }
                 },
                 goToSummaryPoint(anchor) {
                     this.summaryOpen = false;
@@ -427,7 +457,7 @@
         };
     </script>
 @endonce
-<div class="admin-page material-reader" x-data="materialReader({{ \Illuminate\Support\Js::from(['sectionWise' => (bool) $hideDetailsUntilEye, 'clickUrl' => (string) ($clickTrackUrl ?? ''), 'topicPage' => (int) ($topicPageNumber ?: 0)]) }})" @keydown.escape.window="closeTextbook()" @textbook-ready.window="onTextbookLoaded()">
+<div class="admin-page material-reader" x-data="materialReader({{ \Illuminate\Support\Js::from(['sectionWise' => (bool) $hideDetailsUntilEye, 'clickUrl' => (string) ($clickTrackUrl ?? ''), 'topicPage' => (int) ($topicPageNumber ?: 0)]) }})" @keydown.escape.window="closeTextbook(); closeStudy()" @textbook-ready.window="onTextbookLoaded()">
     @if ($hasSummaryLinks)
         <button type="button"
                 @click="summaryOpen = true"
@@ -453,6 +483,24 @@
                 Textbook
             </button>
         @endif
+        <button type="button"
+                @click="openStudy('note')"
+                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs sm:text-sm font-semibold shadow-sm transition"
+                style="border-color:#d4af37;background:#fff8e6;color:#8a6a12;">
+            Summary Note
+        </button>
+        <button type="button"
+                @click="openStudy('fill')"
+                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs sm:text-sm font-semibold shadow-sm transition"
+                style="border-color:#1a367c;background:#eef2ff;color:#1a367c;">
+            Summary Fill Blanks
+        </button>
+        <button type="button"
+                @click="openStudy('mindmap')"
+                class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs sm:text-sm font-semibold shadow-sm transition"
+                style="border-color:#0f766e;background:#ecfdf5;color:#0f766e;">
+            Mindmap
+        </button>
         @if ($content->hasOriginalPdf())
             <button type="button"
                     @click="pdfOpen = true"
@@ -461,6 +509,84 @@
                 Practice PDF
             </button>
         @endif
+    </div>
+
+    <div x-show="studyPanel" x-cloak class="fixed inset-0 z-[210] flex items-center justify-center bg-slate-900/60 p-3 sm:p-6" @click.self="closeStudy()">
+        <div class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" @click.stop>
+            <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                <p class="text-sm font-bold text-slate-900" x-text="studyPanel === 'fill' ? 'Summary Fill Blanks' : (studyPanel === 'mindmap' ? 'Mindmap' : 'Summary Note')"></p>
+                <button type="button" @click="closeStudy()" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700">Close</button>
+            </div>
+            <div class="overflow-y-auto px-4 py-4 sm:px-6">
+                <div x-show="studyPanel === 'note'" class="space-y-4">
+                    @forelse ($studyNoteBlocks as $block)
+                        <section>
+                            <h3 class="text-sm font-bold text-slate-900">{{ $block['title'] }}</h3>
+                            <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
+                                @foreach ($block['points'] as $point)
+                                    <li>{!! \App\Support\MathMarkup::render($point) !!}</li>
+                                @endforeach
+                            </ul>
+                        </section>
+                    @empty
+                        <p class="text-sm text-slate-500">No summary note for this topic yet.</p>
+                    @endforelse
+                </div>
+                <div x-show="studyPanel === 'fill'" class="space-y-4">
+                    @forelse ($studyFillBlanks as $blank)
+                        @php
+                            $blankAnswer = \App\Support\ObjectiveQuestionResolver::answer($blank);
+                            $blankOptions = $blank->options;
+                            if (is_string($blankOptions)) {
+                                $blankOptions = json_decode($blankOptions, true);
+                            }
+                            $blankEntries = \App\Support\ObjectiveOptionHelper::entries(is_array($blankOptions) ? $blankOptions : [], 'fill_blank');
+                            foreach ($blankEntries as $entry) {
+                                $answerText = trim((string) $blankAnswer);
+                                if ($answerText !== '' && (strcasecmp($entry['key'], $answerText) === 0 || strcasecmp($entry['text'], $answerText) === 0)) {
+                                    $blankAnswer = strtoupper($entry['key']).'. '.$entry['text'];
+                                    break;
+                                }
+                            }
+                        @endphp
+                        <div class="rounded-xl border border-slate-200 p-3" x-data="{ open: false }">
+                            <p class="text-sm font-medium text-slate-900">{!! \App\Support\MathMarkup::render($blank->question_text) !!}</p>
+                            @if ($blankEntries !== [])
+                                <div class="mt-2 grid gap-1 text-sm text-slate-700 sm:grid-cols-2">
+                                    @foreach ($blankEntries as $entry)
+                                        <p>{{ strtoupper($entry['key']) }}. {!! \App\Support\MathMarkup::render($entry['text']) !!}</p>
+                                    @endforeach
+                                </div>
+                            @endif
+                            @if (filled($blankAnswer))
+                                <button type="button" @click="open = !open" class="mt-2 text-xs font-bold text-brand-green" x-text="open ? 'Hide answer' : 'See answer'"></button>
+                                <p x-show="open" x-cloak class="mt-1 text-sm font-semibold text-emerald-800">Answer: {!! \App\Support\MathMarkup::render($blankAnswer) !!}</p>
+                            @endif
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500">No fill in the blanks for this topic yet.</p>
+                    @endforelse
+                </div>
+                <div x-show="studyPanel === 'mindmap'">
+                    <div class="mx-auto mb-4 max-w-xs rounded-2xl px-4 py-3 text-center text-sm font-bold text-white" style="background:#1a367c;">
+                        {{ $materialTopic?->displayName() ?? ($content->title ?? 'Topic') }}
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        @forelse ($summaryLinks as $link)
+                            <button type="button"
+                                    data-anchor="{{ $link['anchor'] }}"
+                                    @click="closeStudy(); goToSummaryPoint($el.dataset.anchor)"
+                                    class="rounded-full border px-3 py-1.5 text-xs font-semibold"
+                                    style="border-color:#0f766e;background:#ecfdf5;color:#0f766e;">
+                                {{ $link['label'] }}
+                            </button>
+                        @empty
+                            <p class="text-sm text-slate-500">No mindmap for this topic yet.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     @if ($topicPageImage && $material)
