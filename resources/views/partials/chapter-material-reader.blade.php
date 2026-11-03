@@ -239,10 +239,17 @@
 
     $studyNoteBlocks = collect();
     foreach (collect([$introduction, $trailer, $importance])->filter()->merge($bodySections) as $noteSection) {
-        $notePoints = $noteSection->contentPoints();
-        $noteText = trim((string) ($noteSection->content ?? ''));
-        if ($notePoints === [] && $noteText !== '') {
-            $notePoints = [$noteText];
+        $noteLines = preg_split('/\r\n|\r|\n/u', (string) ($noteSection->content ?? '')) ?: [];
+        $notePoints = [];
+        foreach ($noteLines as $noteLine) {
+            $noteLine = trim($noteLine);
+            if ($noteLine === '') {
+                continue;
+            }
+            $noteLine = preg_replace('/^\d+\.\s*/u', '', $noteLine) ?? $noteLine;
+            if ($noteLine !== '') {
+                $notePoints[] = $noteLine;
+            }
         }
         if ($notePoints === []) {
             continue;
@@ -511,83 +518,107 @@
         @endif
     </div>
 
-    <div x-show="studyPanel" x-cloak class="fixed inset-0 z-[210] flex items-center justify-center bg-slate-900/60 p-3 sm:p-6" @click.self="closeStudy()">
-        <div class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" @click.stop>
-            <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
-                <p class="text-sm font-bold text-slate-900" x-text="studyPanel === 'fill' ? 'Summary Fill Blanks' : (studyPanel === 'mindmap' ? 'Mindmap' : 'Summary Note')"></p>
-                <button type="button" @click="closeStudy()" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700">Close</button>
-            </div>
-            <div class="overflow-y-auto px-4 py-4 sm:px-6">
-                <div x-show="studyPanel === 'note'" class="space-y-4">
-                    @forelse ($studyNoteBlocks as $block)
-                        <section>
-                            <h3 class="text-sm font-bold text-slate-900">{{ $block['title'] }}</h3>
-                            <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
-                                @foreach ($block['points'] as $point)
-                                    <li>{!! \App\Support\MathMarkup::render($point) !!}</li>
-                                @endforeach
-                            </ul>
-                        </section>
-                    @empty
-                        <p class="text-sm text-slate-500">No summary note for this topic yet.</p>
-                    @endforelse
+    @once
+        <style>
+            .study-modal { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100dvh; padding: 16px; background: rgba(15, 23, 42, 0.65); }
+            .study-modal-panel { display: flex; flex-direction: column; width: min(860px, 100%); max-height: min(92dvh, 100%); overflow: hidden; background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28); }
+            .study-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e2e8f0; }
+            .study-modal-body { overflow-y: auto; padding: 18px 20px 28px; font-family: "Nirmala UI", "Noto Sans Gujarati", "Noto Sans Devanagari", sans-serif; }
+            .study-note-block { margin-bottom: 18px; }
+            .study-note-block h3 { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #1a367c; }
+            .study-note-list { margin: 0; padding-left: 1.25rem; }
+            .study-note-list li { margin: 6px 0; line-height: 1.6; color: #1e293b; }
+            .study-fill { margin-bottom: 12px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; }
+            .study-fill p { margin: 0; line-height: 1.55; }
+            .study-fill-options { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-top: 8px; }
+            .study-answer-btn { margin-top: 8px; border: 0; background: transparent; color: #1a367c; font-weight: 800; cursor: pointer; }
+            .study-answer { margin-top: 6px; font-weight: 700; color: #166534; }
+            .study-map { display: flex; flex-direction: column; align-items: center; }
+            .study-map-center { max-width: 280px; padding: 12px 18px; border-radius: 16px; background: #1a367c; color: #fff; text-align: center; font-weight: 800; }
+            .study-map-stem { width: 2px; height: 18px; background: #94a3b8; }
+            .study-map-branches { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+            .study-map-branch { border: 1px solid #0f766e; background: #ecfdf5; color: #0f766e; border-radius: 999px; padding: 8px 14px; font-weight: 700; cursor: pointer; }
+        </style>
+    @endonce
+    <template x-teleport="body">
+        <div x-show="studyPanel" x-cloak class="study-modal" style="display: none;" @click.self="closeStudy()">
+            <div class="study-modal-panel" @click.stop>
+                <div class="study-modal-head">
+                    <p class="text-sm font-bold text-slate-900" x-text="studyPanel === 'fill' ? 'Summary Fill Blanks' : (studyPanel === 'mindmap' ? 'Mindmap' : 'Summary Note')"></p>
+                    <button type="button" @click="closeStudy()" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700">Close</button>
                 </div>
-                <div x-show="studyPanel === 'fill'" class="space-y-4">
-                    @forelse ($studyFillBlanks as $blank)
-                        @php
-                            $blankAnswer = \App\Support\ObjectiveQuestionResolver::answer($blank);
-                            $blankOptions = $blank->options;
-                            if (is_string($blankOptions)) {
-                                $blankOptions = json_decode($blankOptions, true);
-                            }
-                            $blankEntries = \App\Support\ObjectiveOptionHelper::entries(is_array($blankOptions) ? $blankOptions : [], 'fill_blank');
-                            foreach ($blankEntries as $entry) {
-                                $answerText = trim((string) $blankAnswer);
-                                if ($answerText !== '' && (strcasecmp($entry['key'], $answerText) === 0 || strcasecmp($entry['text'], $answerText) === 0)) {
-                                    $blankAnswer = strtoupper($entry['key']).'. '.$entry['text'];
-                                    break;
-                                }
-                            }
-                        @endphp
-                        <div class="rounded-xl border border-slate-200 p-3" x-data="{ open: false }">
-                            <p class="text-sm font-medium text-slate-900">{!! \App\Support\MathMarkup::render($blank->question_text) !!}</p>
-                            @if ($blankEntries !== [])
-                                <div class="mt-2 grid gap-1 text-sm text-slate-700 sm:grid-cols-2">
-                                    @foreach ($blankEntries as $entry)
-                                        <p>{{ strtoupper($entry['key']) }}. {!! \App\Support\MathMarkup::render($entry['text']) !!}</p>
+                <div class="study-modal-body">
+                    <div x-show="studyPanel === 'note'">
+                        @forelse ($studyNoteBlocks as $block)
+                            <section class="study-note-block">
+                                <h3>{{ $block['title'] }}</h3>
+                                <ul class="study-note-list">
+                                    @foreach ($block['points'] as $point)
+                                        <li>{!! \App\Support\MathMarkup::render($point) !!}</li>
                                     @endforeach
-                                </div>
-                            @endif
-                            @if (filled($blankAnswer))
-                                <button type="button" @click="open = !open" class="mt-2 text-xs font-bold text-brand-green" x-text="open ? 'Hide answer' : 'See answer'"></button>
-                                <p x-show="open" x-cloak class="mt-1 text-sm font-semibold text-emerald-800">Answer: {!! \App\Support\MathMarkup::render($blankAnswer) !!}</p>
-                            @endif
-                        </div>
-                    @empty
-                        <p class="text-sm text-slate-500">No fill in the blanks for this topic yet.</p>
-                    @endforelse
-                </div>
-                <div x-show="studyPanel === 'mindmap'">
-                    <div class="mx-auto mb-4 max-w-xs rounded-2xl px-4 py-3 text-center text-sm font-bold text-white" style="background:#1a367c;">
-                        {{ $materialTopic?->displayName() ?? ($content->title ?? 'Topic') }}
-                    </div>
-                    <div class="flex flex-wrap justify-center gap-2">
-                        @forelse ($summaryLinks as $link)
-                            <button type="button"
-                                    data-anchor="{{ $link['anchor'] }}"
-                                    @click="closeStudy(); goToSummaryPoint($el.dataset.anchor)"
-                                    class="rounded-full border px-3 py-1.5 text-xs font-semibold"
-                                    style="border-color:#0f766e;background:#ecfdf5;color:#0f766e;">
-                                {{ $link['label'] }}
-                            </button>
+                                </ul>
+                            </section>
                         @empty
-                            <p class="text-sm text-slate-500">No mindmap for this topic yet.</p>
+                            <p class="text-sm text-slate-500">No summary note for this topic yet.</p>
                         @endforelse
+                    </div>
+                    <div x-show="studyPanel === 'fill'">
+                        @forelse ($studyFillBlanks as $blank)
+                            @php
+                                $blankAnswer = \App\Support\ObjectiveQuestionResolver::answer($blank);
+                                $blankOptions = $blank->options;
+                                if (is_string($blankOptions)) {
+                                    $blankOptions = json_decode($blankOptions, true);
+                                }
+                                $blankEntries = \App\Support\ObjectiveOptionHelper::entries(is_array($blankOptions) ? $blankOptions : [], 'fill_blank');
+                                foreach ($blankEntries as $entry) {
+                                    $answerText = trim((string) $blankAnswer);
+                                    if ($answerText !== '' && (strcasecmp($entry['key'], $answerText) === 0 || strcasecmp($entry['text'], $answerText) === 0)) {
+                                        $blankAnswer = strtoupper($entry['key']).'. '.$entry['text'];
+                                        break;
+                                    }
+                                }
+                            @endphp
+                            <div class="study-fill" x-data="{ open: false }">
+                                <p><strong>{{ $loop->iteration }}.</strong> {!! \App\Support\MathMarkup::render($blank->question_text) !!}</p>
+                                @if ($blankEntries !== [])
+                                    <div class="study-fill-options">
+                                        @foreach ($blankEntries as $entry)
+                                            <p>{{ strtoupper($entry['key']) }}. {!! \App\Support\MathMarkup::render($entry['text']) !!}</p>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                @if (filled($blankAnswer))
+                                    <button type="button" class="study-answer-btn" @click="open = !open" x-text="open ? 'Hide answer' : 'See answer'"></button>
+                                    <p class="study-answer" x-show="open" x-cloak>Answer: {!! \App\Support\MathMarkup::render($blankAnswer) !!}</p>
+                                @endif
+                            </div>
+                        @empty
+                            <p class="text-sm text-slate-500">No fill in the blanks for this topic yet.</p>
+                        @endforelse
+                    </div>
+                    <div x-show="studyPanel === 'mindmap'" class="study-map">
+                        <div class="study-map-center">{{ $materialTopic?->displayName() ?? ($content->title ?? 'Topic') }}</div>
+                        @if ($summaryLinks->isNotEmpty())
+                            <div class="study-map-stem"></div>
+                        @endif
+                        <div class="study-map-branches">
+                            @forelse ($summaryLinks as $link)
+                                <button type="button"
+                                        class="study-map-branch"
+                                        data-anchor="{{ $link['anchor'] }}"
+                                        @click="closeStudy(); goToSummaryPoint($el.dataset.anchor)">
+                                    {{ $link['label'] }}
+                                </button>
+                            @empty
+                                <p class="text-sm text-slate-500">No mindmap for this topic yet.</p>
+                            @endforelse
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </template>
 
     @if ($topicPageImage && $material)
         @php
