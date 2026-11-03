@@ -499,26 +499,36 @@
 
     @once
         <style>
-            .study-modal { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100dvh; padding: 16px; background: rgba(15, 23, 42, 0.65); }
-            .study-modal-panel { display: flex; flex-direction: column; width: min(860px, 100%); max-height: min(92dvh, 100%); overflow: hidden; background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28); }
-            .study-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e2e8f0; }
-            .study-modal-body { overflow-y: auto; padding: 18px 20px 28px; font-family: "Nirmala UI", "Noto Sans Gujarati", "Noto Sans Devanagari", sans-serif; }
-            .study-note-page { background: #fffdf8; border: 1px solid #e4d7b8; border-radius: 16px; padding: 16px 18px 20px; margin-bottom: 16px; }
-            .study-note-page h3 { margin: 12px 0 6px; font-size: 1.05rem; }
-            .study-note-page h4 { margin: 8px 0 4px; }
-            .study-note-page ul { margin: 4px 0 8px; padding-left: 1.2rem; }
-            .study-note-page li { margin: 4px 0; line-height: 1.5; }
-            .study-note-rule { color: #9a8b6e; letter-spacing: 0.12em; margin: 12px 0; }
+            .study-modal { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100dvh; padding: 16px; background: rgba(11, 24, 56, 0.62); }
+            .study-modal-panel { display: flex; flex-direction: column; width: min(880px, 100%); max-height: min(92dvh, 100%); overflow: hidden; background: #f6f3ea; border-radius: 22px; box-shadow: 0 28px 70px rgba(11, 24, 56, 0.35); border: 1px solid #e7d7b0; }
+            .study-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: linear-gradient(90deg, #0b2a5b, #1a367c); color: #fff; }
+            .study-modal-head p { margin: 0; color: #fff; font-size: 16px; letter-spacing: 0.01em; }
+            .study-close { border: 0; border-radius: 999px; background: #d4af37; color: #1a367c; font-weight: 800; padding: 7px 14px; cursor: pointer; }
+            .study-modal-body { overflow-y: auto; padding: 18px 18px 28px; font-family: "Nirmala UI", "Noto Sans Gujarati", "Noto Sans Devanagari", sans-serif; color: #1c1408; }
+            .study-kicker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+            .study-kicker span { display: inline-flex; align-items: center; border-radius: 999px; background: #fff4cc; color: #0b2a5b; font-weight: 800; font-size: 12px; padding: 4px 10px; }
+            .study-note-page { background: #fffdf8; border: 1px solid #e4d7b8; border-radius: 18px; padding: 16px 18px 8px; margin-bottom: 16px; box-shadow: 0 8px 20px rgba(122, 92, 28, 0.06); }
+            .study-note-page h3 { margin: 14px 0 8px; font-size: 1.12rem; color: #0b2a5b; }
+            .study-label { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0 6px; color: #1d4ed8; font-weight: 800; }
+            .study-points { list-style: none; margin: 0 0 10px; padding: 0; }
+            .study-points li { position: relative; margin: 0 0 8px; padding: 8px 10px 8px 28px; line-height: 1.55; background: #fff; border-radius: 12px; border: 1px solid #f1e6cc; }
+            .study-points li:before { content: ""; position: absolute; left: 12px; top: 15px; width: 7px; height: 7px; border-radius: 99px; background: #d4af37; }
+            .study-remember { margin: 8px 0 12px; padding: 10px 12px; border-radius: 12px; background: #eef6ff; color: #0b2a5b; font-weight: 700; line-height: 1.5; }
+            .study-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+            .study-chips span, .study-flow { display: inline-block; background: #fff4cc; border-radius: 12px; padding: 7px 10px; font-weight: 700; }
+            .study-flow { display: block; margin: 0 0 8px; text-align: center; }
+            .study-trick { margin: 0 0 12px; padding: 12px; border-radius: 14px; background: #fff7ed; border: 1px dashed #fdba74; font-weight: 700; line-height: 1.5; }
             .study-note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-            .study-note-actions button { background: #0b2a5b; color: #fff; border: 0; border-radius: 10px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
-            .study-fill { margin: 10px 0 14px; }
-            .study-answer-btn { margin-top: 6px; background: #1d4ed8; color: #fff; border: 0; border-radius: 10px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
-            .study-answer { margin-top: 6px; background: #ecfdf5; border-radius: 10px; padding: 8px 10px; font-weight: 700; color: #166534; }
-            .study-map { display: flex; flex-direction: column; align-items: center; }
-            .study-map-center { max-width: 280px; padding: 12px 18px; border-radius: 16px; background: #1a367c; color: #fff; text-align: center; font-weight: 800; }
-            .study-map-stem { width: 2px; height: 18px; background: #94a3b8; }
+            .study-note-actions button, .study-answer-btn { background: #0b2a5b; color: #fff; border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 800; cursor: pointer; }
+            .study-answer-btn { background: #1d4ed8; margin-top: 8px; }
+            .study-fill { margin: 0 0 12px; padding: 12px; border-radius: 14px; background: #fff; border: 1px solid #e4d7b8; }
+            .study-fill p { margin: 0; line-height: 1.55; }
+            .study-answer { margin-top: 8px; background: #ecfdf5; border-radius: 12px; padding: 8px 10px; font-weight: 800; color: #166534; }
+            .study-map { display: flex; flex-direction: column; align-items: center; padding-top: 8px; }
+            .study-map-center { min-width: 180px; max-width: 320px; padding: 16px 22px; border-radius: 18px; background: linear-gradient(180deg, #1a367c, #0b2a5b); color: #fff; text-align: center; font-weight: 800; box-shadow: 0 10px 24px rgba(11, 42, 91, 0.25); }
+            .study-map-stem { width: 2px; height: 22px; background: #d4af37; }
             .study-map-branches { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
-            .study-map-branch { border: 1px solid #0f766e; background: #ecfdf5; color: #0f766e; border-radius: 999px; padding: 8px 14px; font-weight: 700; cursor: pointer; }
+            .study-map-branch { border: 0; background: #fff; color: #0b2a5b; border-radius: 999px; padding: 9px 14px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 16px rgba(122, 92, 28, 0.08); }
         </style>
     @endonce
     <template x-teleport="body">
@@ -526,52 +536,51 @@
             <div class="study-modal-panel" @click.stop>
                 <div class="study-modal-head">
                     <p class="text-sm font-bold text-slate-900" x-text="studyPanel === 'fill' ? 'Summary Fill Blanks' : (studyPanel === 'mindmap' ? 'Mindmap' : 'Summary Note')"></p>
-                    <button type="button" @click="closeStudy()" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700">Close</button>
+                    <button type="button" @click="closeStudy()" class="study-close">Close</button>
                 </div>
                 <div class="study-modal-body">
                     <div x-show="studyPanel === 'note'">
                         @forelse ($summaryNote['pages'] as $page)
                             <article class="study-note-page">
-                                <p><strong>STD–{{ $summaryNote['meta']['standard'] }} {{ $summaryNote['meta']['subject'] }}</strong></p>
-                                <p><strong>Chapter {{ $summaryNote['meta']['chapter_no'] }}: {{ $summaryNote['meta']['chapter_name'] }}</strong></p>
-                                @if ($page['page'] !== '')
-                                    <p>PAGE NO. {{ $page['page'] }}</p>
-                                @endif
-                                <p class="study-note-rule">........</p>
+                                <div class="study-kicker">
+                                    <span>STD–{{ $summaryNote['meta']['standard'] }} {{ $summaryNote['meta']['subject'] }}</span>
+                                    <span>Chapter {{ $summaryNote['meta']['chapter_no'] }}: {{ $summaryNote['meta']['chapter_name'] }}</span>
+                                    @if ($page['page'] !== '')
+                                        <span>PAGE NO. {{ $page['page'] }}</span>
+                                    @endif
+                                </div>
                                 @if ($page['unclear'] !== '' && $page['topics'] === [])
                                     <p>{{ $page['unclear'] }}</p>
                                 @endif
                                 @foreach ($page['topics'] as $index => $topicNote)
                                     <h3>{{ $topicNote['emoji'] }} Topic {{ $index + 1 }} – {!! \App\Support\MaterialSummaryNote::rich($topicNote['name']) !!}</h3>
-                                    <h4>{{ $summaryNoteLabels['main'] }}</h4>
-                                    <ul>
+                                    <p class="study-label">{{ $summaryNoteLabels['main'] }}</p>
+                                    <ul class="study-points">
                                         @foreach ($topicNote['points'] as $point)
                                             <li>{!! \App\Support\MaterialSummaryNote::rich($point) !!}</li>
                                         @endforeach
                                     </ul>
                                     @if ($topicNote['remember'] !== '')
-                                        <p><strong>{{ $summaryNoteLabels['remember'] }}:</strong> {!! \App\Support\MaterialSummaryNote::rich($topicNote['remember']) !!}</p>
+                                        <p class="study-remember">{{ $summaryNoteLabels['remember'] }}: {!! \App\Support\MaterialSummaryNote::rich($topicNote['remember']) !!}</p>
                                     @endif
-                                    <p class="study-note-rule">........</p>
                                 @endforeach
                                 @if ($page['exam_words'] !== [])
                                     <h3>{{ $summaryNoteLabels['exam'] }}</h3>
-                                    <ul>
+                                    <div class="study-chips">
                                         @foreach ($page['exam_words'] as $word)
-                                            <li>{!! \App\Support\MaterialSummaryNote::rich($word) !!}</li>
+                                            <span>{!! \App\Support\MaterialSummaryNote::rich($word) !!}</span>
                                         @endforeach
-                                    </ul>
-                                    <p class="study-note-rule">........</p>
+                                    </div>
                                 @endif
                                 @if ($page['glance'] !== [])
                                     <h3>{{ $summaryNoteLabels['glance'] }}</h3>
                                     @foreach ($page['glance'] as $step)
-                                        <p>{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
+                                        <p class="study-flow">{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
                                     @endforeach
                                 @endif
                                 @if ($page['memory_trick'] !== '')
                                     <h3>{{ $summaryNoteLabels['trick'] }}</h3>
-                                    <p>{!! \App\Support\MaterialSummaryNote::rich($page['memory_trick']) !!}</p>
+                                    <p class="study-trick">{!! \App\Support\MaterialSummaryNote::rich($page['memory_trick']) !!}</p>
                                     @if ($page['trick_note'] !== '')
                                         <p>{!! \App\Support\MaterialSummaryNote::rich($page['trick_note']) !!}</p>
                                     @endif
@@ -607,7 +616,7 @@
                                 @if ($fillPage['revision_chain'] !== [])
                                     <h3>{{ $summaryNoteLabels['chain'] }}</h3>
                                     @foreach ($fillPage['revision_chain'] as $step)
-                                        <p>{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
+                                        <p class="study-flow">{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
                                     @endforeach
                                 @endif
                             </article>
@@ -619,12 +628,12 @@
                                 @if ($summaryNote['close']['revision_chain'] !== [])
                                     <h3>{{ $summaryNoteLabels['chain'] }}</h3>
                                     @foreach ($summaryNote['close']['revision_chain'] as $step)
-                                        <p>{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
+                                        <p class="study-flow">{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
                                     @endforeach
                                 @endif
                                 @if ($summaryNote['close']['quick_revision'] !== [])
                                     <h3>Quick Revision</h3>
-                                    <ul>
+                                    <ul class="study-points">
                                         @foreach ($summaryNote['close']['quick_revision'] as $line)
                                             <li>{!! \App\Support\MaterialSummaryNote::rich($line) !!}</li>
                                         @endforeach
