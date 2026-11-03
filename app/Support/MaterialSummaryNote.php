@@ -35,7 +35,7 @@ class MaterialSummaryNote
 
         try {
             $cached = Cache::get($cacheKey);
-            if (is_array($cached) && isset($cached['pages'], $cached['fills'])) {
+            if (is_array($cached) && isset($cached['pages'], $cached['fills'], $cached['close']['revision_chain'], $cached['close']['quick_revision'])) {
                 return $cached;
             }
         } catch (\Throwable $e) {
@@ -94,7 +94,11 @@ class MaterialSummaryNote
             'labels' => self::labels('gu'),
             'pages' => [],
             'fills' => [],
-            'close' => [],
+            'close' => [
+                'revision_chain' => [],
+                'quick_revision' => [],
+                'memory_trick' => '',
+            ],
         ];
     }
 

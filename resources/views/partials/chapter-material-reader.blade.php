@@ -613,9 +613,10 @@
                                         </div>
                                     @endforeach
                                 @endforeach
-                                @if ($fillPage['revision_chain'] !== [])
+                                @php $fillChain = $fillPage['revision_chain'] ?? []; @endphp
+                                @if ($fillChain !== [])
                                     <h3>{{ $summaryNoteLabels['chain'] }}</h3>
-                                    @foreach ($fillPage['revision_chain'] as $step)
+                                    @foreach ($fillChain as $step)
                                         <p class="study-flow">{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
                                     @endforeach
                                 @endif
@@ -623,18 +624,23 @@
                         @empty
                             <p class="text-sm text-slate-500">Fill in the blanks are not ready for this chapter yet.</p>
                         @endforelse
-                        @if ($summaryNote['close']['revision_chain'] !== [] || $summaryNote['close']['quick_revision'] !== [])
+                        @php
+                            $close = $summaryNote['close'] ?? [];
+                            $closeChain = $close['revision_chain'] ?? [];
+                            $closeQuick = $close['quick_revision'] ?? [];
+                        @endphp
+                        @if ($closeChain !== [] || $closeQuick !== [])
                             <article class="study-note-page">
-                                @if ($summaryNote['close']['revision_chain'] !== [])
+                                @if ($closeChain !== [])
                                     <h3>{{ $summaryNoteLabels['chain'] }}</h3>
-                                    @foreach ($summaryNote['close']['revision_chain'] as $step)
+                                    @foreach ($closeChain as $step)
                                         <p class="study-flow">{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
                                     @endforeach
                                 @endif
-                                @if ($summaryNote['close']['quick_revision'] !== [])
+                                @if ($closeQuick !== [])
                                     <h3>Quick Revision</h3>
                                     <ul class="study-points">
-                                        @foreach ($summaryNote['close']['quick_revision'] as $line)
+                                        @foreach ($closeQuick as $line)
                                             <li>{!! \App\Support\MaterialSummaryNote::rich($line) !!}</li>
                                         @endforeach
                                     </ul>
