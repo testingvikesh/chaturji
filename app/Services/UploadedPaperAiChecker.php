@@ -184,11 +184,14 @@ Check every question you can read.
 - Subjective questions: give partial marks for each correct point. A vague line does not get full marks.
 - correct_answer is the expected answer for that question, from the paper's answer key when one is printed, otherwise from the class syllabus.
 - awarded is a number from 0 to max_marks. Halves are allowed.
-- comment is one short sentence in {$language} saying what was right or missing.
+- covered is a list of the exact points the student wrote correctly. Use an empty list when nothing is correct.
+- missing is a list of the important points the answer still needs. Use an empty list when the answer is complete.
+- comment is one encouraging teacher sentence in {$language}. Name the point that earned the marks. Full marks can say Excellent. Partial marks can say Nice try.
+- tip is one extra point the student should add next time. Leave tip empty when the answer already has full marks.
 - Do not skip a question that is on the paper. Do not add a question that is not on the paper.
 
 Return JSON only:
-{"remarks":"two sentence overall comment in {$language}","questions":[{"number":"1","question":"...","max_marks":1,"awarded":0,"student_answer":"...","correct_answer":"...","comment":"..."}]}
+{"remarks":"two sentence overall comment in {$language}","questions":[{"number":"1","question":"...","max_marks":2,"awarded":1,"student_answer":"...","correct_answer":"...","covered":["point the student wrote"],"missing":["point still needed"],"comment":"Nice try. The answer names the main idea.","tip":"Also add one example."}]}
 PROMPT;
     }
 
@@ -225,7 +228,10 @@ PROMPT;
                 'awarded' => $awarded,
                 'student_answer' => $studentAnswer,
                 'correct_answer' => trim((string) ($row['correct_answer'] ?? '')),
+                'covered' => $studentAnswer === '' ? [] : $this->lines($row['covered'] ?? $row['key_points_covered'] ?? []),
+                'missing' => $this->lines($row['missing'] ?? $row['key_points_missing'] ?? []),
                 'comment' => trim((string) ($row['comment'] ?? '')),
+                'tip' => $awarded >= $max ? '' : trim((string) ($row['tip'] ?? $row['also'] ?? '')),
             ];
         }
 
@@ -255,12 +261,39 @@ PROMPT;
         }
 
         $total = round(array_sum(array_column($questions, 'awarded')), 2);
+        $percentage = $paperTotal > 0 ? (int) round(($total / $paperTotal) * 100) : 0;
 
         return [
             'total_awarded' => $total,
+            'total_marks' => $paperTotal,
+            'percentage' => $percentage,
+            'grade' => $this->grade($percentage),
             'remarks' => mb_substr(trim((string) ($payload['remarks'] ?? '')), 0, 1000),
             'questions' => $questions,
         ];
+    }
+
+    private function grade(int $percentage): string
+    {
+        return match (true) {
+            $percentage >= 80 => 'A',
+            $percentage >= 60 => 'B',
+            $percentage >= 40 => 'C',
+            default => 'D',
+        };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function lines(mixed $value): array
+    {
+        $items = is_array($value) ? $value : preg_split('/\r\n|\r|\n|;/u', (string) $value);
+
+        return array_values(array_filter(array_map(
+            fn (mixed $line) => trim((string) $line),
+            $items ?: []
+        )));
     }
 
     private function marks(mixed $value): float

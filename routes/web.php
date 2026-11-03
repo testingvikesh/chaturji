@@ -269,6 +269,7 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::post('exam-papers/{examPaper}/sheets/{sheet}/check', [TeacherExamPaperUploadController::class, 'check'])->name('exam-papers.sheets.check');
     Route::post('exam-papers/{examPaper}/sheets/{sheet}/ai', [TeacherExamPaperUploadController::class, 'recheck'])->name('exam-papers.sheets.ai');
     Route::get('exam-papers/{examPaper}/sheets/{sheet}/file', [TeacherExamPaperUploadController::class, 'sheetFile'])->name('exam-papers.sheets.file');
+    Route::get('exam-papers/{examPaper}/sheets/{sheet}/checked', [TeacherExamPaperUploadController::class, 'checkedSheet'])->name('exam-papers.sheets.checked');
     Route::get('exam-papers/{examPaper}', [TeacherExamPaperUploadController::class, 'show'])->name('exam-papers.show');
     Route::delete('exam-papers/{examPaper}', [TeacherExamPaperUploadController::class, 'destroy'])->name('exam-papers.destroy');
 

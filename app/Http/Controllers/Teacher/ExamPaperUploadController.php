@@ -181,6 +181,20 @@ class ExamPaperUploadController extends Controller
         return back()->with('success', 'Answer sheet checked.');
     }
 
+    public function checkedSheet(ExamPaperUpload $examPaper, ExamAnswerSheet $sheet): View
+    {
+        $paper = $this->owned($examPaper);
+        abort_unless($sheet->exam_paper_upload_id === $paper->id, 404);
+        abort_unless(is_array($sheet->ai_result) && ($sheet->ai_result['questions'] ?? []) !== [], 404);
+        $sheet->load('student:id,name');
+        $paper->load('standard');
+
+        return view('teacher.exam-papers.checked', [
+            'paper' => $paper,
+            'sheet' => $sheet,
+        ]);
+    }
+
     public function sheetFile(ExamPaperUpload $examPaper, ExamAnswerSheet $sheet): StreamedResponse
     {
         $paper = $this->owned($examPaper);

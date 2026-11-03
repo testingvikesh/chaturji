@@ -83,41 +83,8 @@
                                         <p class="text-xs text-red-600">{{ $sheet->ai_error }}</p>
                                     @endif
                                     @if ($questions !== [])
-                                        <div style="max-height:280px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;">
-                                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                                                <thead>
-                                                    <tr style="background:#1a367c;color:#fff;">
-                                                        <th style="padding:8px 10px;text-align:left;width:72px;">Q</th>
-                                                        <th style="padding:8px 10px;text-align:left;width:88px;">Marks</th>
-                                                        <th style="padding:8px 10px;text-align:left;">Check</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach ($questions as $row)
-                                                        @php
-                                                            $awarded = (float) ($row['awarded'] ?? 0);
-                                                            $max = (float) ($row['max_marks'] ?? 0);
-                                                            $markColor = $awarded <= 0 ? '#b91c1c' : ($max > 0 && $awarded >= $max ? '#047857' : '#92400e');
-                                                        @endphp
-                                                        <tr style="border-top:1px solid #e2e8f0;vertical-align:top;">
-                                                            <td style="padding:8px 10px;font-weight:700;">{{ $row['number'] ?? '' }}</td>
-                                                            <td style="padding:8px 10px;font-weight:700;color:{{ $markColor }};">{{ rtrim(rtrim(number_format($awarded, 1, '.', ''), '0'), '.') }}/{{ rtrim(rtrim(number_format($max, 1, '.', ''), '0'), '.') }}</td>
-                                                            <td style="padding:8px 10px;color:#334155;">
-                                                                <div>{{ $row['comment'] ?? '' }}</div>
-                                                                @if (! empty($row['student_answer']) || ! empty($row['correct_answer']))
-                                                                    <div style="margin-top:4px;font-size:12px;color:#64748b;">
-                                                                        Written: {{ $row['student_answer'] !== '' ? $row['student_answer'] : '—' }}
-                                                                        @if (! empty($row['correct_answer']))
-                                                                            · Expected: {{ $row['correct_answer'] }}
-                                                                        @endif
-                                                                    </div>
-                                                                @endif
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                        @include('teacher.exam-papers.partials.checked-sheet', ['paper' => $paper, 'sheet' => $sheet, 'questions' => $questions])
+                                        <a href="{{ route('teacher.exam-papers.sheets.checked', [$paper, $sheet]) }}" target="_blank" class="text-xs font-semibold text-brand-green hover:underline">Print checked sheet</a>
                                     @endif
                                     <textarea name="remarks" rows="2" placeholder="Remarks" class="w-full rounded-lg border-slate-200 text-sm" style="display:block;width:100%;max-height:72px;overflow:auto;">{{ $overview }}</textarea>
                                     <div>
