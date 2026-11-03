@@ -14,11 +14,14 @@ class ExamAnswerSheet extends Model
         'file_name',
         'marks_obtained',
         'remarks',
+        'ai_result',
+        'ai_error',
         'checked_at',
     ];
 
     protected $casts = [
         'marks_obtained' => 'decimal:2',
+        'ai_result' => 'array',
         'checked_at' => 'datetime',
     ];
 

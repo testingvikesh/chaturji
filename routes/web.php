@@ -267,6 +267,7 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('exam-papers/{examPaper}/file', [TeacherExamPaperUploadController::class, 'paperFile'])->name('exam-papers.file');
     Route::post('exam-papers/{examPaper}/sheets', [TeacherExamPaperUploadController::class, 'storeSheet'])->name('exam-papers.sheets.store');
     Route::post('exam-papers/{examPaper}/sheets/{sheet}/check', [TeacherExamPaperUploadController::class, 'check'])->name('exam-papers.sheets.check');
+    Route::post('exam-papers/{examPaper}/sheets/{sheet}/ai', [TeacherExamPaperUploadController::class, 'recheck'])->name('exam-papers.sheets.ai');
     Route::get('exam-papers/{examPaper}/sheets/{sheet}/file', [TeacherExamPaperUploadController::class, 'sheetFile'])->name('exam-papers.sheets.file');
     Route::get('exam-papers/{examPaper}', [TeacherExamPaperUploadController::class, 'show'])->name('exam-papers.show');
     Route::delete('exam-papers/{examPaper}', [TeacherExamPaperUploadController::class, 'destroy'])->name('exam-papers.destroy');

@@ -7,11 +7,13 @@ use App\Models\ExamAnswerSheet;
 use App\Models\ExamPaperUpload;
 use App\Models\Standard;
 use App\Models\User;
+use App\Services\UploadedPaperAiChecker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class ExamPaperUploadController extends Controller
 {
@@ -133,7 +135,7 @@ class ExamPaperUploadController extends Controller
             Storage::disk('local')->delete($existing->file_path);
         }
 
-        ExamAnswerSheet::query()->updateOrCreate(
+        $sheet = ExamAnswerSheet::query()->updateOrCreate(
             [
                 'exam_paper_upload_id' => $paper->id,
                 'student_id' => $student->id,
@@ -141,10 +143,23 @@ class ExamPaperUploadController extends Controller
             [
                 'file_path' => $path,
                 'file_name' => $request->file('sheet')->getClientOriginalName(),
+                'marks_obtained' => null,
+                'remarks' => null,
+                'ai_result' => null,
+                'ai_error' => null,
+                'checked_at' => null,
             ]
         );
 
-        return back()->with('success', 'Answer sheet uploaded for '.$student->name.'.');
+        return $this->redirectAfterAi($paper, $sheet, 'Answer sheet uploaded for '.$student->name.'.');
+    }
+
+    public function recheck(ExamPaperUpload $examPaper, ExamAnswerSheet $sheet): RedirectResponse
+    {
+        $paper = $this->owned($examPaper);
+        abort_unless($sheet->exam_paper_upload_id === $paper->id, 404);
+
+        return $this->redirectAfterAi($paper, $sheet, 'Checking '.$sheet->student?->name.' again.');
     }
 
     public function check(Request $request, ExamPaperUpload $examPaper, ExamAnswerSheet $sheet): RedirectResponse
@@ -173,6 +188,32 @@ class ExamPaperUploadController extends Controller
         abort_unless(Storage::disk('local')->exists($sheet->file_path), 404);
 
         return Storage::disk('local')->response($sheet->file_path, $sheet->file_name ?: 'answer-sheet');
+    }
+
+    private function redirectAfterAi(ExamPaperUpload $paper, ExamAnswerSheet $sheet, string $message): RedirectResponse
+    {
+        set_time_limit(180);
+
+        try {
+            $result = app(UploadedPaperAiChecker::class)->check($paper, $sheet);
+            $sheet->update([
+                'marks_obtained' => $result['total_awarded'],
+                'remarks' => $result['remarks'],
+                'ai_result' => $result,
+                'ai_error' => null,
+                'checked_at' => now(),
+            ]);
+
+            return back()->with('success', $message.' AI checked '.$result['total_awarded'].'/'.$paper->total_marks.'.');
+        } catch (Throwable $exception) {
+            $sheet->update([
+                'ai_error' => mb_substr($exception->getMessage(), 0, 1000),
+            ]);
+
+            return back()
+                ->with('success', $message)
+                ->with('warning', 'AI check could not finish. '.$exception->getMessage());
+        }
     }
 
     private function owned(ExamPaperUpload $paper): ExamPaperUpload
