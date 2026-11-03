@@ -237,29 +237,8 @@
     $hasSummaryLinks = $summaryLinks->isNotEmpty();
     $hideDetailsUntilEye = (bool) $hideDetailsUntilEye;
 
-    $studyNoteBlocks = collect();
-    foreach (collect([$introduction, $trailer, $importance])->filter()->merge($bodySections) as $noteSection) {
-        $noteLines = preg_split('/\r\n|\r|\n/u', (string) ($noteSection->content ?? '')) ?: [];
-        $notePoints = [];
-        foreach ($noteLines as $noteLine) {
-            $noteLine = trim($noteLine);
-            if ($noteLine === '') {
-                continue;
-            }
-            $noteLine = preg_replace('/^\d+\.\s*/u', '', $noteLine) ?? $noteLine;
-            if ($noteLine !== '') {
-                $notePoints[] = $noteLine;
-            }
-        }
-        if ($notePoints === []) {
-            continue;
-        }
-        $studyNoteBlocks->push([
-            'title' => $noteSection->displayTitle(),
-            'points' => $notePoints,
-        ]);
-    }
-    $studyFillBlanks = collect($otherQuestionGroups['fill_blank'] ?? []);
+    $summaryNote = \App\Support\MaterialSummaryNote::forMaterial($material instanceof \App\Models\Material ? $material : null);
+    $summaryNoteLabels = $summaryNote['labels'];
     $sectionLabels = $summaryLinks->mapWithKeys(fn ($link) => [$link['anchor'] => $link['label']])->all();
     $tocToggleAttrs = function (string $anchor) use ($hideDetailsUntilEye): string {
         if (! $hideDetailsUntilEye) {
@@ -524,15 +503,17 @@
             .study-modal-panel { display: flex; flex-direction: column; width: min(860px, 100%); max-height: min(92dvh, 100%); overflow: hidden; background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28); }
             .study-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #e2e8f0; }
             .study-modal-body { overflow-y: auto; padding: 18px 20px 28px; font-family: "Nirmala UI", "Noto Sans Gujarati", "Noto Sans Devanagari", sans-serif; }
-            .study-note-block { margin-bottom: 18px; }
-            .study-note-block h3 { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #1a367c; }
-            .study-note-list { margin: 0; padding-left: 1.25rem; }
-            .study-note-list li { margin: 6px 0; line-height: 1.6; color: #1e293b; }
-            .study-fill { margin-bottom: 12px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; }
-            .study-fill p { margin: 0; line-height: 1.55; }
-            .study-fill-options { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-top: 8px; }
-            .study-answer-btn { margin-top: 8px; border: 0; background: transparent; color: #1a367c; font-weight: 800; cursor: pointer; }
-            .study-answer { margin-top: 6px; font-weight: 700; color: #166534; }
+            .study-note-page { background: #fffdf8; border: 1px solid #e4d7b8; border-radius: 16px; padding: 16px 18px 20px; margin-bottom: 16px; }
+            .study-note-page h3 { margin: 12px 0 6px; font-size: 1.05rem; }
+            .study-note-page h4 { margin: 8px 0 4px; }
+            .study-note-page ul { margin: 4px 0 8px; padding-left: 1.2rem; }
+            .study-note-page li { margin: 4px 0; line-height: 1.5; }
+            .study-note-rule { color: #9a8b6e; letter-spacing: 0.12em; margin: 12px 0; }
+            .study-note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+            .study-note-actions button { background: #0b2a5b; color: #fff; border: 0; border-radius: 10px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+            .study-fill { margin: 10px 0 14px; }
+            .study-answer-btn { margin-top: 6px; background: #1d4ed8; color: #fff; border: 0; border-radius: 10px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+            .study-answer { margin-top: 6px; background: #ecfdf5; border-radius: 10px; padding: 8px 10px; font-weight: 700; color: #166534; }
             .study-map { display: flex; flex-direction: column; align-items: center; }
             .study-map-center { max-width: 280px; padding: 12px 18px; border-radius: 16px; background: #1a367c; color: #fff; text-align: center; font-weight: 800; }
             .study-map-stem { width: 2px; height: 18px; background: #94a3b8; }
@@ -549,53 +530,108 @@
                 </div>
                 <div class="study-modal-body">
                     <div x-show="studyPanel === 'note'">
-                        @forelse ($studyNoteBlocks as $block)
-                            <section class="study-note-block">
-                                <h3>{{ $block['title'] }}</h3>
-                                <ul class="study-note-list">
-                                    @foreach ($block['points'] as $point)
-                                        <li>{!! \App\Support\MathMarkup::render($point) !!}</li>
+                        @forelse ($summaryNote['pages'] as $page)
+                            <article class="study-note-page">
+                                <p><strong>STD–{{ $summaryNote['meta']['standard'] }} {{ $summaryNote['meta']['subject'] }}</strong></p>
+                                <p><strong>Chapter {{ $summaryNote['meta']['chapter_no'] }}: {{ $summaryNote['meta']['chapter_name'] }}</strong></p>
+                                @if ($page['page'] !== '')
+                                    <p>PAGE NO. {{ $page['page'] }}</p>
+                                @endif
+                                <p class="study-note-rule">........</p>
+                                @if ($page['unclear'] !== '' && $page['topics'] === [])
+                                    <p>{{ $page['unclear'] }}</p>
+                                @endif
+                                @foreach ($page['topics'] as $index => $topicNote)
+                                    <h3>{{ $topicNote['emoji'] }} Topic {{ $index + 1 }} – {!! \App\Support\MaterialSummaryNote::rich($topicNote['name']) !!}</h3>
+                                    <h4>{{ $summaryNoteLabels['main'] }}</h4>
+                                    <ul>
+                                        @foreach ($topicNote['points'] as $point)
+                                            <li>{!! \App\Support\MaterialSummaryNote::rich($point) !!}</li>
+                                        @endforeach
+                                    </ul>
+                                    @if ($topicNote['remember'] !== '')
+                                        <p><strong>{{ $summaryNoteLabels['remember'] }}:</strong> {!! \App\Support\MaterialSummaryNote::rich($topicNote['remember']) !!}</p>
+                                    @endif
+                                    <p class="study-note-rule">........</p>
+                                @endforeach
+                                @if ($page['exam_words'] !== [])
+                                    <h3>{{ $summaryNoteLabels['exam'] }}</h3>
+                                    <ul>
+                                        @foreach ($page['exam_words'] as $word)
+                                            <li>{!! \App\Support\MaterialSummaryNote::rich($word) !!}</li>
+                                        @endforeach
+                                    </ul>
+                                    <p class="study-note-rule">........</p>
+                                @endif
+                                @if ($page['glance'] !== [])
+                                    <h3>{{ $summaryNoteLabels['glance'] }}</h3>
+                                    @foreach ($page['glance'] as $step)
+                                        <p>{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
                                     @endforeach
-                                </ul>
-                            </section>
+                                @endif
+                                @if ($page['memory_trick'] !== '')
+                                    <h3>{{ $summaryNoteLabels['trick'] }}</h3>
+                                    <p>{!! \App\Support\MaterialSummaryNote::rich($page['memory_trick']) !!}</p>
+                                    @if ($page['trick_note'] !== '')
+                                        <p>{!! \App\Support\MaterialSummaryNote::rich($page['trick_note']) !!}</p>
+                                    @endif
+                                @endif
+                            </article>
                         @empty
-                            <p class="text-sm text-slate-500">No summary note for this topic yet.</p>
+                            <p class="text-sm text-slate-500">Summary note is not ready for this chapter yet.</p>
                         @endforelse
                     </div>
-                    <div x-show="studyPanel === 'fill'">
-                        @forelse ($studyFillBlanks as $blank)
-                            @php
-                                $blankAnswer = \App\Support\ObjectiveQuestionResolver::answer($blank);
-                                $blankOptions = $blank->options;
-                                if (is_string($blankOptions)) {
-                                    $blankOptions = json_decode($blankOptions, true);
-                                }
-                                $blankEntries = \App\Support\ObjectiveOptionHelper::entries(is_array($blankOptions) ? $blankOptions : [], 'fill_blank');
-                                foreach ($blankEntries as $entry) {
-                                    $answerText = trim((string) $blankAnswer);
-                                    if ($answerText !== '' && (strcasecmp($entry['key'], $answerText) === 0 || strcasecmp($entry['text'], $answerText) === 0)) {
-                                        $blankAnswer = strtoupper($entry['key']).'. '.$entry['text'];
-                                        break;
-                                    }
-                                }
-                            @endphp
-                            <div class="study-fill" x-data="{ open: false }">
-                                <p><strong>{{ $loop->iteration }}.</strong> {!! \App\Support\MathMarkup::render($blank->question_text) !!}</p>
-                                @if ($blankEntries !== [])
-                                    <div class="study-fill-options">
-                                        @foreach ($blankEntries as $entry)
-                                            <p>{{ strtoupper($entry['key']) }}. {!! \App\Support\MathMarkup::render($entry['text']) !!}</p>
-                                        @endforeach
-                                    </div>
-                                @endif
-                                @if (filled($blankAnswer))
-                                    <button type="button" class="study-answer-btn" @click="open = !open" x-text="open ? 'Hide answer' : 'See answer'"></button>
-                                    <p class="study-answer" x-show="open" x-cloak>Answer: {!! \App\Support\MathMarkup::render($blankAnswer) !!}</p>
-                                @endif
+                    <div x-show="studyPanel === 'fill'" x-data="{ showAll: false, open: {} }">
+                        @if ($summaryNote['fills'] !== [])
+                            <div class="study-note-actions">
+                                <button type="button" @click="showAll = true">Show all answers</button>
+                                <button type="button" @click="showAll = false; open = {}">Hide answers</button>
                             </div>
+                        @endif
+                        @forelse ($summaryNote['fills'] as $fillPage)
+                            <article class="study-note-page">
+                                <h3>PAGE {{ $fillPage['page'] }} – {{ $summaryNoteLabels['fill'] }}</h3>
+                                @foreach ($fillPage['topics'] as $fillTopic)
+                                    <h4>{{ $fillTopic['emoji'] }} {!! \App\Support\MaterialSummaryNote::rich($fillTopic['name']) !!}</h4>
+                                    @foreach ($fillTopic['questions'] as $question)
+                                        @php $fillKey = $fillPage['page'].'-'.$question['n']; @endphp
+                                        <div class="study-fill">
+                                            <p><strong>{{ $question['n'] }}.</strong> {!! \App\Support\MaterialSummaryNote::rich($question['blank']) !!}</p>
+                                            @if ($question['answer'] !== '')
+                                                <button type="button" class="study-answer-btn" data-key="{{ $fillKey }}" @click="open = Object.assign({}, open, { [$el.dataset.key]: !open[$el.dataset.key] })">{{ $summaryNoteLabels['seeAnswer'] }}</button>
+                                                <p class="study-answer" x-show="showAll || open[$el.dataset.key]" x-cloak data-key="{{ $fillKey }}">{{ $summaryNoteLabels['seeAnswer'] }}: {!! \App\Support\MaterialSummaryNote::rich($question['answer']) !!}</p>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                @endforeach
+                                @if ($fillPage['revision_chain'] !== [])
+                                    <h3>{{ $summaryNoteLabels['chain'] }}</h3>
+                                    @foreach ($fillPage['revision_chain'] as $step)
+                                        <p>{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
+                                    @endforeach
+                                @endif
+                            </article>
                         @empty
-                            <p class="text-sm text-slate-500">No fill in the blanks for this topic yet.</p>
+                            <p class="text-sm text-slate-500">Fill in the blanks are not ready for this chapter yet.</p>
                         @endforelse
+                        @if ($summaryNote['close']['revision_chain'] !== [] || $summaryNote['close']['quick_revision'] !== [])
+                            <article class="study-note-page">
+                                @if ($summaryNote['close']['revision_chain'] !== [])
+                                    <h3>{{ $summaryNoteLabels['chain'] }}</h3>
+                                    @foreach ($summaryNote['close']['revision_chain'] as $step)
+                                        <p>{!! \App\Support\MaterialSummaryNote::rich($step) !!}</p>
+                                    @endforeach
+                                @endif
+                                @if ($summaryNote['close']['quick_revision'] !== [])
+                                    <h3>Quick Revision</h3>
+                                    <ul>
+                                        @foreach ($summaryNote['close']['quick_revision'] as $line)
+                                            <li>{!! \App\Support\MaterialSummaryNote::rich($line) !!}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </article>
+                        @endif
                     </div>
                     <div x-show="studyPanel === 'mindmap'" class="study-map">
                         <div class="study-map-center">{{ $materialTopic?->displayName() ?? ($content->title ?? 'Topic') }}</div>
