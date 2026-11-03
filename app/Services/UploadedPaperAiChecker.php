@@ -255,16 +255,10 @@ PROMPT;
         }
 
         $total = round(array_sum(array_column($questions, 'awarded')), 2);
-        $lines = [trim((string) ($payload['remarks'] ?? ''))];
-
-        foreach ($questions as $question) {
-            $lines[] = 'Q'.$question['number'].': '.$question['awarded'].'/'.$question['max_marks']
-                .($question['comment'] !== '' ? ' — '.$question['comment'] : '');
-        }
 
         return [
             'total_awarded' => $total,
-            'remarks' => mb_substr(trim(implode("\n", array_filter($lines))), 0, 4000),
+            'remarks' => mb_substr(trim((string) ($payload['remarks'] ?? '')), 0, 1000),
             'questions' => $questions,
         ];
     }
