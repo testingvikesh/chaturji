@@ -47,6 +47,7 @@ use App\Http\Controllers\Student\WorkAttemptController as StudentWorkAttemptCont
 use App\Http\Controllers\Teacher\CurriculumController as TeacherCurriculumController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\ExamController as TeacherExamController;
+use App\Http\Controllers\Teacher\ExamPaperUploadController as TeacherExamPaperUploadController;
 use App\Http\Controllers\Teacher\HomeworkController as TeacherHomeworkController;
 use App\Http\Controllers\Teacher\SubjectController as TeacherSubjectController;
 use App\Http\Controllers\Teacher\TopicController as TeacherTopicController;
@@ -259,6 +260,16 @@ Route::middleware(['auth', 'teacher'])->prefix('teacher')->name('teacher.')->gro
     Route::get('/subjects/{subject}', [TeacherSubjectController::class, 'show'])->name('subjects.show');
     Route::get('/subjects/{subject}/topics/{topic}', [TeacherTopicController::class, 'show'])->name('subjects.topics.show');
     Route::get('/subjects/{subject}/chapters/{chapter}', [TeacherTopicController::class, 'chapter'])->name('subjects.chapters.show');
+
+    Route::get('exam-papers', [TeacherExamPaperUploadController::class, 'index'])->name('exam-papers.index');
+    Route::get('exam-papers/create', [TeacherExamPaperUploadController::class, 'create'])->name('exam-papers.create');
+    Route::post('exam-papers', [TeacherExamPaperUploadController::class, 'store'])->name('exam-papers.store');
+    Route::get('exam-papers/{examPaper}/file', [TeacherExamPaperUploadController::class, 'paperFile'])->name('exam-papers.file');
+    Route::post('exam-papers/{examPaper}/sheets', [TeacherExamPaperUploadController::class, 'storeSheet'])->name('exam-papers.sheets.store');
+    Route::post('exam-papers/{examPaper}/sheets/{sheet}/check', [TeacherExamPaperUploadController::class, 'check'])->name('exam-papers.sheets.check');
+    Route::get('exam-papers/{examPaper}/sheets/{sheet}/file', [TeacherExamPaperUploadController::class, 'sheetFile'])->name('exam-papers.sheets.file');
+    Route::get('exam-papers/{examPaper}', [TeacherExamPaperUploadController::class, 'show'])->name('exam-papers.show');
+    Route::delete('exam-papers/{examPaper}', [TeacherExamPaperUploadController::class, 'destroy'])->name('exam-papers.destroy');
 
     Route::post('exams/preview', [TeacherExamController::class, 'preview'])->name('exams.preview');
     Route::get('exams/{exam}/print', [TeacherExamController::class, 'printPaper'])->name('exams.print');
