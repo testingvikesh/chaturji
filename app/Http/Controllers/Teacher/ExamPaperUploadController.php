@@ -187,7 +187,7 @@ class ExamPaperUploadController extends Controller
         abort_unless($sheet->exam_paper_upload_id === $paper->id, 404);
         abort_unless(is_array($sheet->ai_result) && ($sheet->ai_result['questions'] ?? []) !== [], 404);
         $sheet->load('student:id,name');
-        $paper->load('standard');
+        $paper->load(['standard', 'teacher:id,name']);
 
         return view('teacher.exam-papers.checked', [
             'paper' => $paper,
