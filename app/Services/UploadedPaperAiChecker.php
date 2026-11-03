@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ExamAnswerSheet;
 use App\Models\ExamPaperUpload;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -130,25 +131,18 @@ class UploadedPaperAiChecker
 
         array_push($content, ...$paperParts, ...$sheetParts);
 
-        $response = Http::withToken($key)
-            ->timeout(120)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => config('services.openai.vision_model', 'gpt-5.6-luna'),
-                'response_format' => ['type' => 'json_object'],
-                'messages' => [
-                    ['role' => 'user', 'content' => $content],
-                ],
-            ]);
+        $payload = [
+            'model' => config('services.openai.vision_model', 'gpt-5.6-luna'),
+            'response_format' => ['type' => 'json_object'],
+            'messages' => [
+                ['role' => 'user', 'content' => $content],
+            ],
+        ];
+        $response = $this->postCheck($key, $payload);
 
         if ($response->status() === 400) {
-            $response = Http::withToken($key)
-                ->timeout(120)
-                ->post('https://api.openai.com/v1/chat/completions', [
-                    'model' => config('services.openai.vision_model', 'gpt-5.6-luna'),
-                    'messages' => [
-                        ['role' => 'user', 'content' => $content],
-                    ],
-                ]);
+            unset($payload['response_format']);
+            $response = $this->postCheck($key, $payload);
         }
 
         if (! $response->successful()) {
@@ -163,6 +157,27 @@ class UploadedPaperAiChecker
         }
 
         return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function postCheck(string $key, array $payload): \Illuminate\Http\Client\Response
+    {
+        $last = null;
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            try {
+                return Http::withToken($key)
+                    ->connectTimeout(20)
+                    ->timeout(100)
+                    ->post('https://api.openai.com/v1/chat/completions', $payload);
+            } catch (ConnectionException $exception) {
+                $last = $exception;
+            }
+        }
+
+        throw new RuntimeException('The check took too long. Press Check again with AI.', 0, $last);
     }
 
     private function prompt(ExamPaperUpload $paper, string $language): string
@@ -325,7 +340,7 @@ PROMPT;
             'type' => 'image_url',
             'image_url' => [
                 'url' => 'data:'.$mime.';base64,'.base64_encode($bytes),
-                'detail' => 'high',
+                'detail' => 'auto',
             ],
         ];
     }
@@ -337,7 +352,9 @@ PROMPT;
         }
 
         $info = @getimagesize($path);
-        if (! is_array($info) || ($info[0] ?? 0) <= 1600) {
+        $width = (int) ($info[0] ?? 0);
+        $height = (int) ($info[1] ?? 0);
+        if (! is_array($info) || max($width, $height) <= 1600) {
             return $path;
         }
 
@@ -351,10 +368,9 @@ PROMPT;
             return $path;
         }
 
-        $width = imagesx($source);
-        $height = imagesy($source);
-        $targetWidth = 1600;
-        $targetHeight = (int) max(1, round($height * ($targetWidth / $width)));
+        $scale = 1600 / max($width, $height);
+        $targetWidth = (int) max(1, round($width * $scale));
+        $targetHeight = (int) max(1, round($height * $scale));
         $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
 
         if ($canvas === false) {

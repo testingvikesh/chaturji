@@ -206,7 +206,7 @@ class ExamPaperUploadController extends Controller
 
     private function redirectAfterAi(ExamPaperUpload $paper, ExamAnswerSheet $sheet, string $message): RedirectResponse
     {
-        set_time_limit(180);
+        set_time_limit(240);
 
         try {
             $result = app(UploadedPaperAiChecker::class)->check($paper, $sheet);

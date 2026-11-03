@@ -94,13 +94,13 @@ class PdfPageRasterizer
     {
         $pdf = @file_get_contents($pdfPath);
 
-        if ($pdf === false || ! preg_match_all('/\/Subtype\s*\/Image.*?stream\r?\n(.*?)\r?\nendstream/s', $pdf, $matches)) {
+        if ($pdf === false) {
             return [];
         }
 
         $candidates = [];
 
-        foreach ($matches[1] as $raw) {
+        foreach ($this->embeddedJpegStreams($pdf) as $raw) {
             $decoded = $this->decodePdfImageStream($raw);
 
             if ($decoded === null) {
@@ -155,6 +155,47 @@ class PdfPageRasterizer
         uasort($candidates, fn (array $a, array $b) => $b['pixels'] <=> $a['pixels']);
 
         return array_values(array_map(fn (array $row) => $row['path'], $candidates));
+    }
+
+    /**
+     * Pull JPEG streams by marker so a large photo PDF does not depend on a regex over the whole file.
+     *
+     * @return array<int, string>
+     */
+    private function embeddedJpegStreams(string $pdf): array
+    {
+        $streams = [];
+        $offset = 0;
+        $length = strlen($pdf);
+
+        while ($offset < $length && ($marker = strpos($pdf, '/DCTDecode', $offset)) !== false) {
+            $streamAt = strpos($pdf, 'stream', $marker);
+            $endAt = $streamAt === false ? false : strpos($pdf, 'endstream', $streamAt);
+
+            if ($streamAt === false || $endAt === false) {
+                break;
+            }
+
+            $start = $streamAt + 6;
+            if (($pdf[$start] ?? '') === "\r") {
+                $start++;
+            }
+            if (($pdf[$start] ?? '') === "\n") {
+                $start++;
+            }
+
+            $chunk = substr($pdf, $start, $endAt - $start);
+            $soi = strpos($chunk, "\xFF\xD8\xFF");
+            $eoi = $soi === false ? false : strrpos($chunk, "\xFF\xD9");
+
+            if ($soi !== false && $eoi !== false && $eoi > $soi) {
+                $streams[] = substr($chunk, $soi, $eoi - $soi + 2);
+            }
+
+            $offset = $endAt + 9;
+        }
+
+        return $streams;
     }
 
     private function decodePdfImageStream(string $raw): ?string
