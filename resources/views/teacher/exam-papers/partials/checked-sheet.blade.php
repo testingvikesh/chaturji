@@ -40,12 +40,18 @@
                     <p style="margin:0;font-weight:700;color:#1a367c;">Q{{ $row['number'] ?? '' }} {{ $row['question'] ?? '' }}</p>
                     <span style="flex:none;font-weight:800;color:{{ $markColor }};">{{ $markText($awarded) }}/{{ $markText($max) }}</span>
                 </div>
-                <p style="margin:6px 0 0;font-size:13px;color:#334155;"><span style="font-weight:700;">Answer:</span> {{ ($row['student_answer'] ?? '') !== '' ? $row['student_answer'] : 'Not written' }}</p>
+                @php $ticked = $awarded > 0; $praise = ($max > 0 && $awarded >= $max) ? 'Excellent!' : 'Nice try!'; @endphp
+                <p style="margin:6px 0 0;font-size:13px;color:#334155;display:flex;justify-content:space-between;gap:8px;">
+                    <span><span style="font-weight:700;">Answer:</span> {{ ($row['student_answer'] ?? '') !== '' ? $row['student_answer'] : 'Not written' }}</span>
+                    @if ($ticked)
+                        <span style="flex:none;color:#c41616;font-weight:800;text-align:right;">✓ {{ $markText($awarded) }}/{{ $markText($max) }}<br>{{ $praise }}</span>
+                    @endif
+                </p>
                 @if ($covered !== [])
                     <p style="margin:8px 0 2px;font-size:12px;font-weight:700;color:#047857;">Key points covered</p>
                     <ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;">
                         @foreach ($covered as $point)
-                            <li>{{ $point }}</li>
+                            <li>✓ {{ $point }}</li>
                         @endforeach
                     </ul>
                 @endif

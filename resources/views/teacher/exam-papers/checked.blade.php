@@ -41,6 +41,9 @@
         .q { padding: 8px 0 4px; border-bottom: 1px solid #e7d0d0; break-inside: avoid; }
         .answer-no { margin: 0; font-weight: 700; }
         .meta { margin: 4px 0 0; font-size: 13px; }
+        .answer-line { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+        .pen { flex: none; color: #c41616; font-weight: 800; text-align: right; line-height: 1.15; }
+        .pen small { display: block; font-size: 12px; }
         .label { margin: 8px 0 2px; font-weight: 700; }
         ol { margin: 0 0 8px 18px; padding: 0; }
         .note {
@@ -106,22 +109,29 @@
                 $covered = is_array($row['covered'] ?? null) ? array_values($row['covered']) : [];
                 $missing = is_array($row['missing'] ?? null) ? array_values($row['missing']) : [];
                 $full = $max > 0 && $awarded >= $max;
+                $ticked = $awarded > 0;
+                $praise = $full ? 'Excellent!' : 'Nice try!';
                 $side = $full
                     ? 'Wonderful! Covered: '.($covered[0] ?? ($row['comment'] ?? ''))
                     : 'Great start! Also: '.(($row['tip'] ?? '') !== '' ? $row['tip'] : ($missing[0] ?? ($row['comment'] ?? '')));
             @endphp
             <section class="q">
                 <div>
-                    <p class="answer-no">{{ $number }}. ✓ [Answer - No{{ $number }}]</p>
+                    <p class="answer-no">{{ $number }}. {{ $ticked ? '✓' : '○' }} [Answer - No{{ $number }}]</p>
                     @if (! empty($row['question']))
                         <p class="meta">{{ $row['question'] }}</p>
                     @endif
-                    <p class="meta"><strong>Answer:</strong> {{ ($row['student_answer'] ?? '') !== '' ? $row['student_answer'] : 'Not written' }}</p>
+                    <p class="meta answer-line">
+                        <span><strong>Answer:</strong> {{ ($row['student_answer'] ?? '') !== '' ? $row['student_answer'] : 'Not written' }}</span>
+                        @if ($ticked)
+                            <span class="pen">✓ {{ $markText($awarded) }}/{{ $markText($max) }}<small>{{ $praise }}</small></span>
+                        @endif
+                    </p>
                     @if ($covered !== [])
                         <p class="label">Key points covered:</p>
                         <ol>
                             @foreach ($covered as $point)
-                                <li>{{ $point }}</li>
+                                <li>✓ {{ $point }}</li>
                             @endforeach
                         </ol>
                     @endif
