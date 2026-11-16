@@ -45,6 +45,41 @@ class MaterialJsonImporter
                 $sections[] = $this->section('introduction', 'Introduction', $materialSection['introduction']['summary'], $sortOrder++);
             }
 
+            if (! empty($materialSection['story']['paragraphs']) && is_array($materialSection['story']['paragraphs'])) {
+                $storyLines = [];
+                if (! empty($materialSection['story']['headline'])) {
+                    $storyLines[] = trim((string) $materialSection['story']['headline']);
+                }
+                if (! empty($materialSection['story']['meta_line'])) {
+                    $storyLines[] = trim((string) $materialSection['story']['meta_line']);
+                }
+                if (! empty($materialSection['story']['story_title'])) {
+                    $storyLabel = trim((string) ($materialSection['story']['title'] ?? 'Story'));
+                    $storyLines[] = $storyLabel.' : '.trim((string) $materialSection['story']['story_title']);
+                }
+                foreach ($materialSection['story']['paragraphs'] as $para) {
+                    $para = trim((string) $para);
+                    if ($para !== '') {
+                        $storyLines[] = $para;
+                    }
+                }
+                if (! empty($materialSection['story']['memory_line'])) {
+                    $storyLines[] = 'Memory: '.trim((string) $materialSection['story']['memory_line']);
+                }
+                if (! empty($materialSection['story']['moral'])) {
+                    $storyLines[] = 'Moral: '.trim((string) $materialSection['story']['moral']);
+                }
+                if ($storyLines !== []) {
+                    $sections[] = $this->section(
+                        'story',
+                        $materialSection['story']['story_title']
+                            ?? ($materialSection['story']['title'] ?? 'Story'),
+                        implode("\n\n", $storyLines),
+                        $sortOrder++
+                    );
+                }
+            }
+
             if (! empty($materialSection['trailer']['points'])) {
                 $sections[] = $this->section('trailer', 'Trailer', $this->formatPoints($materialSection['trailer']['points']), $sortOrder++);
             }

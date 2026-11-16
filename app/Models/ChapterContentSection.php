@@ -29,6 +29,7 @@ class ChapterContentSection extends Model
             'kala' => 'કળા (Skills)',
             'sankar' => 'સંસ્કાર (Character)',
             'introduction' => 'Introduction',
+            'story' => 'Story',
             'trailer' => 'Trailer',
             'importance_of_this_topic' => 'Importance of this topic',
             'what_i_like' => 'What I Like',
@@ -49,6 +50,7 @@ class ChapterContentSection extends Model
     {
         return match ($this->section_type) {
             'introduction' => '💡',
+            'story' => '📖',
             'trailer' => '🎬',
             'importance_of_this_topic' => '⭐',
             'what_i_like' => '❤️',
@@ -119,6 +121,7 @@ class ChapterContentSection extends Model
     {
         return match ($this->section_type) {
             'introduction' => 'material-section--intro',
+            'story' => 'material-section--story',
             'trailer' => 'material-section--trailer',
             'importance_of_this_topic' => 'material-section--importance',
             'what_i_like' => 'material-section--like',
