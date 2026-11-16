@@ -63,6 +63,18 @@ class MaterialJsonImporter
                         $storyLines[] = $para;
                     }
                 }
+                if (! empty($materialSection['story']['wh_table']) && is_array($materialSection['story']['wh_table'])) {
+                    $storyLines[] = 'W/H Memory Table';
+                    foreach ($materialSection['story']['wh_table'] as $row) {
+                        $wh = trim((string) ($row['wh'] ?? ''));
+                        $question = trim((string) ($row['question'] ?? ''));
+                        $answer = trim((string) ($row['answer'] ?? ''));
+                        if ($wh === '' || $answer === '') {
+                            continue;
+                        }
+                        $storyLines[] = $wh.' | '.$question.' | '.$answer;
+                    }
+                }
                 if (! empty($materialSection['story']['memory_line'])) {
                     $storyLines[] = 'Memory: '.trim((string) $materialSection['story']['memory_line']);
                 }
