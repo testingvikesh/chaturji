@@ -63,17 +63,6 @@ class MaterialJsonImporter
                         $storyLines[] = $para;
                     }
                 }
-                if (! empty($materialSection['story']['panels']) && is_array($materialSection['story']['panels'])) {
-                    $storyLines[] = 'Story Panels';
-                    foreach ($materialSection['story']['panels'] as $panel) {
-                        $caption = trim((string) ($panel['caption'] ?? ''));
-                        if ($caption === '') {
-                            continue;
-                        }
-                        $n = trim((string) ($panel['n'] ?? ''));
-                        $storyLines[] = ($n !== '' ? $n.'. ' : '').$caption;
-                    }
-                }
                 if (! empty($materialSection['story']['wh_table']) && is_array($materialSection['story']['wh_table'])) {
                     $storyLines[] = 'W/H Memory Table';
                     foreach ($materialSection['story']['wh_table'] as $row) {
@@ -85,27 +74,6 @@ class MaterialJsonImporter
                         }
                         $storyLines[] = $wh.' | '.$question.' | '.$answer;
                     }
-                }
-                if (! empty($materialSection['story']['key_points']) && is_array($materialSection['story']['key_points'])) {
-                    $storyLines[] = 'Key to Remember';
-                    foreach ($materialSection['story']['key_points'] as $point) {
-                        $label = trim((string) ($point['label'] ?? ''));
-                        $value = trim((string) ($point['value'] ?? ''));
-                        if ($label === '' || $value === '') {
-                            continue;
-                        }
-                        $storyLines[] = $label.': '.$value;
-                    }
-                }
-                $posterImg = trim((string) (
-                    $materialSection['story']['ai_image_url']
-                    ?? $materialSection['story']['image_url']
-                    ?? $materialSection['story']['ai_image_file']
-                    ?? $materialSection['story']['image_file']
-                    ?? ''
-                ));
-                if ($posterImg !== '') {
-                    $storyLines[] = 'Poster: '.$posterImg;
                 }
                 if (! empty($materialSection['story']['memory_line'])) {
                     $storyLines[] = 'Memory: '.trim((string) $materialSection['story']['memory_line']);
@@ -399,18 +367,30 @@ class MaterialJsonImporter
             $items = $descriptive[$key]['questions'] ?? $subjective[$key]['questions'] ?? [];
 
             foreach ($items as $item) {
+                $answer = $item['answer'] ?? null;
+                $storyAnswer = trim((string) ($item['story_answer'] ?? $item['explain_story'] ?? ''));
+                if ($storyAnswer !== '' && in_array($type, ['four_marks', 'five_marks'], true)) {
+                    $points = is_array($answer)
+                        ? array_values(array_filter(array_map(static fn ($p) => trim((string) $p), $answer)))
+                        : [trim((string) ($answer ?? ''))];
+                    $points = array_values(array_filter($points, static fn ($p) => $p !== ''));
+                    $points[] = 'Story-style explain:';
+                    $points[] = $storyAnswer;
+                    $answer = $points;
+                }
                 $questionSort = $this->pushQuestion(
                     $questions,
                     $seen,
                     $type,
                     (string) ($item['question'] ?? ''),
                     null,
-                    $item['answer'] ?? null,
+                    $answer,
                     [
                         'source' => 'practice_examination',
                         'paper_type' => 'subjective',
                         'section' => $key,
                         'section_title' => $sectionTitle,
+                        'story_answer' => $storyAnswer !== '' ? $storyAnswer : null,
                     ],
                     $questionSort
                 );
