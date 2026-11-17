@@ -238,6 +238,7 @@
     $hideDetailsUntilEye = (bool) $hideDetailsUntilEye;
 
     $summaryNote = \App\Support\MaterialSummaryNote::forMaterial($material instanceof \App\Models\Material ? $material : null);
+    $storyCard = \App\Support\MaterialStory::fromSection(is_array($sectionData) ? $sectionData : null);
     $summaryNoteLabels = $summaryNote['labels'];
     $sectionLabels = $summaryLinks->mapWithKeys(fn ($link) => [$link['anchor'] => $link['label']])->all();
     $tocToggleAttrs = function (string $anchor) use ($hideDetailsUntilEye): string {
@@ -487,6 +488,22 @@
                 style="border-color:#0f766e;background:#ecfdf5;color:#0f766e;">
             Mindmap
         </button>
+        @if ($storyCard['paragraphs'] !== [])
+            <button type="button"
+                    @click="openStudy('story')"
+                    class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs sm:text-sm font-semibold shadow-sm transition"
+                    style="border-color:#c2410c;background:#fff7ed;color:#c2410c;">
+                Story
+            </button>
+        @endif
+        @if ($storyCard['rows'] !== [])
+            <button type="button"
+                    @click="openStudy('wh')"
+                    class="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs sm:text-sm font-semibold shadow-sm transition"
+                    style="border-color:#b45309;background:#fffbeb;color:#92400e;">
+                W/H
+            </button>
+        @endif
         @if ($content->hasOriginalPdf())
             <button type="button"
                     @click="pdfOpen = true"
@@ -529,13 +546,25 @@
             .study-map-stem { width: 2px; height: 22px; background: #d4af37; }
             .study-map-branches { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
             .study-map-branch { border: 0; background: #fff; color: #0b2a5b; border-radius: 999px; padding: 9px 14px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 16px rgba(122, 92, 28, 0.08); }
+            .story-card { background: #fffdf8; border: 1px solid #f3d7b0; border-radius: 18px; padding: 16px 18px 8px; }
+            .story-headline { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 6px; color: #c2410c; font-size: 1.15rem; font-weight: 800; }
+            .story-meta { margin: 0 0 14px; color: #64748b; font-size: 13px; }
+            .story-kicker { margin: 0 0 10px; color: #b45309; font-weight: 800; }
+            .story-card p { margin: 0 0 10px; line-height: 1.7; }
+            .story-memory { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: #fff7ed; color: #9a3412; font-weight: 700; }
+            .wh-wrap { overflow-x: auto; border: 1px solid #ead7a2; border-radius: 14px; background: #fff; }
+            .wh-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+            .wh-table th { background: #f6e7b2; color: #7a5b12; text-align: left; padding: 10px 12px; border-bottom: 1px solid #ead7a2; }
+            .wh-table td { padding: 10px 12px; border-top: 1px solid #f3e6c4; vertical-align: top; line-height: 1.55; }
+            .wh-table td:first-child { font-weight: 800; color: #1d4ed8; white-space: nowrap; }
+            .wh-table td:last-child { color: #b45309; font-weight: 700; }
         </style>
     @endonce
     <template x-teleport="body">
         <div x-show="studyPanel" x-cloak class="study-modal" style="display: none;" @click.self="closeStudy()">
             <div class="study-modal-panel" @click.stop>
                 <div class="study-modal-head">
-                    <p class="text-sm font-bold text-slate-900" x-text="studyPanel === 'fill' ? 'Summary Fill Blanks' : (studyPanel === 'mindmap' ? 'Mindmap' : 'Summary Note')"></p>
+                    <p class="text-sm font-bold text-slate-900" x-text="({story:'Story', wh:'W/H Memory Table', fill:'Summary Fill Blanks', mindmap:'Mindmap'})[studyPanel] || 'Summary Note'"></p>
                     <button type="button" @click="closeStudy()" class="study-close">Close</button>
                 </div>
                 <div class="study-modal-body">
@@ -647,6 +676,69 @@
                                 @endif
                             </article>
                         @endif
+                    </div>
+                    <div x-show="studyPanel === 'story'">
+                        <article class="story-card">
+                            @if ($storyCard['headline'] !== '')
+                                <h3 class="story-headline">📖 {{ $storyCard['headline'] }}</h3>
+                            @endif
+                            @if ($storyCard['meta_line'] !== '')
+                                <p class="story-meta">{{ $storyCard['meta_line'] }}</p>
+                            @endif
+                            @if ($storyCard['title'] !== '')
+                                <p class="story-kicker">🌸 {{ $storyCard['label'] }} : {{ $storyCard['title'] }}</p>
+                            @endif
+                            @foreach ($storyCard['paragraphs'] as $paragraph)
+                                <p>{!! \App\Support\MaterialSummaryNote::rich($paragraph) !!}</p>
+                            @endforeach
+                            @if ($storyCard['memory_line'] !== '')
+                                <p class="story-memory">📌 {{ $storyCard['memory_line'] }}</p>
+                            @endif
+                            @if ($storyCard['moral'] !== '')
+                                <p class="story-memory">{{ $storyCard['moral'] }}</p>
+                            @endif
+                            @if ($storyCard['paragraphs'] === [])
+                                <p class="text-sm text-slate-500">Story is not ready for this topic yet.</p>
+                            @endif
+                        </article>
+                    </div>
+                    <div x-show="studyPanel === 'wh'">
+                        <article class="story-card">
+                            @if ($storyCard['headline'] !== '')
+                                <h3 class="story-headline">📖 {{ $storyCard['headline'] }}</h3>
+                            @endif
+                            @if ($storyCard['meta_line'] !== '')
+                                <p class="story-meta">{{ $storyCard['meta_line'] }}</p>
+                            @endif
+                            <h3 class="story-kicker">🧠 W/H Memory Table</h3>
+                            @if ($storyCard['rows'] !== [])
+                                <div class="wh-wrap">
+                                    <table class="wh-table">
+                                        <thead>
+                                            <tr>
+                                                <th>WH</th>
+                                                <th>Question</th>
+                                                <th>Answer to remember</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($storyCard['rows'] as $row)
+                                                <tr>
+                                                    <td>{{ $row['wh'] }}</td>
+                                                    <td>{{ $row['question'] }}</td>
+                                                    <td>{{ $row['answer'] }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @else
+                                <p class="text-sm text-slate-500">W/H table is not ready for this topic yet.</p>
+                            @endif
+                            @if ($storyCard['memory_line'] !== '')
+                                <p class="story-memory">📌 {{ $storyCard['memory_line'] }}</p>
+                            @endif
+                        </article>
                     </div>
                     <div x-show="studyPanel === 'mindmap'" class="study-map">
                         <div class="study-map-center">{{ $materialTopic?->displayName() ?? ($content->title ?? 'Topic') }}</div>

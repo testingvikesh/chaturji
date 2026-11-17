@@ -31,7 +31,7 @@ class MaterialSummaryNote
             return $empty;
         }
 
-        $cacheKey = 'material-summary-note:v3:'.$material->id.':'.$filename;
+        $cacheKey = 'material-summary-note:v4:'.$material->id.':'.$filename;
 
         try {
             $cached = Cache::get($cacheKey);
