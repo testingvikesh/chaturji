@@ -546,18 +546,20 @@
             .study-map-stem { width: 2px; height: 22px; background: #d4af37; }
             .study-map-branches { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
             .study-map-branch { border: 0; background: #fff; color: #0b2a5b; border-radius: 999px; padding: 9px 14px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 16px rgba(122, 92, 28, 0.08); }
-            .story-card { background: #fffdf8; border: 1px solid #f3d7b0; border-radius: 18px; padding: 16px 18px 8px; }
-            .story-headline { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 6px; color: #c2410c; font-size: 1.15rem; font-weight: 800; }
-            .story-meta { margin: 0 0 14px; color: #64748b; font-size: 13px; }
-            .story-kicker { margin: 0 0 10px; color: #b45309; font-weight: 800; }
-            .story-card p { margin: 0 0 10px; line-height: 1.7; }
-            .story-memory { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: #fff7ed; color: #9a3412; font-weight: 700; }
-            .wh-wrap { overflow-x: auto; border: 1px solid #ead7a2; border-radius: 14px; background: #fff; }
+            .story-card { background: linear-gradient(180deg, #fffaf3 0%, #fff 90px); border: 1px solid #f0d7b0; border-radius: 20px; padding: 18px 18px 14px; box-shadow: 0 10px 28px rgba(146, 96, 24, 0.08); }
+            .story-card strong { color: #9a3412; background: #fff3c4; border-radius: 6px; padding: 0 4px; }
+            .story-headline { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 8px; color: #c2410c; font-size: 1.2rem; font-weight: 800; line-height: 1.35; }
+            .story-meta { display: inline-block; margin: 0 0 14px; padding: 6px 10px; border-radius: 999px; background: #eef2ff; color: #1e3a8a; font-size: 12px; font-weight: 700; }
+            .story-kicker { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px; padding: 6px 12px; border-radius: 12px; background: #fff1e6; color: #9a3412; font-weight: 800; }
+            .story-line { margin: 0 0 8px; padding: 10px 12px 10px 14px; line-height: 1.7; background: #fff; border: 1px solid #f3e6cc; border-left: 4px solid #d4af37; border-radius: 12px; }
+            .story-memory { margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: linear-gradient(90deg, #fff7ed, #fff); border: 1px solid #fdba74; color: #9a3412; font-weight: 800; line-height: 1.55; }
+            .wh-wrap { overflow-x: auto; border: 1px solid #ead7a2; border-radius: 16px; background: #fff; }
             .wh-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-            .wh-table th { background: #f6e7b2; color: #7a5b12; text-align: left; padding: 10px 12px; border-bottom: 1px solid #ead7a2; }
-            .wh-table td { padding: 10px 12px; border-top: 1px solid #f3e6c4; vertical-align: top; line-height: 1.55; }
-            .wh-table td:first-child { font-weight: 800; color: #1d4ed8; white-space: nowrap; }
-            .wh-table td:last-child { color: #b45309; font-weight: 700; }
+            .wh-table th { background: linear-gradient(180deg, #f8e7b0, #f3d98a); color: #7a5412; text-align: left; padding: 12px; }
+            .wh-table tbody tr:nth-child(even) { background: #fffaf0; }
+            .wh-table td { padding: 12px; border-top: 1px solid #f3e6c4; vertical-align: top; line-height: 1.6; }
+            .wh-pill { display: inline-block; border-radius: 999px; background: #e0e7ff; color: #1e3a8a; font-weight: 800; padding: 4px 10px; white-space: nowrap; }
+            .wh-table td:last-child { color: #9a3412; font-weight: 700; }
         </style>
     @endonce
     <template x-teleport="body">
@@ -689,13 +691,13 @@
                                 <p class="story-kicker">🌸 {{ $storyCard['label'] }} : {{ $storyCard['title'] }}</p>
                             @endif
                             @foreach ($storyCard['paragraphs'] as $paragraph)
-                                <p>{!! \App\Support\MaterialSummaryNote::rich($paragraph) !!}</p>
+                                <p class="story-line">{!! \App\Support\MaterialSummaryNote::rich($paragraph) !!}</p>
                             @endforeach
                             @if ($storyCard['memory_line'] !== '')
-                                <p class="story-memory">📌 {{ $storyCard['memory_line'] }}</p>
+                                <p class="story-memory">📌 {!! \App\Support\MaterialSummaryNote::rich($storyCard['memory_line']) !!}</p>
                             @endif
                             @if ($storyCard['moral'] !== '')
-                                <p class="story-memory">{{ $storyCard['moral'] }}</p>
+                                <p class="story-memory">{!! \App\Support\MaterialSummaryNote::rich($storyCard['moral']) !!}</p>
                             @endif
                             @if ($storyCard['paragraphs'] === [])
                                 <p class="text-sm text-slate-500">Story is not ready for this topic yet.</p>
@@ -724,9 +726,9 @@
                                         <tbody>
                                             @foreach ($storyCard['rows'] as $row)
                                                 <tr>
-                                                    <td>{{ $row['wh'] }}</td>
-                                                    <td>{{ $row['question'] }}</td>
-                                                    <td>{{ $row['answer'] }}</td>
+                                                    <td><span class="wh-pill">{!! \App\Support\MaterialSummaryNote::rich($row['wh']) !!}</span></td>
+                                                    <td>{!! \App\Support\MaterialSummaryNote::rich($row['question']) !!}</td>
+                                                    <td>{!! \App\Support\MaterialSummaryNote::rich($row['answer']) !!}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -736,7 +738,7 @@
                                 <p class="text-sm text-slate-500">W/H table is not ready for this topic yet.</p>
                             @endif
                             @if ($storyCard['memory_line'] !== '')
-                                <p class="story-memory">📌 {{ $storyCard['memory_line'] }}</p>
+                                <p class="story-memory">📌 {!! \App\Support\MaterialSummaryNote::rich($storyCard['memory_line']) !!}</p>
                             @endif
                         </article>
                     </div>
