@@ -687,14 +687,36 @@
                             @if ($storyCard['meta_line'] !== '')
                                 <p class="story-meta">{{ $storyCard['meta_line'] }}</p>
                             @endif
+                            @if (($storyCard['topic_theme'] ?? '') !== '')
+                                <p class="story-meta"><strong>પાઠનો મુખ્ય વિષય:</strong> {!! \App\Support\MaterialSummaryNote::rich($storyCard['topic_theme']) !!}</p>
+                            @endif
                             @if ($storyCard['title'] !== '')
-                                <p class="story-kicker">🌸 {{ $storyCard['label'] }} : {{ $storyCard['title'] }}</p>
+                                <p class="story-kicker">🌟 Reverse Story : {{ $storyCard['title'] }}</p>
                             @endif
                             @foreach ($storyCard['paragraphs'] as $paragraph)
                                 <p class="story-line">{!! \App\Support\MaterialSummaryNote::rich($paragraph) !!}</p>
                             @endforeach
+                            @if (($storyCard['memory_chain'] ?? '') !== '')
+                                <p class="story-memory">🔗 {!! \App\Support\MaterialSummaryNote::rich($storyCard['memory_chain']) !!}</p>
+                            @endif
+                            @if (($storyCard['important_facts'] ?? []) !== [])
+                                <div class="story-memory">
+                                    <p><strong>📌 Important Facts Revision</strong></p>
+                                    <ul style="margin:6px 0 0;padding-left:18px;">
+                                        @foreach ($storyCard['important_facts'] as $fact)
+                                            <li>{!! \App\Support\MaterialSummaryNote::rich($fact) !!}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                            @if (($storyCard['life_timeline'] ?? '') !== '')
+                                <p class="story-memory">⏱ {!! \App\Support\MaterialSummaryNote::rich($storyCard['life_timeline']) !!}</p>
+                            @endif
                             @if ($storyCard['memory_line'] !== '')
-                                <p class="story-memory">📌 {!! \App\Support\MaterialSummaryNote::rich($storyCard['memory_line']) !!}</p>
+                                <p class="story-memory">🧠 {!! \App\Support\MaterialSummaryNote::rich($storyCard['memory_line']) !!}</p>
+                            @endif
+                            @if (($storyCard['imagination_note'] ?? '') !== '')
+                                <p class="story-meta">📝 {!! \App\Support\MaterialSummaryNote::rich($storyCard['imagination_note']) !!}</p>
                             @endif
                             @if ($storyCard['moral'] !== '')
                                 <p class="story-memory">{!! \App\Support\MaterialSummaryNote::rich($storyCard['moral']) !!}</p>

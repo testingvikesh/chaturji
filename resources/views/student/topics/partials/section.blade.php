@@ -39,14 +39,36 @@
                 @if ($storyDisplay['meta_line'] !== '')
                     <p class="story-meta">{{ $storyDisplay['meta_line'] }}</p>
                 @endif
+                @if (($storyDisplay['topic_theme'] ?? '') !== '')
+                    <p class="story-meta"><strong>પાઠનો મુખ્ય વિષય:</strong> {!! \App\Support\MaterialSummaryNote::rich($storyDisplay['topic_theme']) !!}</p>
+                @endif
                 @if ($storyDisplay['title'] !== '')
-                    <p class="story-kicker">🌸 {{ $storyDisplay['label'] }} : {{ $storyDisplay['title'] }}</p>
+                    <p class="story-kicker">🌟 Reverse Story : {{ $storyDisplay['title'] }}</p>
                 @endif
                 @foreach ($storyDisplay['paragraphs'] as $paragraph)
                     <p class="story-line">{!! \App\Support\MaterialSummaryNote::rich($paragraph) !!}</p>
                 @endforeach
+                @if (($storyDisplay['memory_chain'] ?? '') !== '')
+                    <p class="story-memory">🔗 {!! \App\Support\MaterialSummaryNote::rich($storyDisplay['memory_chain']) !!}</p>
+                @endif
+                @if (($storyDisplay['important_facts'] ?? []) !== [])
+                    <div class="story-memory">
+                        <p><strong>📌 Important Facts Revision</strong></p>
+                        <ul style="margin:6px 0 0;padding-left:18px;">
+                            @foreach ($storyDisplay['important_facts'] as $fact)
+                                <li>{!! \App\Support\MaterialSummaryNote::rich($fact) !!}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+                @if (($storyDisplay['life_timeline'] ?? '') !== '')
+                    <p class="story-memory">⏱ {!! \App\Support\MaterialSummaryNote::rich($storyDisplay['life_timeline']) !!}</p>
+                @endif
                 @if ($storyDisplay['memory_line'] !== '')
-                    <p class="story-memory">📌 {!! \App\Support\MaterialSummaryNote::rich($storyDisplay['memory_line']) !!}</p>
+                    <p class="story-memory">🧠 {!! \App\Support\MaterialSummaryNote::rich($storyDisplay['memory_line']) !!}</p>
+                @endif
+                @if (($storyDisplay['imagination_note'] ?? '') !== '')
+                    <p class="story-meta">📝 {!! \App\Support\MaterialSummaryNote::rich($storyDisplay['imagination_note']) !!}</p>
                 @endif
                 @if ($storyDisplay['moral'] !== '')
                     <p class="story-memory">{!! \App\Support\MaterialSummaryNote::rich($storyDisplay['moral']) !!}</p>

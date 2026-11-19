@@ -53,15 +53,39 @@ class MaterialJsonImporter
                 if (! empty($materialSection['story']['meta_line'])) {
                     $storyLines[] = trim((string) $materialSection['story']['meta_line']);
                 }
+                if (! empty($materialSection['story']['topic_theme'])) {
+                    $storyLines[] = 'Theme: '.trim((string) $materialSection['story']['topic_theme']);
+                }
                 if (! empty($materialSection['story']['story_title'])) {
                     $storyLabel = trim((string) ($materialSection['story']['title'] ?? 'Story'));
-                    $storyLines[] = $storyLabel.' : '.trim((string) $materialSection['story']['story_title']);
+                    $storyLines[] = 'Reverse Story : '.trim((string) $materialSection['story']['story_title']);
                 }
                 foreach ($materialSection['story']['paragraphs'] as $para) {
                     $para = trim((string) $para);
                     if ($para !== '') {
                         $storyLines[] = $para;
                     }
+                }
+                $memoryChain = is_array($materialSection['story']['memory_chain'] ?? null)
+                    ? implode(' → ', array_values(array_filter(array_map(
+                        static fn ($item) => trim((string) $item),
+                        $materialSection['story']['memory_chain']
+                    ))))
+                    : trim((string) ($materialSection['story']['memory_chain'] ?? ''));
+                if ($memoryChain !== '') {
+                    $storyLines[] = 'Memory Chain: '.$memoryChain;
+                }
+                if (! empty($materialSection['story']['important_facts']) && is_array($materialSection['story']['important_facts'])) {
+                    $storyLines[] = 'Important Facts Revision';
+                    foreach ($materialSection['story']['important_facts'] as $fact) {
+                        $fact = trim((string) $fact);
+                        if ($fact !== '') {
+                            $storyLines[] = '- '.$fact;
+                        }
+                    }
+                }
+                if (! empty($materialSection['story']['life_timeline'])) {
+                    $storyLines[] = 'Timeline: '.trim((string) $materialSection['story']['life_timeline']);
                 }
                 if (! empty($materialSection['story']['wh_table']) && is_array($materialSection['story']['wh_table'])) {
                     $storyLines[] = 'W/H Memory Table';
@@ -77,6 +101,9 @@ class MaterialJsonImporter
                 }
                 if (! empty($materialSection['story']['memory_line'])) {
                     $storyLines[] = 'Memory: '.trim((string) $materialSection['story']['memory_line']);
+                }
+                if (! empty($materialSection['story']['imagination_note'])) {
+                    $storyLines[] = 'Note: '.trim((string) $materialSection['story']['imagination_note']);
                 }
                 if (! empty($materialSection['story']['moral'])) {
                     $storyLines[] = 'Moral: '.trim((string) $materialSection['story']['moral']);
